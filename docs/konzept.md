@@ -37,7 +37,7 @@ Diese Regeln gelten für das ganze Dokument:
 * Die Technik im Kapitel Technik und Architektur ist eine Empfehlung. Claude Code darf davon nur mit Begründung abweichen und meldet jede Abweichung.
 * Die Oberfläche ist auf Deutsch, alle Texte stehen in einer Sprachdatei, damit weitere Sprachen später möglich sind.
 * Der Fahrzeugkatalog (fahrzeugkatalog.xlsx) ist die maßgebliche Quelle für Fahrzeugdaten. Die Spaltennamen in der ersten Zeile werden nicht geändert.
-* Stellen, die ausdrücklich auf später verschoben sind (Feinabstimmung der Gemeindezustimmung, Detail der Busknotenpunkte, Regelwerk der Lenk- und Ruhezeiten, Fahrzeugkatalog für Schienenfahrzeuge, Kennzeichen und Flottennummern im Detail), baut Claude Code erst, wenn sie ausgearbeitet sind.
+* Stellen, die ausdrücklich auf später verschoben sind (Feinabstimmung der Gemeindezustimmung, Detail der Busknotenpunkte, Regelwerk der Lenk- und Ruhezeiten, Fahrzeugkatalog für Schienenfahrzeuge, Kennzeichen und Flottennummern im Detail, Linienimport aus GTFS-Daten), baut Claude Code erst, wenn sie ausgearbeitet sind.
 
 ## Technik und Architektur
 
@@ -62,7 +62,7 @@ Die App wird als Desktop-Anwendung mit Web-Technik gebaut, weil sich Karte, Ober
 
 Das Spiel läuft in Echtzeit mit Spielkalender. Verspätungen und Auslastung ergeben sich aus der Simulation, sie werden nicht gewürfelt.
 
-**Zeit.** Es gibt Pause, 1-fach und mehrere Zeitraffer-Stufen (Vorschlag: 5-, 20- und 60-fach). Der Kalender kennt Uhrzeit, Wochentag, Feiertage, Schulferien und Jahreszeit, weil Fahrpläne, Schichten und Nachfrage davon abhängen. Die Simulation tickt in festen Schritten, unabhängig von der Bildrate.
+**Zeit.** Es gibt Pause, 1-fach und mehrere Zeitraffer-Stufen (Vorschlag: 5-, 20- und 60-fach). Der Kalender kennt Uhrzeit, Wochentag, Feiertage, Schulferien und Jahreszeit, weil Fahrpläne, Schichten und Nachfrage davon abhängen. Gesetzliche Feiertage werden per Regel berechnet (alle 16 Bundesländer, das Bundesland folgt aus der Gemeinde). Schulferien stammen aus Tabellen amtlicher Quellen, zunächst für Schleswig-Holstein und Hamburg. Wo keine Tabelle vorliegt, gibt es keine Schulferien. Die Simulation tickt in festen Schritten, unabhängig von der Bildrate.
 
 **Fahrzeiten und Verspätungen.** Die Fahrzeit eines Busses auf einem Straßenabschnitt ergibt sich aus Streckenlänge, erlaubter Geschwindigkeit und Verkehrsdichte nach Tageszeit. Dazu kommen Haltezeiten, die mit der Zahl der ein- und aussteigenden Fahrgäste wachsen, sowie Ampeln und Kreuzungen. Busspuren, Ampelvorrang und Busstraßen (spätere Module) verkürzen diese Zeiten messbar. Verspätungen pflanzen sich fort: Ein verspäteter Bus kommt verspätet am Wendepunkt an und startet seine nächste Fahrt später.
 
@@ -99,10 +99,10 @@ Aufträge machen die Sandbox abwechslungsreicher und entsprechen der Praxis in D
 
 Ein neues Spiel beginnt mit einem Einrichtungsdialog und danach mit der Suche nach dem ersten Betriebshof-Standort.
 
-1. **Einstellungen.** Startgemeinde (Suche nach Name, jede Gemeinde der Welt), Startkapital (frei einstellbar, in Euro, weitere Währungen kommen später), Firmenname und Firmenfarbe.
+1. **Einstellungen.** Startgemeinde (Suche nach Name, jede Gemeinde der Welt, in Etappe 1 zunächst nur Norderstedt und eine eigene Datei im selben Format, die weltweite Suche folgt später), Startkapital (frei einstellbar, in Euro, weitere Währungen kommen später), Firmenname und Firmenfarbe.
 2. **Welt laden.** Das Spiel lädt den OSM-Auszug der Gemeinde und berechnet Straßennetz, Haltestellen und Nachfragegitter.
-3. **Linienimport (optional).** Reale Linien können importiert werden, zum Beispiel aus GTFS-Daten, und erscheinen als Vorlagen. Der Spieler übernimmt sie ganz oder in Teilen, sie laufen nicht automatisch.
-4. **Standort wählen.** Auf der Karte sucht der Spieler ein Grundstück für den ersten Betriebshof.
+3. **Linienimport (optional).** Reale Linien können importiert werden, zum Beispiel aus GTFS-Daten, und erscheinen als Vorlagen. Der Spieler übernimmt sie ganz oder in Teilen, sie laufen nicht automatisch. Der Linienimport ist zurückgestellt und wird erst gebaut, wenn er ausgearbeitet ist.
+4. **Standort wählen.** Auf der Karte sucht der Spieler ein Grundstück für den ersten Betriebshof. Dieser Schritt wird mit Etappe 2 gebaut, weil er den Grundstückskauf braucht.
 
 **Standortwahl.** Jedes Grundstück zeigt Preis, verfügbare Fläche und Anbindung ans Straßennetz. Gewerbegebiete am Stadtrand sind billig, liegen aber weit von den Linien entfernt. Zentrale Lagen sind teuer, bringen aber kurze Ein- und Ausrückfahrten. Die Lage wirkt damit direkt auf Leerkilometer, Zeit und Kosten.
 
@@ -470,7 +470,7 @@ Die Oberfläche ist schlicht und auf Deutsch. Alle Texte stehen in der Sprachdat
 
 **Hilfe.** Es gibt kein Tutorial. Bedienelemente haben Hilfetexte, und es gibt ein Hilfemenü.
 
-**Noch offen.** Diese Punkte sind nicht festgelegt und werden vor Beginn der Etappe 1 geklärt, Claude Code baut sie nicht auf eigene Faust: Tastenkürzel, Einstellungen (Grafik, Ton, Autosave), Kartenstil und Zoomstufen, Fahrzeugsymbole auf der Karte, Musik und Geräusche, Barrierefreiheit.
+**Festlegungen zu Bedienung und Darstellung.** Tastenkürzel (fest, nicht änderbar): Leertaste für Pause und Weiter, Tasten 1 bis 4 für die Zeitraffer-Stufen, Strg+S (Mac: Cmd+S) zum Speichern, Esc schließt Fenster. Die Karte wird mit gedrückter Maustaste verschoben und mit dem Mausrad gezoomt. Einstellungen: nur Ton an oder aus, Intervall des Autosave und Textgröße. Kartenstil: ein ruhiger, heller OSM-Stil mit nach Bedeutung gestaffelten Straßen, Wasser, Grün und Gebäuden, Zoomstufen vom ganzen Stadtgebiet bis zur einzelnen Haltestelle. Fahrzeugsymbole: farbige Punkte in der Linienfarbe, bei starkem Zoom eine kleine Busform mit Fahrtrichtung. Ton: In Phase 1 gibt es weder Musik noch Geräusche, der Schalter in den Einstellungen bleibt ohne Wirkung. Barrierefreiheit: ausreichender Farbkontrast, Informationen nicht nur über Farbe (zusätzlich Symbol oder Muster) und alle Menüs mit der Tastatur bedienbar.
 
 ## Phasenplan und Abnahme
 
@@ -481,8 +481,8 @@ Claude Code baut das Spiel in Etappen, nicht in einem Durchgang. Jede Etappe hat
 | Phase | Etappe | Ziel | Inhalt (Kapitel) |
 | --- | --- | --- | --- |
 | Phase 1: erste spielbare Version | 0 | Projektgerüst und Testinfrastruktur | App startet, Konfigurationsdatei, Sprachdatei, Testwerkzeuge, automatischer Bau und Test auf Windows und macOS sowie Veröffentlichung der Web-Version auf GitHub Pages (GitHub Actions), Testdatensatz Norderstedt, annahmen.md, fortschritt.md |
-|  | 1 | Karte, Welt und Zeit | Gemeinde wählen, OSM-Auszug laden, Straßennetz, Haltestellen, Nachfragegitter, Kalender, Pause und Zeitraffer (Technik, Zeitmodell, Spielwelt, Spielstart) |
-|  | 2 | Fahrzeugkatalog und Betriebshof | Katalog einlesen und prüfen, Betriebshof-Editor mit allen Bauteilen, Grundstückskauf, Layout-Gültigkeit, Wege im Hof (Betriebshof-Editor, Katalog) |
+|  | 1 | Karte, Welt und Zeit | Gemeinde wählen (zunächst Norderstedt und eine eigene Datei im selben Format), OSM-Auszug laden, Straßennetz, Haltestellen, Nachfragegitter, Kalender, Pause und Zeitraffer (Technik, Zeitmodell, Spielwelt, Spielstart) |
+|  | 2 | Fahrzeugkatalog und Betriebshof | Katalog einlesen und prüfen, Betriebshof-Editor mit allen Bauteilen, Standortwahl und Grundstückskauf, Layout-Gültigkeit, Wege im Hof (Betriebshof-Editor, Katalog) |
 |  | 3a | Fahrzeugmarkt und Personal | Neukauf mit Konfiguration, Gebrauchtmarkt, einzelne Personen einstellen, Lohn (Fahrzeugmarkt, Personal) |
 |  | 3b | Linien und Fahrplan | Linie als Perlenkette mit Richtungen und Kurzläufern, Takt und Einzelfahrten, automatische Fahrzeiten, Standzeiten, Bedarf an Bussen (Linien und Fahrplan) |
 |  | 3c | Dienstplan | Dienste von Hand planen, Lenk- und Ruhezeiten (Personal und Schichtplan) |
