@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 
 // Oberflächentests der Web-Version. Derselbe Test prüft nach der Veröffentlichung die Pages-Adresse (E2E_BASE_URL).
 
@@ -137,31 +139,35 @@ test("Eigene Datei im selben Format laden, falsche Datei mit Meldung ablehnen", 
 test("Haltestelle anklicken zeigt ihren Namen", async ({ page }) => {
   await neuesSpielMitTastatur(page);
   const karte = page.locator("#map");
-  // Auf eine Haltestelle zoomen: der Test fragt die Karte nach einem sichtbaren Haltestellensymbol
-  await page.mouse.move(640, 400);
-  for (let i = 0; i < 12 && Number(await karte.getAttribute("data-zoom")) < 14.5; i++) {
-    await page.mouse.wheel(0, -500);
-    await page.waitForTimeout(250);
-  }
-  await expect.poll(async () => Number(await karte.getAttribute("data-zoom"))).toBeGreaterThan(14);
-  await page.waitForTimeout(500);
-  const ziel = await page.evaluate(() => {
+  // Feste Haltestelle aus dem Datensatz im Projekt (deterministisch, unabhängig von Fenstergröße und Zoom)
+  const daten = JSON.parse(gunzipSync(readFileSync("public/data/norderstedt/norderstedt.osm.json.gz")).toString("utf8")) as {
+    elements: { type: string; id: number; lat?: number; lon?: number; tags?: Record<string, string> }[];
+  };
+  const halt = daten.elements
+    .filter((e) => e.type === "node" && e.tags?.highway === "bus_stop" && e.tags.name)
+    .sort((a, b) => a.id - b.id)[0];
+  const koordinate: [number, number] = [halt.lon!, halt.lat!];
+  const ziel = await page.evaluate(async (c) => {
     type Karte = {
-      queryRenderedFeatures(o: { layers: string[] }): { properties: { name: string }; geometry: { coordinates: [number, number] } }[];
+      jumpTo(o: { center: [number, number]; zoom: number }): void;
+      once(ev: string, f: () => void): void;
+      queryRenderedFeatures(o: { layers: string[] }): { properties: { name: string; id: number } }[];
       project(c: [number, number]): { x: number; y: number };
     };
     const m = (document.getElementById("map") as unknown as { __karte: Karte }).__karte;
-    const f = m.queryRenderedFeatures({ layers: ["haltestellen"] }).find((x) => x.properties.name);
-    if (!f) return null;
-    const p = m.project(f.geometry.coordinates);
-    return { x: p.x, y: p.y, name: f.properties.name };
-  });
-  expect(ziel, "sichtbare Haltestelle mit Namen").not.toBeNull();
+    await new Promise<void>((r) => {
+      m.once("idle", () => r());
+      m.jumpTo({ center: c, zoom: 17 });
+    });
+    const p = m.project(c);
+    return { x: p.x, y: p.y, sichtbar: m.queryRenderedFeatures({ layers: ["haltestellen"] }).length };
+  }, koordinate);
+  expect(ziel.sichtbar, "Haltestellensymbole sichtbar").toBeGreaterThan(0);
   const box = (await karte.boundingBox())!;
   await page.mouse.click(box.x + ziel!.x, box.y + ziel!.y);
   const fenster = page.getByTestId("fenster-haltestelle");
   await expect(fenster).toBeVisible();
-  await expect(fenster).toContainText(ziel!.name);
+  await expect(fenster).toContainText(halt.tags!.name);
   await page.keyboard.press("Escape");
   await expect(fenster).toHaveCount(0);
 });
