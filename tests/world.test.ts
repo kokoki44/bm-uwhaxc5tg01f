@@ -70,22 +70,11 @@ describe("Routing zwischen echten Haltestellen", () => {
   it("liefert zusammenhängende Routen ohne verbotene Abbiegungen, nicht kürzer als die Luftlinie", () => {
     const n = world.network;
     const S = world.stops;
-    // Hauptnetz: Abschnitte, die vom ersten Abschnitt der ersten Haltestelle aus erreichbar sind
-    const erreichbar = new Set<number>();
-    const stapel = [S[0].snaps[0].edge];
-    while (stapel.length) {
-      const e = stapel.pop()!;
-      if (erreichbar.has(e)) continue;
-      erreichbar.add(e);
-      for (const o of n.outEdges[n.edges[e].to]) if (turnAllowed(n, e, o)) stapel.push(o);
-    }
     let geprueft = 0;
     for (let k = 0; k < 60; k++) {
       const a = S[(k * 37) % S.length], z = S[(k * 101 + 13) % S.length];
       if (a === z) continue;
       const r = findRoute(n, a.snaps, z.snaps, config.roads);
-      const zielImHauptnetz = z.snaps.some((s) => erreichbar.has(s.edge)) && a.snaps.some((s) => erreichbar.has(s.edge));
-      if (!zielImHauptnetz) continue; // Haltestellen an Straßenstücken, die nur über Straßen außerhalb der Gemeinde angebunden sind
       expect(r, `${a.name} -> ${z.name}`).not.toBeNull();
       geprueft++;
       for (let i = 1; i < r!.edges.length; i++) {
@@ -99,9 +88,36 @@ describe("Routing zwischen echten Haltestellen", () => {
       expect(r!.timeS).toBeGreaterThanOrEqual(r!.lengthM / vmax - 1e-6);
     }
     expect(geprueft).toBeGreaterThanOrEqual(55);
-    // Mindestens 95 Prozent aller Haltestellen liegen im Hauptnetz
-    const imNetz = S.filter((s) => s.snaps.some((sn) => erreichbar.has(sn.edge))).length;
-    expect(imNetz / S.length).toBeGreaterThanOrEqual(0.95);
+  });
+  it("alle Haltestellen liegen im zusammenhängenden Netz (hin und zurück erreichbar, dank 2 km Rand)", () => {
+    const n = world.network;
+    const start = world.stops.find((s) => s.name.includes("Norderstedt Mitte"))!.snaps[0].edge;
+    const suche = (nachbarn: (e: number) => number[]) => {
+      const gesehen = new Set<number>();
+      const stapel = [start];
+      while (stapel.length) {
+        const e = stapel.pop()!;
+        if (gesehen.has(e)) continue;
+        gesehen.add(e);
+        stapel.push(...nachbarn(e));
+      }
+      return gesehen;
+    };
+    const vor = suche((e) => n.outEdges[n.edges[e].to].filter((o) => turnAllowed(n, e, o)));
+    const eingang: number[][] = n.edges.map(() => []);
+    for (const e of n.edges) for (const o of n.outEdges[e.to]) if (turnAllowed(n, e.id, o)) eingang[o].push(e.id);
+    const rueck = suche((e) => eingang[e]);
+    // Ausnahmen müssten mit Begründung in annahmen.md stehen; derzeit gibt es keine
+    const ausnahmen: string[] = [];
+    const ausserhalb = world.stops.filter((s) => !s.snaps.some((x) => vor.has(x.edge) && rueck.has(x.edge))).map((s) => s.name);
+    expect(ausserhalb.filter((name) => !ausnahmen.includes(name))).toEqual([]);
+  });
+  it("Rand: Straßen außerhalb der Gemeinde gehören zum Netz, Haltestellen und Nachfrage nur innerhalb", () => {
+    const [w, s, e, nn] = world.bbox;
+    const ausserhalb = world.network.edges.filter((x) => x.coords.every(([lon, lat]) => lon < w || lon > e || lat < s || lat > nn));
+    expect(ausserhalb.length).toBeGreaterThan(500);
+    for (const st of world.stops) expect(st.coord[0] >= w && st.coord[0] <= e && st.coord[1] >= s && st.coord[1] <= nn).toBe(true);
+    for (const c of world.demand.cells) expect(c.gebiet).not.toBe("");
   });
   it("Einbahnstraßen werden nur in Fahrtrichtung befahren (keine Gegenrichtung im Netz)", () => {
     const ex = new TestOsm().node(1, 0, 0).node(2, 1, 0);

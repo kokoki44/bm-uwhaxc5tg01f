@@ -3,6 +3,7 @@ import { parts, type CivilMs } from "../calendar/civil";
 import { config, schulferien } from "../config";
 import { t, type TextKey } from "../i18n";
 import { h } from "./dom";
+import type { Stufe } from "./keys";
 
 const euro = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
 const zwei = (n: number) => String(n).padStart(2, "0");
@@ -24,7 +25,7 @@ export function baueKopfleiste(
   firma: { name: string; farbe: string },
   region: string | null,
   suedhalbkugel: boolean,
-  aktionen: { tempo(stufe: 0 | 1 | 2 | 3 | 4): void; hilfe(): void },
+  aktionen: { tempo(stufe: 0 | Stufe): void; hilfe(): void },
 ): Kopfleiste {
   const root = document.getElementById("kopfleiste")!;
   root.replaceChildren();
@@ -39,7 +40,7 @@ export function baueKopfleiste(
       title: i === 0 ? t("kopf.pause.hilfe") : t("kopf.tempo.hilfe", { tempo: s, taste: i }),
       text: i === 0 ? `⏸ ${t("kopf.pause")}` : `▶ ${t("kopf.tempo", { tempo: s })}`,
     });
-    b.addEventListener("click", () => aktionen.tempo(i as 0 | 1 | 2 | 3 | 4));
+    b.addEventListener("click", () => aktionen.tempo(i as 0 | Stufe));
     return b;
   });
   const hilfe = h("button", { type: "button", "data-testid": "hilfe", text: `? ${t("kopf.hilfe")}` });

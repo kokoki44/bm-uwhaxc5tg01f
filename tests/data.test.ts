@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { config } from "../src/config";
 import { parseOsmGz } from "../src/data/osm";
+import { assembleRings, pointInRings } from "../src/world/geo";
+import { isBusWay } from "../src/world/roads";
 import { ladeNorderstedt } from "./helpers/norderstedt";
 
 describe("Testdatensatz Norderstedt", () => {
@@ -23,6 +25,19 @@ describe("Testdatensatz Norderstedt", () => {
     expect(d.elements.some((e) => e.tags?.natural === "water" || e.tags?.waterway)).toBe(true);
     expect(d.elements.some((e) => e.tags?.leisure === "park" || e.tags?.landuse === "forest")).toBe(true);
     expect(d.elements.some((e) => e.tags?.boundary === "administrative" && e.tags.admin_level === "8" && e.tags.name === "Norderstedt")).toBe(true);
+  });
+  it("Rand von 2 km: außerhalb der Gemeinde nur Straßen für Busse, keine Gebäude, kein Grün, keine Haltestellen", async () => {
+    const d = await ladeNorderstedt();
+    const grenze = d.elements.find((e) => e.tags?.admin_level === "8" && e.tags.name === "Norderstedt")!;
+    const ringe = assembleRings(grenze.members!.filter((m) => m.geometry).map((m) => m.geometry!.map((p) => [p!.lon, p!.lat] as [number, number])));
+    const innen = (e: { lat?: number; lon?: number; geometry?: ({ lat: number; lon: number } | null)[] }) =>
+      e.lat !== undefined ? pointInRings([e.lon!, e.lat], ringe) : (e.geometry ?? []).some((p) => p && pointInRings([p.lon, p.lat], ringe));
+    const aussen = d.elements.filter((e) => e.type !== "relation" && !innen(e));
+    const wege = aussen.filter((e) => e.type === "way");
+    expect(wege.length).toBeGreaterThan(500);
+    expect(wege.filter((w) => !isBusWay(w.tags, config.roads)).map((w) => `${w.id} ${JSON.stringify(w.tags)}`)).toEqual([]);
+    const knoten = aussen.filter((e) => e.type === "node");
+    expect(knoten.every((k) => k.tags?.highway === "traffic_signals")).toBe(true);
   });
   it("Datei ist unverändert (Hash). Nach bewusstem Neuabruf setzt npm run daten:norderstedt den Hash neu", () => {
     const pfad = "public/" + config.data.norderstedtPath;

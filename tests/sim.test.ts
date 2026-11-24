@@ -26,12 +26,18 @@ describe("Simulationskern", () => {
     s.advance(5000);
     expect(s.status()).toEqual({ ...vorher, speed: 0 });
   });
-  it("ein Spieltag bei 60-fach dauert 24 Minuten Echtzeit (60 mal Echtzeit)", () => {
+  it.each([
+    [60, 24 * 60],
+    [240, 6 * 60],
+    [600, 2.4 * 60],
+  ])("ein Spieltag bei %i-fach dauert %i s Echtzeit", (tempo, echtzeitS) => {
     const s = mk();
-    s.setSpeed(60);
-    // 1440 s Echtzeit in Schritten wie im Worker
-    for (let i = 0; i < 14400; i++) s.advance(config.sim.tickRealMs);
+    s.setSpeed(tempo);
+    // Echtzeit in Schritten wie im Worker; der Takt bleibt fest
+    const takte = Math.round((echtzeitS * 1000) / config.sim.tickRealMs);
+    for (let i = 0; i < takte; i++) s.advance(config.sim.tickRealMs);
     expect(s.status().gameSeconds).toBeCloseTo(86400, 6);
+    expect(s.status().ticks).toBe(takte);
   });
   it("jede Stufe: Spielzeit = Stufe mal Echtzeit", () => {
     for (const tempo of config.sim.speeds) {

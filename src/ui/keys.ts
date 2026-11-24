@@ -1,5 +1,7 @@
 /** Feste Tastenkürzel (Konzept, Festlegungen zu Bedienung und Darstellung). Nicht änderbar. */
-export type Aktion = { art: "pauseUmschalten" } | { art: "tempo"; stufe: 1 | 2 | 3 | 4 } | { art: "fensterSchliessen" } | { art: "speichern" };
+/** Geschwindigkeitsstufe auf den Tasten 1 bis 5 (Index in config.sim.speeds). */
+export type Stufe = 1 | 2 | 3 | 4 | 5;
+export type Aktion = { art: "pauseUmschalten" } | { art: "tempo"; stufe: Stufe } | { art: "fensterSchliessen" } | { art: "speichern" } | { art: "testansicht" };
 
 export interface Taste {
   key: string;
@@ -12,10 +14,11 @@ export interface Taste {
 
 export function aktionFuer(t: Taste): Aktion | null {
   if (t.key === "Escape") return { art: "fensterSchliessen" };
+  if (t.key === "F3") return { art: "testansicht" };
   if ((t.ctrlKey || t.metaKey) && !t.altKey && (t.key === "s" || t.key === "S")) return { art: "speichern" };
   if (t.inEingabe || t.ctrlKey || t.metaKey || t.altKey) return null;
   if (t.key === " " || t.key === "Spacebar") return { art: "pauseUmschalten" };
-  if (t.key === "1" || t.key === "2" || t.key === "3" || t.key === "4") return { art: "tempo", stufe: Number(t.key) as 1 | 2 | 3 | 4 };
+  if (/^[1-5]$/.test(t.key)) return { art: "tempo", stufe: Number(t.key) as Stufe };
   return null;
 }
 
@@ -34,7 +37,7 @@ export class Zeitsteuerung {
   get pausiert(): boolean {
     return this.aktuell === 0;
   }
-  setzeStufe(stufe: 1 | 2 | 3 | 4): number {
+  setzeStufe(stufe: Stufe): number {
     this.aktuell = this.speeds[stufe];
     this.letzteStufe = this.aktuell;
     return this.aktuell;

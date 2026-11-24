@@ -88,7 +88,7 @@ export function validateConfig(c: unknown): Config {
   };
   if (!cfg?.sim || !(cfg.sim.tickRealMs > 0)) bad("sim.tickRealMs");
   if (!Array.isArray(cfg.sim.speeds) || !cfg.sim.speeds.includes(cfg.sim.startSpeed)) bad("sim.speeds/startSpeed");
-  if (cfg.sim.speeds.length !== 5 || cfg.sim.speeds[0] !== 0) bad("sim.speeds: Pause und vier Stufen (Tasten 1 bis 4)");
+  if (cfg.sim.speeds.length !== 6 || cfg.sim.speeds[0] !== 0) bad("sim.speeds: Pause und fünf Stufen (Tasten 1 bis 5)");
   if (!(cfg.sim.maxCatchUpTicks >= 1)) bad("sim.maxCatchUpTicks");
   if (!cfg.map || cfg.map.center?.length !== 2 || !cfg.map.farben) bad("map");
   if (!cfg.roads || !(cfg.roads.fallbackSpeedKmh > 0) || !(cfg.roads.ampelZuschlagS >= 0)) bad("roads");

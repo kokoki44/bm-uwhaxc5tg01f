@@ -20,6 +20,13 @@ const zeigen = () => (status.innerText = Object.values(zeilen).filter(Boolean).j
 
 const map = createMap("map");
 
+// Testansicht (Statuszeile) standardmäßig aus, F3 schaltet sie jederzeit um, auch im Einrichtungsdialog
+document.addEventListener("keydown", (e) => {
+  if (aktionFuer({ key: e.key })?.art !== "testansicht") return;
+  e.preventDefault();
+  status.hidden = !status.hidden;
+});
+
 createStore().then((store) => {
   zeilen.speicher = t("status.speicher", { art: t(store.kind === "sqlite" ? "status.speicher.desktop" : "status.speicher.browser") });
   zeigen();
@@ -52,7 +59,7 @@ function zeigeHilfe(): void {
     t("hilfe.titel"),
     h("div", {},
       h("h3", { text: t("hilfe.tasten") }),
-      h("ul", {}, li("hilfe.taste.leertaste"), li("hilfe.taste.zahlen"), li("hilfe.taste.speichern"), li("hilfe.taste.esc")),
+      h("ul", {}, li("hilfe.taste.leertaste"), li("hilfe.taste.zahlen"), li("hilfe.taste.speichern"), li("hilfe.taste.esc"), li("hilfe.taste.f3")),
       h("h3", { text: t("hilfe.karte") }),
       h("p", { text: t("hilfe.karte.text") }),
       h("p", { text: t("hilfe.haltestelle") }),

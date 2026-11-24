@@ -6,7 +6,7 @@ import { setLanguage, t } from "../src/i18n";
 describe("Konfiguration", () => {
   it("wird geladen und enthält die Simulationswerte", () => {
     expect(config.sim.tickRealMs).toBeGreaterThan(0);
-    expect(config.sim.speeds).toEqual([0, 1, 5, 20, 60]);
+    expect(config.sim.speeds).toEqual([0, 1, 10, 60, 240, 600]);
   });
   it("lehnt unvollständige Konfiguration ab", () => {
     expect(() => validateConfig({})).toThrow(/Konfiguration ungültig/);

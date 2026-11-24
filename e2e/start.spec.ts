@@ -33,8 +33,11 @@ test("Web-Version startet: Norderstedt laden, Karte, Zeit, Tasten, Fenster", asy
   page.on("pageerror", (e) => fehler.push(String(e)));
   await neuesSpielMitTastatur(page);
 
-  // Status aus Etappe 0 und Welt
+  // Testansicht (Statuszeile): standardmäßig aus, F3 schaltet sie ein
   const status = page.getByTestId("status");
+  await expect(status).toBeHidden();
+  await page.keyboard.press("F3");
+  await expect(status).toBeVisible();
   await expect(status).toContainText("IndexedDB (Browser)");
   await expect(status).toContainText(/Testdatensatz Norderstedt: \d+ Elemente/);
   await expect(status).toContainText(/Norderstedt: \d+ Haltestellen, \d+ Straßenabschnitte, \d+ Ampeln/);
@@ -58,7 +61,7 @@ test("Web-Version startet: Norderstedt laden, Karte, Zeit, Tasten, Fenster", asy
   await expect(page.getByTestId("uhrzeit")).toHaveText(/^(Mo|Di|Mi|Do|Fr|Sa|So) \d{2}\.\d{2}\.\d{4} \d{2}:\d{2}$/);
   await expect(page.getByTestId("tempo-1")).toHaveAttribute("aria-pressed", "true");
 
-  // Tasten: Leertaste pausiert, nochmal weiter, 3 = 20-fach, 4 = 60-fach
+  // Tasten: Leertaste pausiert, nochmal weiter, 1 bis 5 wählen 1-, 10-, 60-, 240- und 600-fach
   await page.locator("#map canvas").click({ position: { x: 5, y: 5 } });
   await page.keyboard.press(" ");
   await expect(page.getByTestId("tempo-0")).toHaveAttribute("aria-pressed", "true");
@@ -67,11 +70,13 @@ test("Web-Version startet: Norderstedt laden, Karte, Zeit, Tasten, Fenster", asy
   expect(await ticks()).toBe(stand);
   await page.keyboard.press(" ");
   await expect(page.getByTestId("tempo-1")).toHaveAttribute("aria-pressed", "true");
-  await page.keyboard.press("3");
-  await expect(page.getByTestId("tempo-20")).toHaveAttribute("aria-pressed", "true");
-  await page.keyboard.press("4");
-  await expect(page.getByTestId("tempo-60")).toHaveAttribute("aria-pressed", "true");
-  await expect(status).toContainText("Geschwindigkeit 60-fach");
+  for (const [taste, tempo] of [["2", 10], ["3", 60], ["4", 240], ["5", 600]] as const) {
+    await page.keyboard.press(taste);
+    await expect(page.getByTestId(`tempo-${tempo}`)).toHaveAttribute("aria-pressed", "true");
+    await expect(status).toContainText(`Geschwindigkeit ${tempo}-fach`);
+  }
+  await page.keyboard.press("F3");
+  await expect(status).toBeHidden();
 
   // Karte: Zoomen mit dem Mausrad, Verschieben mit gedrückter Maustaste
   const karte = page.locator("#map");
@@ -97,6 +102,39 @@ test("Web-Version startet: Norderstedt laden, Karte, Zeit, Tasten, Fenster", asy
 
   await page.screenshot({ path: info.outputPath("karte.png") });
   expect(fehler).toEqual([]);
+});
+
+test("Simulations-Worker schafft 600-fach ohne Stocken", async ({ page }, info) => {
+  await neuesSpielMitTastatur(page);
+  await page.locator("#map canvas").click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press("5");
+  await expect(page.getByTestId("tempo-600")).toHaveAttribute("aria-pressed", "true");
+  // Statusmeldungen des Workers mitschreiben: Takt und Spielzeit je Meldung mit Zeitstempel
+  const messung = await page.evaluate(async () => {
+    const status = document.getElementById("status")!;
+    const proben: { t: number; takte: number; spiel: number }[] = [];
+    const lese = () => {
+      const m = /(\d+) Takte, Spielzeit ([\d.]+) s/.exec(status.textContent ?? "");
+      if (m) proben.push({ t: performance.now(), takte: Number(m[1]), spiel: Number(m[2]) });
+    };
+    const beobachter = new MutationObserver(lese);
+    beobachter.observe(status, { childList: true, characterData: true, subtree: true });
+    lese();
+    await new Promise((r) => setTimeout(r, 10000));
+    beobachter.disconnect();
+    const a = proben[0], z = proben[proben.length - 1];
+    let maxLuecke = 0;
+    for (let i = 1; i < proben.length; i++) maxLuecke = Math.max(maxLuecke, proben[i].t - proben[i - 1].t);
+    return { dauerMs: z.t - a.t, takte: z.takte - a.takte, spielS: z.spiel - a.spiel, meldungen: proben.length, maxLueckeMs: maxLuecke };
+  });
+  const sollTakte = messung.dauerMs / 100;
+  info.annotations.push({ type: "messung-600-fach", description: JSON.stringify(messung) });
+  console.log("Messung 600-fach:", JSON.stringify(messung));
+  // Fester Takt: mindestens 95 Prozent der Solltakte, Spielzeit = 600 mal Echtzeit, keine Lücke über 1 s
+  expect(messung.takte).toBeGreaterThanOrEqual(sollTakte * 0.95);
+  expect(messung.spielS).toBeCloseTo(messung.takte * 60, 0);
+  expect(messung.spielS / (messung.dauerMs / 1000)).toBeGreaterThan(600 * 0.95);
+  expect(messung.maxLueckeMs).toBeLessThan(1000);
 });
 
 /** Kleiner Auszug im Overpass-Format: Gemeindegrenze, eine Straße, eine Haltestelle. */

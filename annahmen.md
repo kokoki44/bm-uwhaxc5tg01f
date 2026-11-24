@@ -8,7 +8,7 @@ Einträge, die Koko prüft. Jeder Wert steht in der zentralen Konfiguration (`sr
 | --- | --- | --- | --- |
 | A0-1 | Simulationstakt `sim.tickRealMs` | 100 ms (10 Takte pro Sekunde) | Fein genug für flüssige Bewegung, grob genug für 60-fachen Zeitraffer mit vielen Bussen. Spielzeit pro Takt = Tempo mal Takt. |
 | A0-2 | Nachholgrenze `sim.maxCatchUpTicks` | 20 Takte | Nach einer Pause des Browser-Tabs rechnet die Simulation nicht Minuten nach, sondern höchstens 2 Sekunden. |
-| A0-3 | Zeitraffer-Stufen `sim.speeds` | 0, 1, 5, 20, 60 | Aus dem Konzept (Vorschlag 5, 20, 60), dazu Pause und 1-fach. |
+| A0-3 | Geschwindigkeitsstufen `sim.speeds` | 0, 1, 10, 60, 240, 600 (Tasten 1 bis 5) | Seit 25.11.2026 aus dem Konzept (vorher 1, 5, 20, 60). Der Takt bleibt fest bei 100 ms, die Spielzeit je Takt ist Stufe mal 0,1 s (bei 600-fach 60 s je Takt). |
 | A0-4 | Kartenmitte und Zoom | Norderstedt, Zoom 12 | Nur Startansicht des leeren Kartenrahmens. |
 | A0-5 | Testdatensatz als gzip-JSON im Overpass-Format | `norderstedt.osm.json.gz` (2,3 MB) | Eine Datei, Web und Desktop lesen sie gleich. Die Geofabrik-Datei für Schleswig-Holstein wäre viel größer und müsste erst zugeschnitten werden. Overpass liefert genau die Gemeindegrenze. |
 | A0-6 | Speicher-Tabelle und Format | Ein Datensatz je Spielstand: Version, Zeitpunkt, Inhalt als JSON | Einfach und für beide Speicher gleich. Das Format der Spielstände füllt sich ab Etappe 4b. |
@@ -25,7 +25,7 @@ Gebaut wird nur, was die jeweilige Etappe davon braucht.
 
 | Nr. | Thema | Festlegung | Etappe 1 baut davon |
 | --- | --- | --- | --- |
-| O-1 | Tastenkürzel (fest, nicht änderbar) | Leertaste: Pause und Weiter. Tasten 1 bis 4: Zeitraffer-Stufen. Strg+S (Mac: Cmd+S): Speichern. Esc: schließt Fenster. Karte verschieben mit gedrückter Maustaste, zoomen mit dem Mausrad. | Leertaste, Tasten 1 bis 4, Esc, Karte verschieben und zoomen. Strg+S erst mit dem Speichern in Etappe 4b. |
+| O-1 | Tastenkürzel (fest, nicht änderbar) | Leertaste: Pause und Weiter. Tasten 1 bis 5: Geschwindigkeitsstufen. Strg+S (Mac: Cmd+S): Speichern. Esc: schließt Fenster. Karte verschieben mit gedrückter Maustaste, zoomen mit dem Mausrad. | Leertaste, Tasten 1 bis 5, Esc, Karte verschieben und zoomen. Strg+S erst mit dem Speichern in Etappe 4b. |
 | O-2 | Einstellungen | Nur Ton an oder aus, Intervall des Autosave, Textgröße. | Nichts (kein Einstellungsfenster in Etappe 1). |
 | O-3 | Kartenstil | Ruhiger, heller OSM-Stil mit gut lesbaren Straßen (nach Bedeutung gestaffelt), Wasser, Grün und Gebäuden. Zoomstufen vom ganzen Stadtgebiet bis zur einzelnen Haltestelle. | Stil mit Straßen nach Bedeutung, Gebäuden, Grün, Wasser, Haltestellen. Zoomstufen als Konfigurationswerte. |
 | O-4 | Fahrzeugsymbole | Farbige Punkte in der Linienfarbe, ab starkem Zoom eine kleine Busform mit Fahrtrichtung. | Nichts (es gibt noch keine Fahrzeuge). |
@@ -52,7 +52,7 @@ Das Modell schätzt Arbeitsplätze, die mit sozialversicherungspflichtig Beschä
 | A1-3 | Standardgeschwindigkeit je Straßenklasse ohne maxspeed `roads.defaultSpeedKmh` | zum Beispiel Hauptstraßen 50, Wohnstraßen 30, verkehrsberuhigt 7, Autobahn 100 km/h | Innerorts gilt in Deutschland 50 km/h, Wohngebiete sind meist Tempo-30-Zonen, verkehrsberuhigte Bereiche Schrittgeschwindigkeit, Busse auf Autobahnen höchstens 100 km/h. |
 | A1-4 | Für Busse befahrbare Straßen `roads.busHighways` | Autobahn bis Wohnstraße, verkehrsberuhigte Bereiche, Busstraßen. Wirtschaftswege (service) nur mit bus=yes | Fuß-, Rad- und Feldwege sind für Busse nicht befahrbar. Zufahrten (service) sind meist privat, Busbahnhöfe sind in OSM mit bus=yes markiert. |
 | A1-5 | Wenden | Nur in Sackgassen | Linienbusse wenden nicht mitten auf der Straße. |
-| A1-6 | Abbiegeregeln mit Weg als "via" | werden nicht ausgewertet. In Norderstedt bleiben 17 von 131 Regeln unberücksichtigt (Weg als "via", Ausnahme für Busse oder unvollständige Relation) | Weg als "via" ist selten und aufwendig. Regeln mit Knoten als "via" werden ausgewertet, Ausnahmen für Busse (except=bus oder psv) beachtet. |
+| A1-6 | Abbiegeregeln mit Weg als "via" | werden nicht ausgewertet. Mit dem Rand von 2 km bleiben 13 von 215 Regeln unberücksichtigt (Weg als "via", Ausnahme für Busse oder unvollständige Relation); vorher 17 von 131. Von Koko akzeptiert. | Weg als "via" ist selten und aufwendig. Regeln mit Knoten als "via" werden ausgewertet, Ausnahmen für Busse (except=bus oder psv) beachtet. |
 | A1-7 | Haltestellen | highway=bus_stop, dazu Bussteige (public_transport=platform mit bus=yes) ohne bus_stop-Knoten im Umkreis von 15 m | Vermeidet doppelte Haltestellen, wenn Haltestelle und Bussteig beide erfasst sind. |
 | A1-8 | Zuordnung der Haltestelle zur Straße | Fangradius 60 m; neben der Straße zählt die rechte Fahrtrichtung, direkt auf der Straße beide Richtungen | Rechtsverkehr. Mit 60 m werden alle 259 Haltestellen in Norderstedt zugeordnet. |
 
@@ -64,7 +64,7 @@ Das Modell schätzt Arbeitsplätze, die mit sozialversicherungspflichtig Beschä
 | A1-10 | Wohnfläche je Einwohner | 47,4 m² | Größenordnung der Wohnfläche je Einwohner in Deutschland laut Statistischem Bundesamt (rund 47 m² in den letzten Jahren). |
 | A1-11 | Wohnanteil der Geschossfläche | 80 Prozent | Wände, Treppenhäuser und Keller zählen nicht zur Wohnfläche. |
 | A1-12 | Geschosse ohne Angabe in OSM | Einfamilienhaus 1,5, Mehrfamilienhaus 4, Wohngebäude 2,5, unbestimmtes Gebäude 2, Arbeitsgebäude 1,5 | Einfamilienhäuser mit ausgebautem Dachgeschoss, Gewerbehallen meist eingeschossig. |
-| A1-13 | Fläche je Arbeitsplatz | Büro 25 m², Gewerbe 60 m², Einzelhandel 45 m², Industrie 90 m², Lager 150 m², Schule 120 m², sonstige 80 m² | Erfahrungswerte der Flächenplanung je Nutzung. Gewerbe zuerst mit 35 m² ergab 69.313 Arbeitsplätze, deutlich über dem Korridor. 60 m² passt zu gemischt genutzten Gewerbebauten mit Hallenanteil. |
+| A1-13 | Fläche je Arbeitsplatz | Büro 25 m², Gewerbe 60 m², Einzelhandel 45 m², Industrie 90 m², Lager 150 m², Schule 120 m², sonstige 80 m² | Erfahrungswerte der Flächenplanung je Nutzung. Gewerbe zuerst mit 35 m² ergab 69.313 Arbeitsplätze, deutlich über dem Korridor. 60 m² passt zu gemischt genutzten Gewerbebauten mit Hallenanteil. **Nur an Norderstedt kalibriert: muss in Etappe 6 an einer zweiten Region gegengeprüft werden.** |
 | A1-14 | Gebäude ohne Art (building=yes) | Nutzung aus der umgebenden Landnutzung; außerhalb von Wohn- und Gewerbeflächen zur Hälfte als Wohnen gezählt | Viele Wohnhäuser sind in OSM nur als building=yes erfasst. |
 | A1-15 | Nebengebäude | Garagen, Schuppen, Carports, Parkhäuser und Gebäude unter 30 m² zählen nicht | Dort wohnt und arbeitet niemand. |
 | A1-16 | Orte von Interesse | Kategorien Schule, Einkauf, Freizeit, Versorgung aus amenity, shop und leisure | Entsprechen den Reisezwecken im Konzept (Schule, Einkauf, Freizeit), Versorgung für Ärzte, Ämter und Krankenhäuser. |
@@ -84,3 +84,14 @@ Das Modell schätzt Arbeitsplätze, die mit sozialversicherungspflichtig Beschä
 | A1-25 | Spielzeit | Start mit Datum und Uhrzeit des Rechners, auf die Minute; keine Zeitzonen und keine Sommerzeitumstellung im Spiel | Das Konzept verlangt den Start in der Gegenwart. Eine Zeitumstellung würde Fahrpläne mitten in der Nacht verschieben. |
 | A1-26 | Standard-Startkapital `setup.startkapitalStandard` | 2.000.000 Euro | Nur Vorbelegung, frei änderbar. Reicht für einen kleinen Betriebshof und einige Gebrauchtbusse. |
 | A1-27 | Abbruch eines Ladevorgangs | Bei Fehler zurück zur Einrichtung | Klare Rückmeldung statt halb geladener Welt. |
+
+### Nachträge nach der Freigabe von Etappe 1 (25.11.2026)
+
+| Nr. | Thema | Festlegung | Begründung |
+| --- | --- | --- | --- |
+| A1-28 | Rand um die Gemeinde | 2 km, nur Straßen, die ein Bus befahren darf, mit Ampeln und Abbiegeregeln. Haltestellen, Gebäude, Grün und Nachfrage nur in der Gemeinde | Vorgabe Koko. Ergebnis: alle 259 Haltestellen liegen im zusammenhängenden Netz (hin und zurück erreichbar), es gibt keine Ausnahmen. Datei 2,15 MB. |
+| A1-29 | Statuszeile | Nur als Testansicht, standardmäßig ausgeblendet, F3 schaltet sie ein und aus (auch im Einrichtungsdialog). F3 steht in der Hilfe | Vorgabe Koko. |
+| A1-30 | Strg+S (Mac: Cmd+S) | Belegt, aber ohne Wirkung bis Etappe 4b (Speichern und Laden) | Von Koko akzeptiert. |
+| A1-31 | Fahrzeiten | Ohne Verkehrsdichte nach Tageszeit bis Etappe 4a | Von Koko akzeptiert. Die Verkehrsdichte gehört zum Betrieb. |
+| A1-32 | Ortsteile von Norderstedt | In OSM nicht als Verwaltungsgrenzen erfasst. Die Teilung in Subdivisionen ist nur an einer Teststadt geprüft | Von Koko akzeptiert. |
+| A1-33 | Leistung bei 600-fach | Gemessen im Browsertest: 100 von 100 Takten in 10 s, Spielzeit genau 600 mal Echtzeit, längste Lücke zwischen zwei Takten 102 ms | Der Worker rechnet bisher nur die Zeit. Die Messung läuft bei jeder Abgabe weiter mit und wird mit jeder Etappe aussagekräftiger. Zählwerte statt Einzelfahrgästen kommen mit Etappe 4a. |

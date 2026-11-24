@@ -31,11 +31,13 @@ describe("Einrichtungsdialog: Prüfung", () => {
 });
 
 describe("Tastenkürzel", () => {
-  it("Leertaste, 1 bis 4, Esc, Strg+S und Cmd+S", () => {
+  it("Leertaste, 1 bis 5, Esc, F3, Strg+S und Cmd+S", () => {
     expect(aktionFuer({ key: " " })).toEqual({ art: "pauseUmschalten" });
     expect(aktionFuer({ key: "1" })).toEqual({ art: "tempo", stufe: 1 });
-    expect(aktionFuer({ key: "4" })).toEqual({ art: "tempo", stufe: 4 });
-    expect(aktionFuer({ key: "5" })).toBeNull();
+    expect(aktionFuer({ key: "5" })).toEqual({ art: "tempo", stufe: 5 });
+    expect(aktionFuer({ key: "6" })).toBeNull();
+    expect(aktionFuer({ key: "0" })).toBeNull();
+    expect(aktionFuer({ key: "F3" })).toEqual({ art: "testansicht" });
     expect(aktionFuer({ key: "Escape" })).toEqual({ art: "fensterSchliessen" });
     expect(aktionFuer({ key: "s", ctrlKey: true })).toEqual({ art: "speichern" });
     expect(aktionFuer({ key: "s", metaKey: true })).toEqual({ art: "speichern" });
@@ -47,12 +49,12 @@ describe("Tastenkürzel", () => {
   });
   it("Zeitsteuerung: Leertaste kehrt zur letzten Stufe zurück", () => {
     const z = new Zeitsteuerung(config.sim.speeds, 1);
-    expect(z.setzeStufe(3)).toBe(20);
+    expect(z.setzeStufe(4)).toBe(240);
     expect(z.umschalten()).toBe(0);
     expect(z.pausiert).toBe(true);
-    expect(z.umschalten()).toBe(20);
+    expect(z.umschalten()).toBe(240);
     z.pause();
-    expect(z.setzeStufe(4)).toBe(60);
-    expect(config.sim.speeds.slice(1)).toEqual([1, 5, 20, 60]);
+    expect(z.setzeStufe(5)).toBe(600);
+    expect([1, 2, 3, 4, 5].map((s) => z.setzeStufe(s as 1 | 2 | 3 | 4 | 5))).toEqual([1, 10, 60, 240, 600]);
   });
 });
