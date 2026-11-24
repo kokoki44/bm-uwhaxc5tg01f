@@ -5,14 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bus-Manager</title>
     <style>
-      html, body, #map { margin: 0; height: 100%; width: 100%; font-family: system-ui, sans-serif; }
-      #status { position: absolute; top: 8px; left: 8px; z-index: 2; background: rgba(255,255,255,.92);
-        padding: 6px 10px; border-radius: 4px; font-size: 13px; line-height: 1.4; }
+      :root { --text: #1b1b1b; --rand: #8a8a8a; --akzent: #0b5394; --fehler: #a4161a; --flaeche: #ffffff; --kopf: 52px; }
+      html, body { margin: 0; height: 100%; width: 100%; font-family: system-ui, sans-serif; color: var(--text); font-size: 15px; }
+      #map { position: absolute; inset: 0; }
+      body.im-spiel #map { top: var(--kopf); }
+      button, input, select { font: inherit; color: inherit; }
+      button { background: var(--flaeche); border: 1px solid var(--rand); border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+      button[aria-pressed="true"] { background: var(--akzent); color: #fff; border-color: var(--akzent); font-weight: 700; text-decoration: underline; }
+      :focus-visible { outline: 3px solid #e8a400; outline-offset: 2px; }
+      #kopfleiste { position: absolute; top: 0; left: 0; right: 0; height: var(--kopf); display: none; align-items: center; gap: 18px;
+        padding: 0 12px; background: var(--flaeche); border-bottom: 1px solid #c8c8c8; z-index: 3; box-sizing: border-box; }
+      body.im-spiel #kopfleiste { display: flex; }
+      #kopfleiste .feld { display: flex; flex-direction: column; line-height: 1.2; }
+      #kopfleiste .klein { font-size: 12px; color: #444; }
+      #kopfleiste .firma { display: flex; align-items: center; gap: 6px; font-weight: 700; }
+      #kopfleiste .farbfeld { width: 14px; height: 14px; border: 1px solid #333; display: inline-block; }
+      #zeitsteuerung { display: flex; gap: 4px; }
+      #status { position: absolute; bottom: 8px; left: 8px; z-index: 2; background: rgba(255,255,255,.94); padding: 6px 10px;
+        border-radius: 4px; font-size: 12px; line-height: 1.4; max-width: 60ch; }
+      .dialog { max-width: 520px; width: calc(100% - 40px); border: 1px solid var(--rand); border-radius: 6px; padding: 18px 22px; }
+      .dialog::backdrop { background: rgba(30, 40, 50, .35); }
+      .dialog h1 { font-size: 20px; margin: 0 0 12px; }
+      .dialog fieldset { border: 0; padding: 0; margin: 0 0 12px; }
+      .dialog label { display: block; margin: 10px 0 4px; font-weight: 600; }
+      .dialog legend { font-weight: 600; margin-bottom: 4px; }
+      .dialog .option { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; margin: 4px 0; }
+      .dialog input[type=text], .dialog input[type=number] { width: 100%; box-sizing: border-box; padding: 6px; border: 1px solid var(--rand); border-radius: 4px; }
+      .dialog .hilfe { font-size: 12px; color: #444; margin: 2px 0 0; }
+      .dialog .fehler { color: var(--fehler); font-size: 13px; margin: 4px 0 0; }
+      .dialog .fehler::before { content: "⚠ "; }
+      .dialog .aktionen { margin-top: 16px; display: flex; justify-content: flex-end; }
+      .dialog .primaer { background: var(--akzent); color: #fff; border-color: var(--akzent); padding: 8px 16px; font-weight: 700; }
+      progress { width: 100%; height: 14px; }
+      .fenster { position: absolute; top: calc(var(--kopf) + 12px); right: 12px; z-index: 4; background: var(--flaeche); border: 1px solid var(--rand);
+        border-radius: 6px; padding: 12px 16px; min-width: 260px; max-width: 420px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+      .fenster header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+      .fenster h2 { font-size: 17px; margin: 0; }
+      .fenster ul { padding-left: 18px; }
     </style>
   </head>
   <body>
+    <div id="kopfleiste" role="banner"></div>
     <div id="map"></div>
-    <div id="status" data-testid="status"></div>
+    <div id="status" data-testid="status" role="status" aria-live="polite"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

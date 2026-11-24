@@ -1,16 +1,23 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
+import { jetztCivil } from "../src/calendar/civil";
 import { config } from "../src/config";
+import { neuesSpiel, pruefeSetup, type SpielZustand } from "../src/game/setup";
 import { SimCore } from "../src/sim/core";
 import { IndexedDbStore } from "../src/storage/indexeddb";
+import { istFreigeschaltet } from "../src/world/unlock";
+import { buildWorld, type World } from "../src/world/world";
+import { ladeNorderstedt, netzSperren } from "./helpers/norderstedt";
 
 /**
  * Rauchtest durch den Kernzyklus. Wird mit jeder Etappe um echte Schritte erweitert.
- * Etappe 0: Gerüst. Schritte, die erst später existieren, sind als offen markiert (todo).
+ * Schritte, die erst später existieren, sind als offen markiert (todo).
  */
 interface Ctx {
   store: IndexedDbStore;
   sim: SimCore;
+  world?: World;
+  spiel?: SpielZustand;
 }
 
 const schritte: { name: string; seit: string; run?: (c: Ctx) => Promise<void> | void }[] = [
@@ -23,7 +30,28 @@ const schritte: { name: string; seit: string; run?: (c: Ctx) => Promise<void> | 
       expect(c.sim.status().ticks).toBeGreaterThan(0);
     },
   },
-  { name: "Gemeinde wählen", seit: "1" },
+  {
+    name: "Gemeinde wählen (Einrichtung, Norderstedt offline laden, Welt aufbauen)",
+    seit: "1",
+    run: async (c) => {
+      const setup = pruefeSetup({ gemeinde: { art: "norderstedt" }, startkapital: "2000000", firmenname: "Rauchtest Bus", firmenfarbe: "#123456" }, config.setup);
+      expect(setup.ok).toBe(true);
+      if (!setup.ok) return;
+      const entsperren = netzSperren();
+      try {
+        c.world = buildWorld(await ladeNorderstedt(), config);
+      } finally {
+        entsperren();
+      }
+      c.spiel = neuesSpiel(setup.werte, c.world, jetztCivil());
+      expect(c.world.gemeinde.name).toBe("Norderstedt");
+      expect(c.world.stops.length).toBeGreaterThan(0);
+      expect(c.world.network.edges.length).toBeGreaterThan(0);
+      expect(c.world.demand.cells.length).toBeGreaterThan(0);
+      expect(istFreigeschaltet(c.spiel.freischaltungen, c.world.gebiete[0].id)).toBe(true);
+      expect(c.spiel.kontostandEur).toBe(2000000);
+    },
+  },
   { name: "Betriebshof bauen", seit: "2" },
   { name: "Bus kaufen", seit: "3a" },
   { name: "Fahrer einstellen", seit: "3a" },

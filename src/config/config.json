@@ -8,7 +8,80 @@
   "map": {
     "center": [9.9876, 53.7068],
     "zoom": 12,
-    "backgroundColor": "#e8eef2"
+    "minZoom": 10,
+    "maxZoom": 19,
+    "zoomGebaeude": 13,
+    "zoomNebenstrassen": 13,
+    "zoomServicewege": 15,
+    "zoomHaltestellen": 13,
+    "backgroundColor": "#e8eef2",
+    "farben": {
+      "hintergrund": "#f4f2ee",
+      "wasser": "#9cc3e0",
+      "gruen": "#cfe3c0",
+      "gebaeude": "#ddd7cd",
+      "gebaeudeRand": "#c2b9ab",
+      "strasseRand": "#a9a49b",
+      "autobahn": "#e8a94a",
+      "hauptstrasse": "#f3cf7e",
+      "nebenstrasse": "#ffffff",
+      "grenze": "#6b5b95",
+      "haltestelle": "#0b5394"
+    }
+  },
+  "roads": {
+    "busHighways": [
+      "motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link",
+      "secondary", "secondary_link", "tertiary", "tertiary_link", "unclassified",
+      "residential", "living_street", "busway", "bus_guideway", "road"
+    ],
+    "defaultSpeedKmh": {
+      "motorway": 100, "motorway_link": 60, "trunk": 80, "trunk_link": 50,
+      "primary": 50, "primary_link": 40, "secondary": 50, "secondary_link": 40,
+      "tertiary": 50, "tertiary_link": 40, "unclassified": 50, "residential": 30,
+      "living_street": 7, "service": 20, "busway": 50, "bus_guideway": 50, "road": 30
+    },
+    "fallbackSpeedKmh": 30,
+    "maxspeedNamed": { "DE:urban": 50, "DE:rural": 100, "DE:living_street": 7, "DE:bicycle_road": 30, "DE:zone30": 30, "DE:zone:30": 30, "walk": 7 },
+    "ampelZuschlagS": 15,
+    "kreuzungZuschlagS": 2
+  },
+  "stops": {
+    "fangradiusM": 60,
+    "gleichAbstandToleranzM": 2,
+    "aufLinieToleranzM": 1.5,
+    "verkehrsseite": "rechts",
+    "dublettenRadiusM": 15
+  },
+  "demand": {
+    "zellgroesseM": 250,
+    "mindestflaecheM2": 30,
+    "wohnflaecheProEinwohnerM2": 47.4,
+    "wohnanteilGeschossflaeche": 0.8,
+    "nebenAmenity": ["parking", "bicycle_parking", "shelter"],
+    "nebengebaeude": ["garage", "garages", "shed", "carport", "roof", "hut", "greenhouse", "service", "transformer_tower", "bunker", "kiosk", "toilets", "boathouse", "cabin", "barn", "stable", "farm_auxiliary", "parking", "construction", "ruins"],
+    "wohngebaeude": ["house", "detached", "semidetached_house", "terrace", "apartments", "residential", "dormitory", "bungalow", "farm"],
+    "geschosseStandard": { "house": 1.5, "detached": 1.5, "semidetached_house": 1.5, "terrace": 2, "bungalow": 1, "apartments": 4, "residential": 2.5, "dormitory": 3, "farm": 1.5, "yes": 2, "arbeit": 1.5 },
+    "flaecheProArbeitsplatzM2": { "office": 25, "commercial": 60, "retail": 45, "supermarket": 60, "industrial": 90, "warehouse": 150, "school": 120, "kindergarten": 80, "university": 60, "hospital": 60, "public": 40, "civic": 40, "government": 30, "hotel": 70, "church": 400, "sonstige": 80 },
+    "landnutzungWohnen": ["residential"],
+    "landnutzungArbeit": { "commercial": "commercial", "retail": "retail", "industrial": "industrial" },
+    "unbekanntWohnanteil": 0.5,
+    "poiKategorien": {
+      "schule": { "amenity": ["school", "kindergarten", "college", "university"] },
+      "einkauf": { "shop": ["*"], "amenity": ["marketplace", "pharmacy"] },
+      "freizeit": { "amenity": ["cinema", "theatre", "library", "restaurant", "cafe", "pub", "bar", "fast_food", "community_centre", "arts_centre"], "leisure": ["park", "sports_centre", "stadium", "swimming_pool", "pitch", "playground", "golf_course"] },
+      "versorgung": { "amenity": ["hospital", "clinic", "doctors", "dentist", "townhall", "post_office", "bank"] }
+    }
+  },
+  "world": {
+    "teilungAbEinwohnern": 250000
+  },
+  "setup": {
+    "startkapitalStandard": 2000000,
+    "startkapitalMin": 1,
+    "startkapitalMax": 1000000000000,
+    "firmennameMaxLaenge": 60,
+    "firmenfarbeStandard": "#0b6e4f"
   },
   "storage": {
     "saveVersion": 1,

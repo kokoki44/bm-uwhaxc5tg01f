@@ -40,6 +40,7 @@ Der Schritt `npx playwright install chromium` ist einmalig nötig, bevor `npm te
 | `npx tauri dev` | Desktop-App im Entwicklungsmodus |
 | `npx tauri build --no-bundle` | Desktop-App bauen |
 | `npm run katalog:hash` | Hash von `fahrzeugkatalog.xlsx` neu setzen, nur nach bewusstem Austausch der Datei |
+| `npm run daten:norderstedt` | Testdatensatz Norderstedt einmalig neu von Overpass laden (setzt Prüfsumme neu, nie in Tests) |
 
 ## Daten
 
