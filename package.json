@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "bus-manager",
   "private": true,
   "version": "0.0.0",
@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run && playwright test",
+    "test": "node scripts/test.mjs",
     "test:e2e": "playwright test",
     "tauri": "tauri",
     "katalog:hash": "node scripts/katalog-hash.mjs"

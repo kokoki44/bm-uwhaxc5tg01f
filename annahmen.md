@@ -15,3 +15,19 @@ Einträge, die Koko prüft. Jeder Wert steht in der zentralen Konfiguration (`sr
 | A0-7 | Startversion der Speicherstände | 1 | Erste Version. Ältere Stände bleiben ladbar, neuere als die App kennt werden abgelehnt. |
 | A0-8 | Platzhalter-Symbol der App | Einfarbige blaue Fläche | Nur damit der Bau funktioniert. Ein richtiges Symbol ist keine Funktion des Konzepts. |
 | A0-9 | Hash-Test des Fahrzeugkatalogs | SHA-256 in `fahrzeugkatalog.sha256`, Neusetzen mit `npm run katalog:hash` | Nach deiner Vorgabe: Der Test meldet jede Veränderung der Datei. Nur bei bewusstem Austausch setzt man den Hash neu. |
+| A0-10 | Bekannte `npm audit`-Warnungen | 2 Warnungen mittlerer Stufe: `uuid` in `exceljs` | Koko hat entschieden, sie nicht zu beheben. Sie betreffen nur das Lesen der lokalen Katalogdatei, keine Eingaben von außen. |
+| A0-11 | Veröffentlichung auf Pages in zwei Jobs | Bau und Upload in einem Job, `deploy-pages` in einem eigenen | Ein Job fand das Artefakt manchmal nicht, weil die Artefaktliste Bruchteile einer Sekunde nach dem Upload noch leer war. |
+| A0-12 | Overpass-Nutzung | Tests laden nie live von Overpass, nur den festen Datensatz im Projekt | Entscheidung von Koko. Live-Abfragen für weitere Regionen nur auf ausdrücklichen Wunsch des Spielers und mit Rücksicht auf die Nutzungsgrenzen. |
+
+## Oberfläche (vorläufig, wartet auf Kokos Bestätigung)
+
+Diese Einträge ersetzen den Punkt "Noch offen" im Kapitel Oberfläche des Konzepts noch nicht. Gebaut wird nur, was Etappe 1 davon braucht.
+
+| Nr. | Thema | Vorschlag | Etappe 1 baut davon |
+| --- | --- | --- | --- |
+| O-1 | Tastenkürzel (fest, nicht änderbar) | Leertaste: Pause und Weiter. Tasten 1 bis 4: Zeitraffer-Stufen. Strg+S (Mac: Cmd+S): Speichern. Esc: schließt Fenster. Karte verschieben mit gedrückter Maustaste, zoomen mit dem Mausrad. | Leertaste, Tasten 1 bis 4, Esc, Karte verschieben und zoomen. Strg+S erst mit dem Speichern in Etappe 4b. |
+| O-2 | Einstellungen | Nur Ton an oder aus, Intervall des Autosave, Textgröße. | Nichts (kein Einstellungsfenster in Etappe 1). |
+| O-3 | Kartenstil | Ruhiger, heller OSM-Stil mit gut lesbaren Straßen (nach Bedeutung gestaffelt), Wasser, Grün und Gebäuden. Zoomstufen vom ganzen Stadtgebiet bis zur einzelnen Haltestelle. | Stil mit Straßen nach Bedeutung, Gebäuden, Grün, Wasser, Haltestellen. Zoomstufen als Konfigurationswerte. |
+| O-4 | Fahrzeugsymbole | Farbige Punkte in der Linienfarbe, ab starkem Zoom eine kleine Busform mit Fahrtrichtung. | Nichts (es gibt noch keine Fahrzeuge). |
+| O-5 | Ton | In Phase 1 kein Ton. Der Schalter in den Einstellungen bleibt ohne Wirkung. | Nichts. |
+| O-6 | Barrierefreiheit | Ausreichender Farbkontrast, Informationen nicht nur über Farbe (zusätzlich Symbol oder Muster), alle Menüs mit der Tastatur bedienbar. | Gilt für alles, was Etappe 1 baut (Kontrast, Symbol zusätzlich zur Farbe, Tastaturbedienung). |

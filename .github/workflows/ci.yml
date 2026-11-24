@@ -51,17 +51,14 @@ jobs:
           name: testergebnisse-${{ matrix.os }}
           path: test-results/
 
-  web:
-    name: Web-Version veröffentlichen
+  # Bau und Veröffentlichung sind getrennte Jobs. Im selben Job fragt deploy-pages die Artefaktliste
+  # Bruchteile einer Sekunde nach dem Upload ab und findet das Artefakt dann manchmal noch nicht
+  # ("Found 0 artifact(s)"). Ein eigener Job gibt der Liste Zeit und ist das von GitHub empfohlene Muster.
+  web-bau:
+    name: Web-Version bauen
     needs: test
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -74,6 +71,18 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
+
+  web:
+    name: Web-Version veröffentlichen
+    needs: web-bau
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v5
 
