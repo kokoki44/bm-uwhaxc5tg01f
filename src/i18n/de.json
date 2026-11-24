@@ -1,0 +1,11 @@
+{
+  "app.titel": "Bus-Manager",
+  "status.bereit": "Bereit",
+  "status.simulation": "Simulation: {ticks} Takte, Spielzeit {sekunden} s, Geschwindigkeit {tempo}-fach",
+  "status.speicher": "Speicher: {art}",
+  "status.speicher.desktop": "SQLite (Desktop)",
+  "status.speicher.browser": "IndexedDB (Browser)",
+  "status.daten": "Testdatensatz Norderstedt: {anzahl} Elemente",
+  "status.daten.fehler": "Testdatensatz Norderstedt konnte nicht geladen werden",
+  "fehler.sprachschluessel": "Unbekannter Textschlüssel: {schluessel}"
+}

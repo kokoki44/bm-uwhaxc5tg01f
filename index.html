@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bus-Manager</title>
+    <style>
+      html, body, #map { margin: 0; height: 100%; width: 100%; font-family: system-ui, sans-serif; }
+      #status { position: absolute; top: 8px; left: 8px; z-index: 2; background: rgba(255,255,255,.92);
+        padding: 6px 10px; border-radius: 4px; font-size: 13px; line-height: 1.4; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="status" data-testid="status"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

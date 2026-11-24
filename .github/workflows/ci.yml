@@ -1,0 +1,95 @@
+name: Bau, Test und Web-Version
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Bau und Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium
+      - name: Alle Tests (Einzeltests, Rauchtest, Oberflächentest)
+        run: npm test
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Desktop-App bauen
+        run: npx tauri build --no-bundle
+      - name: Desktop-App startet (nur Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process src-tauri/target/release/bus-manager.exe -PassThru
+          Start-Sleep 10
+          if ($p.HasExited) { throw "Die App wurde sofort beendet" }
+          Stop-Process -Id $p.Id -Force
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: testergebnisse-${{ matrix.os }}
+          path: test-results/
+
+  web:
+    name: Web-Version veröffentlichen
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+      - id: deploy
+        uses: actions/deploy-pages@v5
+
+  pruefen:
+    name: Pages-Adresse erreichbar und startet
+    needs: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Oberflächentest gegen die veröffentlichte Seite
+        run: npx playwright test
+        env:
+          E2E_BASE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/

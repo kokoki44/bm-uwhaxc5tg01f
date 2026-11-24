@@ -1,0 +1,26 @@
+{
+  "sim": {
+    "tickRealMs": 100,
+    "maxCatchUpTicks": 20,
+    "speeds": [0, 1, 5, 20, 60],
+    "startSpeed": 1
+  },
+  "map": {
+    "center": [9.9876, 53.7068],
+    "zoom": 12,
+    "backgroundColor": "#e8eef2"
+  },
+  "storage": {
+    "saveVersion": 1,
+    "databaseName": "busmanager",
+    "indexedDbStore": "spielstaende"
+  },
+  "data": {
+    "norderstedtPath": "data/norderstedt/norderstedt.osm.json.gz"
+  },
+  "catalog": {
+    "fileName": "fahrzeugkatalog.xlsx",
+    "sheetName": "Busse",
+    "columnCount": 63
+  }
+}
