@@ -43,6 +43,20 @@ Projekt: Bus-Manager, ein Busunternehmen-Managementspiel auf OpenStreetMap-Basis
 
 - Die Oberfläche ist auf Deutsch. Alle Texte stehen in einer Sprachdatei, damit weitere Sprachen später möglich sind.
 
+## Dateien
+
+- Alle Textdateien sind UTF-8 ohne BOM.
+- Textdateien werden nicht mit PowerShell-Befehlen wie Set-Content oder Out-File bearbeitet, weil diese Umlaute zerstören oder ein BOM schreiben können. Bearbeite sie mit den Datei-Werkzeugen (Lesen, Bearbeiten, Schreiben).
+- Der Test für die Kodierung (`tests/encoding.test.ts`) bleibt bestehen.
+
+## Subagenten
+
+- Nutze Subagenten, wo es sinnvoll ist, aber nicht für Kleinigkeiten, weil jeder Subagent Kontingent verbraucht.
+- Sinnvoll sind: (a) unabhängige Teilaufgaben parallel, zum Beispiel Quellenrecherche für Korridore oder Daten, Schreiben von Tests, Prüfen des Fahrzeugkatalogs; (b) eine unabhängige Prüfung am Ende jeder Etappe: Ein Subagent, der den Code nicht geschrieben hat, vergleicht das Ergebnis mit dem Konzept und den bestätigten Abnahmekriterien und meldet Abweichungen, ohne selbst etwas zu ändern.
+- Für Subagenten gelten dieselben Regeln: `docs/konzept.md` ist die Quelle der Wahrheit, nichts erfinden, fehlende Werte als Annahme in `annahmen.md`.
+- Nur der Hauptagent committet und pusht. Zwei Agenten ändern nie gleichzeitig dieselbe Datei.
+- Der Bericht jeder Etappe nennt, wofür Subagenten genutzt wurden und was die unabhängige Prüfung ergeben hat.
+
 ## GitHub
 
 - Das Repository ist öffentlich und hat einen zufälligen Namen. Es dürfen keine Zugangsdaten, Schlüssel oder privaten Daten ins Repository.
