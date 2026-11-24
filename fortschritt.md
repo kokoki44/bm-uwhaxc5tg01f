@@ -13,6 +13,6 @@ Fertig:
 - GitHub-Workflow (`.github/workflows/ci.yml`): Bau und Test auf Windows und macOS, Web-Version auf GitHub Pages, Test der Pages-Adresse.
 
 Offen:
-- Freigabe durch Koko, GitHub-Schritte (siehe Bericht), Prüfung des Workflows auf macOS.
+- Freigabe durch Koko. Workflow ist auf Windows, macOS und für die Pages-Adresse grün (https://kokoki44.github.io/bm-uwhaxc5tg01f/).
 
 Geändert gegenüber Konzept: nichts.
