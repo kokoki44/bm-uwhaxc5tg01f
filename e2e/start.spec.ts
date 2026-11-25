@@ -80,6 +80,9 @@ test("Web-Version startet: Norderstedt laden, Karte, Zeit, Tasten, Fenster", asy
   await page.locator("#map canvas").click({ position: { x: 5, y: 5 } });
   await page.keyboard.press(" ");
   await expect(page.getByTestId("tempo-0")).toHaveAttribute("aria-pressed", "true");
+  // Regression (Windows und macOS, 25.11.2026): Der Knopf zeigt die Pause, bevor der Worker angehalten hat. Erst messen,
+  // wenn der Worker selbst die Pause meldet, sonst kommt noch ein Takt dazu (15 statt 16).
+  await expect(page.getByTestId("status")).toContainText("Geschwindigkeit 0-fach", { timeout: 10000 });
   const stand = await ticks();
   await page.waitForTimeout(500);
   expect(await ticks()).toBe(stand);
