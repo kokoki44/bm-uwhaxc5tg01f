@@ -81,11 +81,26 @@
       .editor-mitte { position: relative; overflow: hidden; }
       .editor-mitte svg { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; font-family: system-ui, sans-serif; }
       .listeneintrag { display: block; width: 100%; text-align: left; margin: 2px 0; font-size: 12px; }
+      #menueleiste { position: absolute; top: calc(var(--kopf) + 12px); left: 12px; z-index: 4; display: none; flex-direction: column; gap: 4px; }
+      body.im-spiel #menueleiste { display: flex; }
+      body.im-editor #menueleiste { display: none; }
+      #menueleiste button { text-align: left; min-width: 130px; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+      .fenster.links { left: 160px; }
+      .fenster.breit { max-width: min(920px, calc(100vw - 200px)); max-height: calc(100vh - var(--kopf) - 40px); overflow: auto; }
+      .reiter { display: flex; gap: 4px; margin: 8px 0; }
+      .spalten2 { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(280px, 1fr); gap: 14px; }
+      .farbpunkt { width: 12px; height: 12px; border: 1px solid #333; display: inline-block; vertical-align: middle; margin-right: 4px; }
+      .filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; font-size: 13px; }
+      .filter select { padding: 2px; }
+      .optionen label { display: block; font-size: 13px; margin: 2px 0; }
+      .gesperrt { color: #666; }
+      tr.gewaehlt td { background: #e6eef8; }
     </style>
   </head>
   <body>
     <div id="kopfleiste" role="banner"></div>
     <div id="map"></div>
+    <nav id="menueleiste"></nav>
     <div id="status" data-testid="status" role="status" aria-live="polite" hidden></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

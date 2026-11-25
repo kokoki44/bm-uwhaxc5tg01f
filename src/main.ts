@@ -1,12 +1,21 @@
 import katalogUrl from "../fahrzeugkatalog.xlsx?url";
-import { jetztCivil } from "./calendar/civil";
+import optionenUrl from "../optionen.xlsx?url";
+import { jetztCivil, parts } from "./calendar/civil";
 import type { KatalogErgebnis } from "./catalog/katalog";
+import type { OptionenErgebnis } from "./catalog/optionen";
+import { belegung, busMass, kreisVon, marktOptionen } from "./fleet/fuhrpark";
+import { fortschreiben, starteMarkt, type SpielKontext } from "./game/spiel";
+import { oeffneFahrzeuge } from "./ui/fahrzeuge";
+import { oeffneFahrzeugmarkt } from "./ui/fahrzeugmarkt";
+import { baueMenueleiste } from "./ui/menue";
+import { oeffnePersonal } from "./ui/personal";
+import { aktualisiereFenster, type SpielUi } from "./ui/spielui";
 import { config } from "./config";
 import { analysiereHof } from "./depot/analyse";
 import { busMasseAusKatalog, type HofKontext } from "./depot/hof";
 import { standorteSichtbar, zeigeGrundstueck, zeigeStandorte } from "./map/map";
 import { oeffneEditor } from "./ui/editor";
-import { katalogFehlerZeilen, katalogStatus, zeigeKatalogFehler } from "./ui/katalogfenster";
+import { katalogFehlerZeilen, katalogStatus, optionenStatus, zeigeKatalogFehler, zeigeOptionenFehler } from "./ui/katalogfenster";
 import { oeffneStandortliste, standortKlick, type StandortKontext } from "./ui/standortwahl";
 import { hofZuGeo, rechteckRing, torAnbindung } from "./world/standorte";
 import { neuesSpiel, type SpielZustand } from "./game/setup";
@@ -32,6 +41,11 @@ const katalogLaden: Promise<KatalogErgebnis> = fetch(katalogUrl)
   // ExcelJS ist groß, deshalb als eigenes Teilpaket nachgeladen
   .then(async (b) => (await import("./catalog/katalog")).ladeKatalog(b, config.catalog))
   .catch((e: unknown) => ({ modelle: [], meldungen: [{ schwere: "fehler" as const, code: "dateiUnlesbar" as const, wert: String(e) }], zeilenGesamt: 0 }));
+// Optionsdatei (Ausstattung beim Neukauf), genauso direkt gelesen
+const optionenLaden: Promise<OptionenErgebnis> = fetch(optionenUrl)
+  .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(`HTTP ${r.status}`))))
+  .then(async (b) => (await import("./catalog/optionen")).ladeOptionen(b, config.optionen))
+  .catch((e: unknown) => ({ optionen: [], meldungen: [{ schwere: "fehler" as const, code: "dateiUnlesbar" as const, wert: String(e) }] }));
 const zeigen = () => (status.innerText = Object.values(zeilen).filter(Boolean).join("\n"));
 
 const map = createMap("map");
@@ -114,16 +128,44 @@ async function starteEinrichtung(): Promise<void> {
   zeigen();
 
   const katalog = await katalogLaden;
-  zeilen.katalog = [katalogStatus(katalog), ...katalogFehlerZeilen(katalog)].join("\n");
+  const optionen = await optionenLaden;
+  zeilen.katalog = [katalogStatus(katalog), ...katalogFehlerZeilen(katalog), ...optionenStatus(optionen)].join("\n");
   zeigen();
   const hofKontext: HofKontext = { cfg: config.betriebshof, busse: busMasseAusKatalog(katalog.modelle) };
   const sp = spiel;
+  const modelle = new Map(katalog.modelle.map((m) => [m.modell_id!, m]));
+  const spielKontext: SpielKontext = {
+    markt: {
+      modelle,
+      optionen: marktOptionen(optionen.optionen),
+      markt: config.fahrzeugmarkt,
+      katalog: config.catalog,
+      hofCfg: config.betriebshof,
+      freigeschaltet: new Set(), // Technologiebaum folgt mit Etappe 7b
+      frei: config.optionen.frei,
+      kreis: kreisVon(world.gemeinde.kreisschluessel, config.fahrzeugmarkt),
+    },
+    hof: hofKontext,
+    region: world.gemeinde.region,
+  };
+  starteMarkt(sp, spielKontext);
 
   const zeitsteuerung = new Zeitsteuerung(config.sim.speeds, config.sim.startSpeed);
   const kopf = baueKopfleiste(spiel.firma, world.gemeinde.region, world.bbox[1] < 0, {
     tempo: (stufe) => setzeTempo(stufe === 0 ? zeitsteuerung.pause() : zeitsteuerung.setzeStufe(stufe)),
     hilfe: zeigeHilfe,
+  });
+  const ui: SpielUi = {
+    spiel: sp,
+    k: spielKontext,
+    kontoGeaendert: () => kopf.setzeKontostand(sp.kontostandEur),
     betriebshof: () => (sp.betriebshof ? hofEditor() : oeffneStandortliste(standortKontext)),
+  };
+  baueMenueleiste((b) => {
+    if (b === "betriebshof") ui.betriebshof();
+    else if (b === "fahrzeuge") oeffneFahrzeuge(ui);
+    else if (b === "fahrzeugmarkt") oeffneFahrzeugmarkt(ui);
+    else oeffnePersonal(ui);
   });
 
   // Standortwahl und Betriebshof
@@ -148,7 +190,15 @@ async function starteEinrichtung(): Promise<void> {
       return;
     }
     standorteSichtbar(map, false);
-    oeffneEditor({ spiel: sp, ctx: hofKontext, world, kontoGeaendert: () => kopf.setzeKontostand(sp.kontostandEur), geschlossen: () => (hofAufKarte(), map.resize()) });
+    oeffneEditor({
+      spiel: sp,
+      ctx: hofKontext,
+      world,
+      kontoGeaendert: () => kopf.setzeKontostand(sp.kontostandEur),
+      geschlossen: () => (hofAufKarte(), map.resize()),
+      belegung: () => belegung(sp.fuhrpark, modelle),
+      busse: () => sp.fuhrpark.busse.map((b) => ({ platz: b.platz, ...busMass(modelle.get(b.modellId)!), farbe: b.konfig.lackierung, flottennummer: b.flottennummer })),
+    });
   };
   zeigeStandorte(map, antwort.render.standorte, (id, p) => standortKlick(standortKontext, id, p));
   map.resize();
@@ -156,9 +206,18 @@ async function starteEinrichtung(): Promise<void> {
   kopf.setzeZeit(spiel.startZeit);
 
   const startZeit = spiel.startZeit;
+  let letzterTag = parts(startZeit).tag;
   const sim = startSimulation((s) => {
     zeilen.sim = t("status.simulation", { ticks: s.ticks, sekunden: s.gameSeconds.toFixed(1), tempo: s.speed });
-    kopf.setzeZeit(startZeit + Math.floor(s.gameSeconds) * 1000);
+    const jetzt = startZeit + Math.floor(s.gameSeconds) * 1000;
+    kopf.setzeZeit(jetzt);
+    // Ereignisse der Spielzeit (Wochenwechsel, Monatsende) genau einmal, auch bei 600-fach
+    const ereignisse = fortschreiben(sp, jetzt, spielKontext);
+    if (ereignisse.length) kopf.setzeKontostand(sp.kontostandEur);
+    // neue Bewerber erscheinen tageweise: offene Fenster beim Tageswechsel und nach Ereignissen neu zeichnen
+    const tag = parts(jetzt).tag;
+    if (ereignisse.length || tag !== letzterTag) aktualisiereFenster();
+    letzterTag = tag;
     zeigen();
   });
   const setzeTempo = (tempo: number) => {
@@ -169,6 +228,7 @@ async function starteEinrichtung(): Promise<void> {
 
   // Beim Start: Katalogfehler (nur wenn es welche gibt), dann die Suche nach dem ersten Standort
   zeigeKatalogFehler(katalog);
+  zeigeOptionenFehler(optionen);
   oeffneStandortliste(standortKontext);
 
   document.addEventListener("keydown", (e) => {

@@ -6,6 +6,7 @@ import {
 } from "../depot/hof";
 import type { Seite } from "../depot/rechteck";
 import { berechneWege, type HofWege } from "../depot/wege";
+import { alleBusseHabenPlatz, type Belegung, type PlatzRef } from "../fleet/plaetze";
 import type { SpielZustand } from "../game/setup";
 import { t, type TextKey } from "../i18n";
 import { torAnbindung } from "../world/standorte";
@@ -20,6 +21,10 @@ export interface EditorKontext {
   kontoGeaendert(): void;
   /** Editor wurde geschlossen (zurück zur Karte). */
   geschlossen(): void;
+  /** Busse auf ihren Plätzen (für die Prüfung vor dem Abriss). */
+  belegung?(): Belegung[];
+  /** Busse zum Zeichnen: Platz, Maße, Lackierung, Flottennummer. */
+  busse?(): { platz: PlatzRef; laengeM: number; breiteM: number; farbe: string; flottennummer: string }[];
 }
 
 const cfg = config.betriebshof;
@@ -285,6 +290,15 @@ export function oeffneEditor(k: EditorKontext): void {
     const erstattung = baukostenEur(b.typ, b, cfg) * cfg.abrissErstattung;
     const abriss = h("button", { type: "button", "data-testid": "auswahl-abreissen", text: t("editor.abreissen", { erstattung: euro(erstattung) }) });
     abriss.addEventListener("click", () => {
+      // Ein Bauteil, ohne das ein Bus keinen gültigen Platz mehr hätte, bleibt stehen (Annahme A3-22)
+      const bel = k.belegung?.() ?? [];
+      if (bel.length) {
+        const probe: Betriebshof = { ...hof, bauteile: hof.bauteile.filter((x) => x.id !== b.id) };
+        if (!alleBusseHabenPlatz(probe, analysiereHof(probe, k.ctx), bel, cfg)) {
+          melde(t("editor.abrissBelegt", { name: bezeichnung(b) }));
+          return;
+        }
+      }
       const e = abreissen(hof, k.spiel, b.id, cfg);
       melde(t("editor.abgerissen", { name: bezeichnung(b), erstattung: euro(e ?? 0) }), true);
       ausgewaehlt = null;
@@ -332,6 +346,28 @@ export function oeffneEditor(k: EditorKontext): void {
       const text = NS("text", { x: b.x + b.b / 2, y: b.y + b.t / 2, "font-size": groesse, "text-anchor": "middle", "dominant-baseline": "central", fill: Z.text, "pointer-events": "none" });
       text.textContent = beschriftung;
       g.append(text);
+      svg.append(g);
+    }
+    // Busse als kleine Rechtecke auf ihren Plätzen (Konzept: Optik), in ihrer Lackierung
+    const proHalle = new Map<number, number>();
+    for (const bus of k.busse?.() ?? []) {
+      const p = hof.bauteile.find((x) => x.id === bus.platz.id);
+      if (!p) continue;
+      const hoch = p.t >= p.b;
+      const [bw, bh] = hoch ? [bus.breiteM, bus.laengeM] : [bus.laengeM, bus.breiteM];
+      let x = p.x + (p.b - bw) / 2, y = p.y + (p.t - bh) / 2;
+      if (bus.platz.art === "halle") {
+        const i = proHalle.get(p.id) ?? 0;
+        proHalle.set(p.id, i + 1);
+        const schritt = bus.breiteM + cfg.seitenabstandM;
+        if (hoch) x = p.x + cfg.seitenabstandM / 2 + i * schritt;
+        else y = p.y + cfg.seitenabstandM / 2 + i * schritt;
+      }
+      const g = NS("g", { "data-testid": "bus-im-hof", "pointer-events": "none" });
+      g.append(NS("rect", { x, y, width: bw, height: bh, rx: 0.4, fill: bus.farbe, stroke: Z.bauteilRand, "stroke-width": 1, "vector-effect": "non-scaling-stroke" }));
+      const nr = NS("text", { x: x + bw / 2, y: y + bh / 2, "font-size": Math.min(1.6, Math.min(bw, bh) * 0.6), "text-anchor": "middle", "dominant-baseline": "central", fill: Z.text });
+      nr.textContent = bus.flottennummer;
+      g.append(nr);
       svg.append(g);
     }
     const w = ausgewaehlt !== null ? wege.je.get(ausgewaehlt) : undefined;
