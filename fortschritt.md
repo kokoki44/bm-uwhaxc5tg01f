@@ -107,9 +107,17 @@ Geändert gegenüber Konzept: nichts.
 Koko hat am 25.11.2026 die Kriterien 1 bis 16 bestätigt, mit zwei Änderungen: Kriterium 3 enthält die Batterie- und Plätzeregel (Preis und Platzzahl nach gewählter Batterie, Handrechnung an einem MAN-Modell), neues Kriterium 17: Verkauf an den Händler (Wert ohne Streuung minus Abschlag, Bus weg, Platz frei, im Spielstand abgebildet, Test für Betrag und Platz). Antworten 1 bis 15 und Annahmen A3-1 bis A3-19 bestätigt. Konzept mit den Festlegungen zu Kauf, Ausstattung und Lohn committet.
 
 Stand (wird bei Unterbrechung aktualisiert):
-- Fertig: Zufall mit Startwert (`src/game/zufall.ts`), Konfiguration (`optionen`, `fahrzeugmarkt`, `personal`), Kreisschlüssel der Gemeinde, Plätze im Hof (`src/fleet/plaetze.ts`), Fuhrpark mit Neukauf, Konfiguration, Plätzen nach Batterie, Wert, Verkauf, Umsetzen, Umlackieren, Kennzeichen (`src/fleet/fuhrpark.ts`), Gebrauchtmarkt (`src/fleet/markt.ts`).
-- In Arbeit (Subagenten, nach dem Nutzungslimit fortgesetzt): Optionsdatei `optionen.xlsx` mit Leser und Tests; Personal-Kern `src/personal/personal.ts` mit Tests.
-- Offen: Tests für Fuhrpark und Markt, Zeitereignisse (Wochenwechsel, Monatsende), Spielzustand, Oberfläche (Menüleiste, Fahrzeugmarkt, Fahrzeuge, Personal, Busse im Editor), Rauchtest, Oberflächentest, Annahmen eintragen, unabhängige Prüfung.
+- Fertig:
+  - Zufall mit Startwert (`src/game/zufall.ts`), Konfiguration (`optionen`, `fahrzeugmarkt`, `personal`), Kreisschlüssel der Gemeinde.
+  - Optionsdatei `optionen.xlsx` mit Leser und Prüfung der Spalten (`src/catalog/optionen.ts`, Subagent).
+  - Fuhrpark (`src/fleet`): Plätze im Hof, Neukauf mit Konfiguration, Plätze und Preis nach Batterie, Wert, Verkauf, Umsetzen, Umlackieren, Kennzeichen, Flottennummer, Gebrauchtmarkt mit Inspektion, Speichern und Laden.
+  - Personal (`src/personal`, Subagent): Lohntabelle, Ausschreibung, Bewerber, Einstellen, Kündigung, Stufenaufstieg, Monatslohn, Speichern und Laden.
+  - Spielzustand und Zeitereignisse (`src/game/spiel.ts`): Wochenwechsel und Monatsende genau einmal.
+  - Oberfläche: Menüleiste am linken Rand, Fenster Fahrzeugmarkt (Neukauf, Gebrauchtmarkt), Fahrzeuge, Personal; Busse im Editor; Abriss belegter Plätze gesperrt; Fehler der Optionsdatei im Startfenster und in F3.
+  - Tests: `tests/fuhrpark.test.ts`, `tests/spiel.test.ts`, `tests/optionen.test.ts`, `tests/personal.test.ts`, Rauchtest mit "Bus kaufen" und "Fahrer einstellen", Oberflächentest `e2e/markt.spec.ts`.
+  - Nachtrag Etappe 2 (Antwort 15): Durchfahrt nur bei mindestens 27 m Torabstand, Rundweg nur wenn er eine Fläche umschließt, mit Regressionstests.
+  - Annahmen A3-1 bis A3-30 in `annahmen.md`.
+- Offen: unabhängige Prüfung durch einen Subagenten, Workflow auf Windows, macOS und Pages.
 
 Entwurf der Abnahmekriterien (bestätigt, siehe oben):
 
