@@ -102,9 +102,11 @@ Ebenfalls behoben (Regressionstest): Der Oberflächentest "600-fach" schlug auf 
 
 Geändert gegenüber Konzept: nichts.
 
-## Etappe 3a: Fahrzeugmarkt und Personal (gebaut, wartet auf Kokos Freigabe)
+## Etappe 3a: Fahrzeugmarkt und Personal (freigegeben von Koko am 25.11.2026)
 
-Stand vor Beginn: Git-Tag `etappe-2-fertig`. Konzept mit Kokos Festlegungen zu Kauf, Ausstattung und Lohn (25.11.2026) committet.
+Stand vor Beginn: Git-Tag `etappe-2-fertig`. Freigegebener Stand: Git-Tag `etappe-3a-fertig`.
+
+Nachträge nach der Freigabe (25.11.2026): Arbeitgeberanteil auf die Jahressonderzahlung bestätigt. Batteriebereich ohne Schritt, der kleiner als der Standardschritt ist, bietet nur das Maximum (A3-33, Yutong U12 LE nur 466 kWh, Regressionstest). Detailansicht: Modellreihe als Überschrift, Variante als Zusatz; in Listen "Reihe, Variante". A3-20 bis A3-32 bestätigt. Konzept mit Kokos Festlegungen zu Kauf, Ausstattung und Lohn (25.11.2026) committet.
 
 Bestätigte Abnahmekriterien (Koko, 25.11.2026):
 1. Neukauf: Liste der neu kaufbaren Modelle (im_neukauf = ja, nur Fahrzeugart Bus), filterbar nach Hersteller, Bauart und Antrieb. Zeilen mit gleichem Hersteller, Modellfamilie und Modell erscheinen als ein Modell mit wählbarer Variante. Die Ansicht zeigt die Daten aus dem Katalog.

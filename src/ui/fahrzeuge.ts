@@ -5,7 +5,7 @@ import { t, type TextKey } from "../i18n";
 import { h } from "./dom";
 import { datum, euro, euroRund, zahl } from "./format";
 import { platzText } from "./fahrzeugmarkt";
-import { beobachte, modellName, type SpielUi } from "./spielui";
+import { beobachte, modellName, reihenName, type SpielUi } from "./spielui";
 import { oeffneFenster } from "./windows";
 
 /** Fahrzeugliste: eigene Busse mit Platz, Umsetzen, Umlackieren, Verkauf an den Händler. */
@@ -80,7 +80,8 @@ export function oeffneFahrzeuge(ui: SpielUi): void {
     });
     const opt = b.konfig.optionen.map((id) => k.optionen.find((o) => o.id === id)?.name ?? id).join(", ");
     detail.replaceChildren(
-      h("h3", { text: t("fahrzeuge.detailTitel", { nr: b.flottennummer, modell: modellName(m) }) }),
+      h("h3", { text: t("fahrzeuge.detailTitel", { nr: b.flottennummer, modell: reihenName(m) }) }),
+      h("p", { class: "hilfe", text: m.variante ?? "" }),
       h("dl", { class: "werte" },
         h("dt", { text: t("fahrzeuge.kennzeichen") }), h("dd", { text: b.kennzeichen }),
         h("dt", { text: t("fahrzeuge.lackierung") }), h("dd", {}, h("span", { class: "farbpunkt", style: `background:${b.konfig.lackierung}`, "aria-hidden": "true" }), t("fahrzeuge.lackierungText", { farbe: b.konfig.lackierung })),

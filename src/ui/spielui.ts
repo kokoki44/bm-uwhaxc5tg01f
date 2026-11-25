@@ -38,9 +38,9 @@ export function aktualisiereFenster(): void {
   }
 }
 
-/** Anzeigename eines Modells: Hersteller, Modell, Variante. */
+/** Anzeigename eines Modells in Listen: Modellreihe, dahinter die Variante mit Komma getrennt. */
 export function modellName(m: Bus): string {
-  return [m.hersteller, m.modellfamilie, m.modell !== "Standard" ? m.modell : null, m.variante].filter(Boolean).join(" ");
+  return m.variante ? `${reihenName(m)}, ${m.variante}` : reihenName(m);
 }
 
 /** Anzeigename einer Modellreihe (ohne Variante). */

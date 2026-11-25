@@ -443,6 +443,8 @@ describe("Batteriegrößen", () => {
     // Bereich ohne Schritt (Antwort von Koko vom 25.11.2026): Standardschritt statt nur Maximum
     expect(opt(modell(e, "ebusco_2_2_12")!)).toEqual([350, 400, 450, 500]);
     expect(opt(modell(e, "yutong_u12_lf")!)).toEqual([465, 515, 528]);
+    // Regression (Koko, 25.11.2026): Spanne kleiner als der Standardschritt ist ein Rundungsfehler, nur das Maximum
+    expect(opt(modell(e, "yutong_u12_le")!)).toEqual([466]);
   });
 
   it("künstliche Fälle", () => {
@@ -451,6 +453,8 @@ describe("Batteriegrößen", () => {
     expect(opt(bus(300, 500, null))).toEqual([300, 350, 400, 450, 500]);
     expect(opt(bus(300, 500, 0))).toEqual([300, 350, 400, 450, 500]);
     expect(opt(bus(300, 422, null))).toEqual([300, 350, 400, 422]);
+    expect(opt(bus(300, 349, null))).toEqual([349]);
+    expect(opt(bus(300, 350, null))).toEqual([300, 350]);
     expect(batterieOptionen(bus(300, 500, null), 100)).toEqual([300, 400, 500]);
     expect(opt(bus(null, 422, null))).toEqual([422]);
     expect(opt(bus(165, null, null))).toEqual([165]);

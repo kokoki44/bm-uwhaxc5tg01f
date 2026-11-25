@@ -69,6 +69,9 @@ test("Fahrzeugmarkt und Personal: Neukauf, Gebrauchtkauf, Verkauf, Einstellen, L
   await markt.getByTestId("markt-filter-antrieb").selectOption("Elektro");
   await markt.getByTestId("markt-modell").filter({ hasText: /^MAN Lion's City E 12$/ }).click();
   await expect(markt.getByTestId("markt-preis")).toHaveText("Preis: 520.000,00 €");
+  // Überschrift ohne Variante, Variante als Zusatz (Koko, 25.11.2026)
+  await expect(markt.getByTestId("markt-titel")).toHaveText("MAN Lion's City E 12");
+  await expect(markt.getByTestId("markt-titel-variante")).toHaveText("2 Türen");
   await expect(markt.getByTestId("markt-werte")).toContainText("44 Sitzplätze, 44 Stehplätze");
   await markt.getByTestId("markt-batterie").selectOption("534");
   await expect(markt.getByTestId("markt-preis")).toHaveText("Preis: 644.600,00 €");

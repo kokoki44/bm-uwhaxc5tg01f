@@ -25,6 +25,8 @@ export function batterieOptionen(bus: BatterieAngaben, standardSchrittKwh: numbe
   const eps = GLEITKOMMA_EPS * Math.max(1, Math.abs(max));
   if (max - min <= eps) return [max];
   const eigenerSchritt = bus.batterie_kwh_schritt !== null && bus.batterie_kwh_schritt > 0;
+  // Bereich ohne Schritt, der kleiner als der Standardschritt ist: Rundungsfehler im Katalog, nur das Maximum (A3-33)
+  if (!eigenerSchritt && max - min < standardSchrittKwh - eps) return [max];
   const schritt = eigenerSchritt ? bus.batterie_kwh_schritt! : standardSchrittKwh;
   const out: number[] = [];
   for (let i = 0; ; i++) {

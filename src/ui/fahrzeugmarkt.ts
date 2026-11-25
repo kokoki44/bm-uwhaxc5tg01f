@@ -174,7 +174,8 @@ function neukauf(ui: SpielUi): { el: HTMLElement } {
 
     detail.replaceChildren(
       ...([
-        h("h3", { text: modellName(m) }),
+        h("h3", { "data-testid": "markt-titel", text: reihenName(m) }),
+        m.variante ? h("p", { class: "hilfe", "data-testid": "markt-titel-variante", text: m.variante }) : null,
         werteBox,
         h("div", { class: "zweispaltig" }, ...felder),
         einzeln.length ? h("div", { class: "optionen" }, h("p", { class: "fett", text: t("markt.ausstattung") }), ...einzeln) : null,
