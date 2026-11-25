@@ -73,7 +73,7 @@ describe("Fahrzeugkatalog einlesen: echte Datei", () => {
     for (const s of ZAHL_SPALTEN) expect(artAusRegel(regeln[s]), s).toBe("zahl");
     for (const s of AUSWAHL_SPALTEN) expect(artAusRegel(regeln[s]), s).toBe("auswahl");
     expect(artAusRegel(regeln.abgasnorm)).toBe("text");
-    expect(artAusRegel(regeln.verbrauchseinheit)).toBe("text");
+    expect(erlaubteWerte(regeln.verbrauchseinheit.einheit)).toEqual(["Liter", "kWh", "kg"]);
     expect(["ja", "nein", "nur Elektro", "automatisch"]).toEqual(
       expect.arrayContaining([...new Set(Object.values(regeln).map((r) => r.pflicht))]),
     );
@@ -289,6 +289,39 @@ describe("Fahrzeugkatalog: fehlerhafte Dateien", () => {
     expect(modell(e, "altas_cityline_dsl")!.flurtyp).toBeNull();
   });
 
+  it("verbrauchseinheit wird gegen Liter, kWh, kg geprüft: Abweichung ist ein Hinweis, das Modell bleibt nutzbar", async () => {
+    const echt = await ladeKatalog(echteKatalogBytes(), cfg);
+    expect(finde(echt, { spalte: "verbrauchseinheit" })).toEqual([]);
+    let zeile = 0;
+    const bytes = await veraenderterKatalog((wb) => {
+      zeile = zeilenNr(wb, "altas_cityline_dsl");
+      busse(wb).getCell(zeile, spaltenNr(wb, "verbrauchseinheit")).value = "Gallonen";
+    });
+    const e = await ladeKatalog(bytes, cfg);
+    expect(finde(e, { code: "wertNichtErlaubt", zeile, spalte: "verbrauchseinheit" })).toEqual([
+      { schwere: "hinweis", code: "wertNichtErlaubt", zeile, spalte: "verbrauchseinheit", wert: "Gallonen", modellId: "altas_cityline_dsl" },
+    ]);
+    const b = modell(e, "altas_cityline_dsl")!;
+    expect(b).toBeDefined();
+    expect(b.verbrauchseinheit).not.toBe("Gallonen");
+    expect(e.modelle).toHaveLength(206);
+  });
+
+  it("leerer Batterieschritt: Hinweis nur bei einem Bereich ohne Schritt, nicht bei fester Batterie", async () => {
+    const e = await ladeKatalog(echteKatalogBytes(), cfg);
+    const h = finde(e, { code: "elektrofeldLeer", spalte: "batterie_kwh_schritt" });
+    const mitBereich = e.modelle.filter(
+      (b) => b.antrieb === "Elektro" && b.batterie_kwh_schritt === null && b.batterie_kwh_min !== null && b.batterie_kwh_max !== null && b.batterie_kwh_max > b.batterie_kwh_min,
+    );
+    expect(mitBereich.length).toBeGreaterThan(0);
+    expect(h.map((m) => m.modellId).sort()).toEqual(mitBereich.map((b) => b.modell_id).sort());
+    expect(h.map((m) => m.modellId)).toContain("ebusco_2_2_12");
+    // feste Batterie ohne Schritt: kein Hinweis
+    const fest = e.modelle.filter((b) => b.antrieb === "Elektro" && b.batterie_kwh_schritt === null && !mitBereich.includes(b));
+    expect(fest.length).toBeGreaterThan(0);
+    for (const b of fest) expect(h.map((m) => m.modellId)).not.toContain(b.modell_id);
+  });
+
   it("Text in laenge_mm: Fehler, Zeile nicht genutzt", async () => {
     let zeile = 0;
     const bytes = await veraenderterKatalog((wb) => {
@@ -398,27 +431,40 @@ describe("Batteriegrößen", () => {
   const bus = (min: number | null, max: number | null, schritt: number | null) =>
     ({ batterie_kwh_min: min, batterie_kwh_max: max, batterie_kwh_schritt: schritt }) as Bus;
 
+  const std = cfg.batterieStandardSchrittKwh;
+  const opt = (b: Bus) => batterieOptionen(b, std);
+
   it("Beispiele aus dem Katalog", async () => {
     const e = await ladeKatalog(echteKatalogBytes(), cfg);
-    expect(batterieOptionen(modell(e, "man_lions_city_12_e_2t")!)).toEqual([356, 445, 534]);
-    expect(batterieOptionen(modell(e, "mercedes_ecitaro_g_3t")!)).toEqual([444, 555, 666, 777]);
-    expect(batterieOptionen(modell(e, "iveco_crossway_le_city_12_elec")!)).toEqual([346, 415, 484]);
-    expect(batterieOptionen(modell(e, "altas_cityline_dsl")!)).toEqual([]);
+    expect(opt(modell(e, "man_lions_city_12_e_2t")!)).toEqual([356, 445, 534]);
+    expect(opt(modell(e, "mercedes_ecitaro_g_3t")!)).toEqual([444, 555, 666, 777]);
+    expect(opt(modell(e, "iveco_crossway_le_city_12_elec")!)).toEqual([346, 415, 484]);
+    expect(opt(modell(e, "altas_cityline_dsl")!)).toEqual([]);
+    // Bereich ohne Schritt (Antwort von Koko vom 25.11.2026): Standardschritt statt nur Maximum
+    expect(opt(modell(e, "ebusco_2_2_12")!)).toEqual([350, 400, 450, 500]);
+    expect(opt(modell(e, "yutong_u12_lf")!)).toEqual([465, 515, 528]);
   });
 
   it("künstliche Fälle", () => {
-    expect(batterieOptionen(bus(300, 500, null))).toEqual([500]);
-    expect(batterieOptionen(bus(300, 500, 0))).toEqual([500]);
-    expect(batterieOptionen(bus(null, 422, null))).toEqual([422]);
-    expect(batterieOptionen(bus(165, null, null))).toEqual([165]);
-    expect(batterieOptionen(bus(null, 400, 50))).toEqual([400]);
-    expect(batterieOptionen(bus(null, null, 89))).toEqual([]);
-    expect(batterieOptionen(bus(null, null, null))).toEqual([]);
-    expect(batterieOptionen(bus(207, 414, 207))).toEqual([207, 414]);
+    expect(std).toBe(50);
+    // Bereich ohne Schritt: Standardschritt aus der Konfiguration, das Maximum bleibt wählbar
+    expect(opt(bus(300, 500, null))).toEqual([300, 350, 400, 450, 500]);
+    expect(opt(bus(300, 500, 0))).toEqual([300, 350, 400, 450, 500]);
+    expect(opt(bus(300, 422, null))).toEqual([300, 350, 400, 422]);
+    expect(batterieOptionen(bus(300, 500, null), 100)).toEqual([300, 400, 500]);
+    expect(opt(bus(null, 422, null))).toEqual([422]);
+    expect(opt(bus(165, null, null))).toEqual([165]);
+    expect(opt(bus(400, 400, null))).toEqual([400]);
+    expect(opt(bus(null, 400, 50))).toEqual([400]);
+    expect(opt(bus(null, null, 89))).toEqual([]);
+    expect(opt(bus(null, null, null))).toEqual([]);
+    expect(opt(bus(207, 414, 207))).toEqual([207, 414]);
+    // eigener Schritt: der Bereich endet beim letzten vollen Schritt
+    expect(opt(bus(300, 520, 100))).toEqual([300, 400, 500]);
   });
 
   it("Gleitkommaschritte enden sauber beim Maximum", () => {
-    expect(batterieOptionen(bus(0.1, 0.4, 0.1))).toEqual([0.1, 0.2, 0.3, 0.4]);
-    expect(batterieOptionen(bus(10, 10.35, 0.1))).toEqual([10, 10.1, 10.2, 10.3]);
+    expect(opt(bus(0.1, 0.4, 0.1))).toEqual([0.1, 0.2, 0.3, 0.4]);
+    expect(opt(bus(10, 10.35, 0.1))).toEqual([10, 10.1, 10.2, 10.3]);
   });
 });

@@ -7,12 +7,14 @@ export const BEISPIEL_T = 40;
 
 /**
  * Vollständiges erstes Layout mit jedem Bauteiltyp, auf 50 × 40 m:
- * Tor am Westrand, Fahrweg 7 m breit quer durch, nördlich 6 Stellplätze, Ladeplatz, Halle und Tankstelle,
+ * Tore am West- und Ostrand (Durchfahrt, damit die Busse nicht wenden müssen), Fahrweg 7 m breit quer durch,
+ * nördlich 6 Stellplätze, Ladeplatz, Halle und Tankstelle,
  * südlich Werkstatt, Waschanlage, Büro, Lager, Toilette, Küche und Pausenraum.
  */
 export const BEISPIEL_LAYOUT: [BauteilTyp, Rechteck][] = [
   ["tor", { x: 0, y: 16, b: 4, t: 7 }],
-  ["fahrweg", { x: 4, y: 16, b: 46, t: 7 }],
+  ["fahrweg", { x: 4, y: 16, b: 42, t: 7 }],
+  ["tor", { x: 46, y: 16, b: 4, t: 7 }],
   ...[4, 8, 12, 16, 20, 24].map((x) => ["stellplatz", { x, y: 2, b: 4, t: 14 }] as [BauteilTyp, Rechteck]),
   ["ladeplatz", { x: 28, y: 2, b: 4, t: 14 }],
   ["halle", { x: 32, y: 1, b: 4, t: 15 }],

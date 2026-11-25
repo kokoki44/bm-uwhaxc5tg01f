@@ -13,10 +13,10 @@ describe("Sprachdatei Etappe 2", () => {
   });
   it("jedes Bauteil hat Namen und Symbol, jede Layoutmeldung und jeder Baufehler einen Text", () => {
     for (const b of BAUTEIL_TYPEN) (hat(`bauteil.${b}`), hat(`bauteil.symbol.${b}`));
-    for (const c of ["keinTor", "torNichtAmRand", "nichtVerbunden", "stellplatzNichtErreichbar", "halleNichtErreichbar", "sackgasse"]) hat(`editor.meldung.${c}`);
+    for (const c of ["keinTor", "torNichtAmRand", "nichtVerbunden", "stellplatzNichtErreichbar", "halleNichtErreichbar", "sackgasse", "getrennteNetze", "keineWendemoeglichkeit"]) hat(`editor.meldung.${c}`);
     for (const c of ["ungueltigeMasse", "zuKlein", "ausserhalb", "ueberlappung", "geldFehlt"]) hat(`editor.baufehler.${c}`);
-    for (const c of ["ungueltig", "zuGross", "geldFehlt"]) hat(`editor.zukaufFehler.${c}`);
-    for (const c of ["ungueltigeMasse", "zuKlein", "zuGross", "nichtInFlaeche", "geldFehlt", "hierNicht"]) hat(`grundstueck.fehler.${c}`);
+    for (const c of ["ungueltig", "zuGross", "seitenverhaeltnis", "geldFehlt"]) hat(`editor.zukaufFehler.${c}`);
+    for (const c of ["ungueltigeMasse", "zuKlein", "zuGross", "seitenverhaeltnis", "nichtInFlaeche", "geldFehlt", "hierNicht"]) hat(`grundstueck.fehler.${c}`);
     for (const l of config.grundstueck.landnutzung) hat(`standort.art.${l}`);
     for (const s of ["n", "o", "s", "w"]) hat(`seite.${s}`);
   });
@@ -36,6 +36,7 @@ describe("Konfiguration Betriebshof", () => {
     expect(b.stellplatz.nachBus && b.ladeplatz.nachBus).toBe(true);
     expect(config.betriebshof.raster[0]).toBe(1);
     expect(config.grundstueck.hoechstflaecheM2).toBe(100000);
+    expect(config.grundstueck.maxSeitenverhaeltnis).toBe(10);
     expect(config.betriebshof.abrissErstattung).toBe(0.5);
     expect(config.betriebshof.waschDurchsatzProStunde).toBe(10);
   });

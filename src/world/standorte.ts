@@ -1,6 +1,6 @@
 import type { GrundstueckConfig } from "../config";
 import type { OsmExtract } from "../data/osm";
-import type { Betriebshof, Grundstueck, Kasse } from "../depot/hof";
+import { seitenverhaeltnisOk, type Betriebshof, type Grundstueck, type Kasse } from "../depot/hof";
 import type { Seite } from "../depot/rechteck";
 import { inArea, type AdminArea } from "./boundaries";
 import type { DemandCell } from "./demand";
@@ -149,13 +149,14 @@ export function bodenpreis(dichte: number, maxDichte: number, cfg: GrundstueckCo
   return Math.round(cfg.bodenpreisMinEurM2 + (cfg.bodenpreisMaxEurM2 - cfg.bodenpreisMinEurM2) * anteil);
 }
 
-export type StartFehler = "ungueltigeMasse" | "zuKlein" | "zuGross" | "nichtInFlaeche" | "geldFehlt";
+export type StartFehler = "ungueltigeMasse" | "zuKlein" | "zuGross" | "seitenverhaeltnis" | "nichtInFlaeche" | "geldFehlt";
 
-/** Prüft das Startgrundstück: Rechteck in der OSM-Fläche, mindestens Mindestgröße, höchstens 10 Hektar. */
+/** Prüft das Startgrundstück: Rechteck in der OSM-Fläche, mindestens Mindestgröße, höchstens 10 Hektar, Seitenverhältnis höchstens 1 zu 10. */
 export function pruefeStartgrundstueck(s: Standort, nw: LonLat, b: number, t: number, cfg: GrundstueckConfig): StartFehler | null {
   if (!Number.isInteger(b) || !Number.isInteger(t) || b <= 0 || t <= 0) return "ungueltigeMasse";
   if (b * t < cfg.mindestflaecheM2 || Math.min(b, t) < cfg.mindestSeiteM) return "zuKlein";
   if (b * t > cfg.hoechstflaecheM2) return "zuGross";
+  if (!seitenverhaeltnisOk({ b, t }, cfg.maxSeitenverhaeltnis)) return "seitenverhaeltnis";
   if (!rechteckInFlaeche(s.ring, nw, b, t)) return "nichtInFlaeche";
   return null;
 }

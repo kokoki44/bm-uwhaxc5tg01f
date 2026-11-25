@@ -8,7 +8,8 @@ import { kontakt, randSeite, SEITEN, seitenLaenge, seitenTiefe, vereinige, type 
 const EPS = 1e-9;
 
 export type HofMeldungCode =
-  | "keinTor" | "torNichtAmRand" | "nichtVerbunden" | "stellplatzNichtErreichbar" | "halleNichtErreichbar" | "sackgasse";
+  | "keinTor" | "torNichtAmRand" | "nichtVerbunden" | "getrennteNetze" | "stellplatzNichtErreichbar" | "halleNichtErreichbar"
+  | "sackgasse" | "keineWendemoeglichkeit";
 
 export interface HofMeldung {
   code: HofMeldungCode;
@@ -143,6 +144,64 @@ const stirnseiten = (r: Rechteck): Seite[] => (r.b < r.t ? ["n", "s"] : r.b > r.
 const laengsteZufahrt = (zug: Kontakt[], s?: Seite) =>
   Math.max(0, ...vereinige(zug.filter((k) => !s || k.seite === s).map((k) => [k.von, k.bis] as [number, number])).map(([a, b]) => b - a));
 
+/** Ist die Fahrfläche groß genug, dass ein Bus darauf vorwärts wenden kann? */
+export const istWendeflaeche = (r: Rechteck, cfg: BetriebshofConfig) => Math.min(r.b, r.t) >= cfg.wendeflaecheMinM - EPS;
+
+/**
+ * Fahrwege ohne Wendemöglichkeit (Annahme A2-31). Netz: Tore und Fahrwege, verbunden bei breitem Kontakt; jedes Tor am
+ * Rand hängt zusätzlich an der Straße. Ein Fahrweg hat eine Wendemöglichkeit, wenn er auf einem Rundweg liegt (auch
+ * Durchfahrt über zwei Tore und die Straße) oder wenn hinter ihm, von der Straße aus gesehen, eine Wendefläche
+ * (beide Seiten mindestens wendeflaecheMinM) oder ein Rundweg liegt. Er selbst zählt dabei mit.
+ */
+export function ohneWendemoeglichkeit(
+  fahr: Bauteil[], nachbarn: Map<number, number[]>, torSeite: Map<number, Seite>, cfg: BetriebshofConfig,
+): number[] {
+  const STRASSE = -1;
+  const ids = new Set(fahr.map((d) => d.id));
+  const adj = new Map<number, number[]>([[STRASSE, []]]);
+  for (const d of fahr) adj.set(d.id, (nachbarn.get(d.id) ?? []).filter((n) => ids.has(n)));
+  for (const t of torSeite.keys()) {
+    if (!ids.has(t)) continue;
+    adj.get(t)!.push(STRASSE);
+    adj.get(STRASSE)!.push(t);
+  }
+  const erreichtOhne = (start: number, a: number, b: number, sperre?: number) => {
+    // Breitensuche ab start, ohne die Kante a-b und ohne den Knoten sperre
+    const ges = new Set([start]);
+    const q = [start];
+    while (q.length) {
+      const x = q.shift()!;
+      for (const y of adj.get(x)!) {
+        if ((x === a && y === b) || (x === b && y === a) || y === sperre || ges.has(y)) continue;
+        ges.add(y);
+        q.push(y);
+      }
+    }
+    return ges;
+  };
+  // Knoten auf einem Rundweg: mindestens eine Kante, die keine Brücke ist
+  const aufRundweg = new Set<number>();
+  for (const [x, ys] of adj)
+    for (const y of ys) if (x < y && erreichtOhne(x, x, y).has(y)) (aufRundweg.add(x), aufRundweg.add(y));
+  // Abstand zur Straße
+  const dist = new Map<number, number>([[STRASSE, 0]]);
+  const q = [STRASSE];
+  while (q.length) {
+    const x = q.shift()!;
+    for (const y of adj.get(x)!) if (!dist.has(y)) (dist.set(y, dist.get(x)! + 1), q.push(y));
+  }
+  const wende = new Set(fahr.filter((d) => istWendeflaeche(d, cfg)).map((d) => d.id));
+  const out: number[] = [];
+  for (const d of fahr) {
+    if (d.typ !== "fahrweg" || aufRundweg.has(d.id) || !dist.has(d.id)) continue;
+    // Vorgänger in Richtung Straße; dahinter liegt alles, was ohne diesen Vorgänger erreichbar ist
+    const vor = adj.get(d.id)!.find((y) => dist.get(y) === dist.get(d.id)! - 1);
+    const hinter = erreichtOhne(d.id, d.id, vor ?? STRASSE, vor);
+    if (![...hinter].some((x) => wende.has(x) || aufRundweg.has(x))) out.push(d.id);
+  }
+  return out;
+}
+
 /**
  * Prüft das Layout: Ein Layout ist nur gültig, wenn Tor, Fahrwege und alle Bauteile verbunden sind
  * und ein Bus jeden Stellplatz erreichen kann. Warnt bei Sackgassen. Rechnet die Kapazitäten.
@@ -164,7 +223,7 @@ export function analysiereHof(hof: Betriebshof, ctx: HofKontext): HofAnalyse {
   }
 
   // Fahrflächen, die vom Tor aus erreichbar sind (Verbindung mindestens so breit wie die kleinste Zufahrt)
-  const erreichbar = new Set<number>(torSeite.keys());
+  const erreichbar = new Set<number>();
   const nachbarn = new Map<number, number[]>(fahr.map((d) => [d.id, []]));
   for (const a of fahr)
     for (const b of fahr) {
@@ -174,9 +233,17 @@ export function analysiereHof(hof: Betriebshof, ctx: HofKontext): HofAnalyse {
         nachbarn.get(b.id)!.push(a.id);
       }
     }
-  const schlange = [...erreichbar];
-  while (schlange.length) {
-    for (const n of nachbarn.get(schlange.shift()!)!) if (!erreichbar.has(n)) (erreichbar.add(n), schlange.push(n));
+  // Ein Layout ist ein zusammenhängendes Netz: mehrere Tore sind erlaubt, aber nur im selben Netz.
+  let netze = 0;
+  for (const t of torSeite.keys()) {
+    if (erreichbar.has(t)) continue;
+    netze++;
+    if (netze > 1) fehler.push({ code: "getrennteNetze", bauteil: t });
+    erreichbar.add(t);
+    const schlange = [t];
+    while (schlange.length) {
+      for (const n of nachbarn.get(schlange.shift()!)!) if (!erreichbar.has(n)) (erreichbar.add(n), schlange.push(n));
+    }
   }
   const fahrErreichbar = fahr.filter((d) => erreichbar.has(d.id));
 
@@ -226,6 +293,16 @@ export function analysiereHof(hof: Betriebshof, ctx: HofKontext): HofAnalyse {
     if (d.typ !== "fahrweg" || nachbarn.get(d.id)!.filter((n) => erreichbar.has(n)).length > 1) continue;
     const genutzt = alle.some((b) => !BEFAHRBAR.includes(b.typ) && kontakt(b, d));
     if (!genutzt) warnungen.push({ code: "sackgasse", bauteil: d.id });
+  }
+  for (const id of ohneWendemoeglichkeit(fahrErreichbar, nachbarn, torSeite, cfg)) {
+    const d = fahrErreichbar.find((x) => x.id === id)!;
+    // Nur Fahrwege, an denen Bus-Plätze liegen (Stellplätze, Ladeplätze, Hallen mit Zufahrt über diesen Weg)
+    const mitPlaetzen = alle.some((b) => {
+      if (!(BUSPLATZ.includes(b.typ) || b.typ === "halle") || !verbunden.has(b.id)) return false;
+      const k = kontakt(b, d);
+      return !!k && k.bis - k.von >= Math.min(cfg.zufahrtMinM, kleinsterBus(ctx.busse).breiteM) - EPS;
+    });
+    if (mitPlaetzen) warnungen.push({ code: "keineWendemoeglichkeit", bauteil: id });
   }
 
   const kapazitaet = new Map<number, Kapazitaet>();

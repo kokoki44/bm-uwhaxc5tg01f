@@ -19,7 +19,7 @@ export const ZAHL_SPALTEN = [
 /** Spalten mit festen erlaubten Werten (aus dem Blatt Spalten gelesen). */
 export const AUSWAHL_SPALTEN = [
   "fahrzeugart", "bauart", "antrieb", "flurtyp", "batterie_chemie", "batterie_einbauort", "ladeanschluss",
-  "im_neukauf", "region",
+  "im_neukauf", "region", "verbrauchseinheit",
 ] as const satisfies readonly Spalte[];
 
 type ZahlSpalte = (typeof ZAHL_SPALTEN)[number];
@@ -306,7 +306,11 @@ export function pruefeKatalog(roh: KatalogRoh, cfg: CatalogConfig): KatalogErgeb
         if (z.werte[s] === null || z.werte[s] === undefined) fehler({ code: "pflichtfeldLeer", ...ort, spalte: s });
         nutzbar = false;
       } else if (p === "ja") hinweis({ code: "feldLeer", ...ort, spalte: s });
-      else if (p === "nur elektro" && elektro) hinweis({ code: "elektrofeldLeer", ...ort, spalte: s });
+      else if (p === "nur elektro" && elektro) {
+        // Leerer Batterieschritt nur melden, wenn ein Bereich angegeben ist; bei fester Batterie braucht es keinen Schritt.
+        if (s === "batterie_kwh_schritt" && !hatBatterieBereich(zahl(w.batterie_kwh_min), zahl(w.batterie_kwh_max))) continue;
+        hinweis({ code: "elektrofeldLeer", ...ort, spalte: s });
+      }
     }
 
     if (nutzbar) modelle.push({ ...(w as Omit<Bus, "zeile">), zeile: z.zeile } as Bus);
@@ -317,21 +321,33 @@ export function pruefeKatalog(roh: KatalogRoh, cfg: CatalogConfig): KatalogErgeb
 /**
  * Wählbare Batteriegrößen in kWh: von batterie_kwh_min bis batterie_kwh_max in Schritten von batterie_kwh_schritt.
  * Der Bereich endet beim letzten vollen Schritt.
+ * Bereich ohne Schritt: Schritte des Standardschritts aus der Konfiguration ab dem Minimum; das Maximum aus dem
+ * Datenblatt ist immer wählbar, auch wenn es kein volles Vielfaches ist (Annahme A2-30).
  */
-export function batterieOptionen(bus: Pick<Bus, "batterie_kwh_min" | "batterie_kwh_max" | "batterie_kwh_schritt">): number[] {
+export function batterieOptionen(
+  bus: Pick<Bus, "batterie_kwh_min" | "batterie_kwh_max" | "batterie_kwh_schritt">,
+  standardSchrittKwh: number,
+): number[] {
   const min = bus.batterie_kwh_min ?? bus.batterie_kwh_max;
   const max = bus.batterie_kwh_max ?? bus.batterie_kwh_min;
   if (min === null || max === null || min > max) return [];
-  const schritt = bus.batterie_kwh_schritt;
-  if (schritt === null || !(schritt > 0)) return [max];
   const eps = GLEITKOMMA_EPS * Math.max(1, Math.abs(max));
+  if (max - min <= eps) return [max];
+  const eigenerSchritt = bus.batterie_kwh_schritt !== null && bus.batterie_kwh_schritt > 0;
+  const schritt = eigenerSchritt ? bus.batterie_kwh_schritt! : standardSchrittKwh;
   const out: number[] = [];
   for (let i = 0; ; i++) {
     const v = min + i * schritt;
     if (v > max + eps) break;
     out.push(Number(v.toFixed(9)));
   }
+  if (!eigenerSchritt && Math.abs(out[out.length - 1] - max) > eps) out.push(max);
   return out;
+}
+
+/** Ist ein Batteriebereich (min kleiner als max) angegeben? */
+export function hatBatterieBereich(min: number | null, max: number | null): boolean {
+  return min !== null && max !== null && max - min > GLEITKOMMA_EPS * Math.max(1, Math.abs(max));
 }
 
 /** Liest und prüft den Katalog. Wirft nie: eine unlesbare Datei ergibt den Fehler dateiUnlesbar. */

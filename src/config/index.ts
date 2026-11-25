@@ -82,6 +82,8 @@ export interface GrundstueckConfig {
   mindestflaecheM2: number;
   mindestSeiteM: number;
   hoechstflaecheM2: number;
+  /** Größtes erlaubtes Verhältnis lange zu kurze Seite des Grundstücks (10 heißt 1 zu 10). */
+  maxSeitenverhaeltnis: number;
   anbindungSuchradiusM: number;
   /** Abstand der Messpunkte entlang der Grenze einer Fläche für die Anbindung. */
   anbindungStuetzabstandM: number;
@@ -121,6 +123,8 @@ export interface BetriebshofConfig {
   zufahrtMinM: number;
   gegenverkehrAbM: number;
   gebaeudeKontaktMinM: number;
+  /** Kleinste Seite einer Fahrfläche, auf der ein Bus vorwärts wenden kann (Wendemöglichkeit). */
+  wendeflaecheMinM: number;
   hofGeschwindigkeitKmh: number;
   waschDurchsatzProStunde: number;
   betankungMin: number;
@@ -152,6 +156,8 @@ export interface CatalogConfig {
   pflichtFuerNutzung: string[];
   /** Erlaubte relative Abweichung zwischen gerechneter Formel und Wert in der Datei. */
   formelToleranz: number;
+  /** Schritt der wählbaren Batteriegrößen, wenn ein Bereich ohne eigenen Schritt angegeben ist. */
+  batterieStandardSchrittKwh: number;
 }
 
 export interface FerienEintrag {
@@ -185,13 +191,16 @@ export function validateConfig(c: unknown): Config {
   if (!cfg.storage.databaseName || !cfg.storage.indexedDbStore) bad("storage.*");
   if (!cfg.data?.norderstedtPath) bad("data.norderstedtPath");
   if (!cfg.catalog?.fileName || cfg.catalog.columnCount !== 63) bad("catalog");
+  if (!(cfg.catalog.batterieStandardSchrittKwh > 0)) bad("catalog.batterieStandardSchrittKwh");
   const g = cfg.grundstueck;
   if (!g || !(g.bodenpreisMinEurM2 > 0) || !(g.bodenpreisMaxEurM2 >= g.bodenpreisMinEurM2)) bad("grundstueck.bodenpreis");
   if (!(g.mindestflaecheM2 > 0) || !(g.hoechstflaecheM2 >= g.mindestflaecheM2) || !(g.mindestSeiteM > 0)) bad("grundstueck.flaechen");
+  if (!(g.maxSeitenverhaeltnis >= 1)) bad("grundstueck.maxSeitenverhaeltnis");
   const b = cfg.betriebshof;
   if (!b || !b.raster?.length || b.raster.some((r) => !(r >= 1) || !Number.isInteger(r)) || !b.raster.includes(b.rasterStandard)) bad("betriebshof.raster (ganze Meter, kleinste Stufe 1 m)");
   if (Math.min(...b.raster) !== 1) bad("betriebshof.raster: kleinste Rastergröße 1 m");
   if (!(b.hofGeschwindigkeitKmh > 0) || !(b.abrissErstattung >= 0 && b.abrissErstattung <= 1)) bad("betriebshof");
+  if (!(b.wendeflaecheMinM > 0)) bad("betriebshof.wendeflaecheMinM");
   for (const typ of ["tor", "fahrweg", "stellplatz", "halle", "werkstatt", "waschanlage", "lager", "buero", "tankstelle", "ladeplatz", "toilette", "kueche", "pausenraum"]) {
     const bt = b.bauteile?.[typ];
     if (!bt || !(bt.kostenEurM2 >= 0) || !/^#[0-9a-f]{6}$/i.test(bt.farbe) || (!bt.nachBus && !(bt.minA > 0 && bt.minB >= bt.minA))) bad(`betriebshof.bauteile.${typ}`);

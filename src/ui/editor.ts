@@ -126,7 +126,7 @@ export function oeffneEditor(k: EditorKontext): void {
   zukaufKnopf.addEventListener("click", () => {
     const e = zukaufen(hof, k.spiel, seiteWahl.value as Seite, Number(zukaufM.value), config.grundstueck);
     if (e.ok) melde(t("editor.zukaufOk", { kosten: euro(e.kostenEur) }), true);
-    else melde(t(`editor.zukaufFehler.${e.fehler}` as TextKey, { max: zahl(config.grundstueck.hoechstflaecheM2), ha: zahl(config.grundstueck.hoechstflaecheM2 / 10000) }));
+    else melde(t(`editor.zukaufFehler.${e.fehler}` as TextKey, { max: zahl(config.grundstueck.hoechstflaecheM2), ha: zahl(config.grundstueck.hoechstflaecheM2 / 10000), verhaeltnis: config.grundstueck.maxSeitenverhaeltnis }));
     if (e.ok) aenderung();
   });
   const zukauf = h("div", { class: "zukauf" }, h("h3", { text: t("editor.zukauf") }), h("div", { class: "zweispaltig" }, h("label", { for: "e-seite", text: t("editor.seite") }), seiteWahl, h("label", { for: "e-zukauf", text: t("editor.meter") }), zukaufM), zukaufInfo, zukaufKnopf);
@@ -209,7 +209,7 @@ export function oeffneEditor(k: EditorKontext): void {
 
   const meldungText = (m: HofMeldung) => {
     const b = hof.bauteile.find((x) => x.id === m.bauteil);
-    return t(`editor.meldung.${m.code}` as TextKey, { bauteil: b ? bezeichnung(b) : "" });
+    return t(`editor.meldung.${m.code}` as TextKey, { bauteil: b ? bezeichnung(b) : "", m: zahl(config.betriebshof.wendeflaecheMinM) });
   };
 
   function zeichneInfo() {

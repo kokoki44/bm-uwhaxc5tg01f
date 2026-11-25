@@ -87,6 +87,9 @@ test("Betriebshof: Katalogfehler, Standort wählen, Grundstück kaufen, Layout b
   await baueMitEingabe(page, "werkstatt", { x: 4, y: 23, b: 5, t: 15 });
   await baueMitEingabe(page, "buero", { x: 27, y: 23, b: 4, t: 4 });
   await expect(page.getByTestId("editor-betrieb")).toHaveText(/✔ Betriebsbereit/);
+  // nur ein Tor und ein schmaler Fahrweg mit Stellplätzen: Warnung, Layout bleibt gültig
+  await expect(page.getByTestId("editor-warnungen")).toContainText("keine Wendemöglichkeit");
+  await expect(page.getByTestId("editor-gueltig")).toContainText("Layout gültig");
   // Überlappung wird abgelehnt
   await baueMitEingabe(page, "lager", { x: 5, y: 17, b: 4, t: 4 });
   await expect(page.getByTestId("editor-meldung")).toContainText("überlappt");

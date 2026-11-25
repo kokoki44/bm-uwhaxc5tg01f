@@ -99,6 +99,10 @@ describe("Standortwahl", () => {
     expect(kaufeStartgrundstueck(kasse, s, s.startLage, 40, 40, g)).toEqual({ ok: false, fehler: "zuKlein" });
     expect(kaufeStartgrundstueck(kasse, s, s.startLage, 100, 19, g)).toEqual({ ok: false, fehler: "zuKlein" });
     expect(kaufeStartgrundstueck(kasse, s, s.startLage, 400, 300, g)).toEqual({ ok: false, fehler: "zuGross" });
+    // Seitenverhältnis höchstens 1 zu 10: 20 × 201 m ist zu schmal, 20 × 200 m an der Grenze erlaubt (Fläche ausgenommen)
+    expect(kaufeStartgrundstueck(kasse, s, s.startLage, 20, 201, g)).toEqual({ ok: false, fehler: "seitenverhaeltnis" });
+    expect(kaufeStartgrundstueck(kasse, s, s.startLage, 201, 20, g)).toEqual({ ok: false, fehler: "seitenverhaeltnis" });
+    expect(pruefeStartgrundstueck(s, s.startLage, 20, 200, g)).not.toBe("seitenverhaeltnis");
     const weit = hofZuGeo(s.startLage, 5000, 5000);
     expect(kaufeStartgrundstueck(kasse, s, weit, 50, 40, g)).toEqual({ ok: false, fehler: "nichtInFlaeche" });
     expect(kaufeStartgrundstueck({ kontostandEur: 1000 }, s, s.startLage, 50, 40, g)).toEqual({ ok: false, fehler: "geldFehlt" });

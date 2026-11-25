@@ -85,6 +85,7 @@
     "mindestflaecheM2": 2000,
     "mindestSeiteM": 20,
     "hoechstflaecheM2": 100000,
+    "maxSeitenverhaeltnis": 10,
     "anbindungSuchradiusM": 1500,
     "anbindungStuetzabstandM": 20,
     "indexZelleM": 100,
@@ -117,6 +118,7 @@
     "zufahrtMinM": 3.5,
     "gegenverkehrAbM": 7,
     "gebaeudeKontaktMinM": 1,
+    "wendeflaecheMinM": 27,
     "hofGeschwindigkeitKmh": 10,
     "waschDurchsatzProStunde": 10,
     "betankungMin": 8,
@@ -168,6 +170,7 @@
     "standardwerteBlatt": "Standardwerte",
     "standardwerteKopfZeile": 4,
     "pflichtFuerNutzung": ["modell_id", "hersteller", "modellfamilie", "modell", "fahrzeugart", "bauart", "antrieb", "laenge_mm", "breite_mm"],
-    "formelToleranz": 0.000001
+    "formelToleranz": 0.000001,
+    "batterieStandardSchrittKwh": 50
   }
 }

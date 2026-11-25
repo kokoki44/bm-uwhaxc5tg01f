@@ -129,6 +129,27 @@ describe("Betriebshof: Bauen, Kosten, Grundstück", () => {
     expect(zukaufen(hof(), kasse(), "o", 0, config.grundstueck)).toEqual({ ok: false, fehler: "ungueltig" });
   });
 
+  it("Zukauf hält das Seitenverhältnis von höchstens 1 zu 10 ein, die Anzeige des Höchstwerts berücksichtigt es", () => {
+    const g = config.grundstueck;
+    expect(g.maxSeitenverhaeltnis).toBe(10);
+    const h = hof(50, 40); // 50 m breit (Ost nach West), 40 m tief
+    const k = kasse(100_000_000);
+    // nach Osten: Breite höchstens 10 × 40 = 400 m, also 350 m; die Fläche (16.000 m²) wäre noch erlaubt
+    expect(zukaufHoechstM(h, "o", g)).toBe(350);
+    expect(zukaufHoechstM(h, "w", g)).toBe(350);
+    expect(zukaufen(h, k, "o", 351, g)).toEqual({ ok: false, fehler: "seitenverhaeltnis" });
+    expect(h.grundstueck.flaeche).toEqual({ x: 0, y: 0, b: 50, t: 40 });
+    expect(zukaufen(h, k, "o", 350, g).ok).toBe(true);
+    expect(h.grundstueck.flaeche).toEqual({ x: 0, y: 0, b: 400, t: 40 });
+    expect(zukaufHoechstM(h, "o", g)).toBe(0);
+    expect(zukaufen(h, k, "w", 1, g)).toEqual({ ok: false, fehler: "seitenverhaeltnis" });
+    // nach Süden: Fläche begrenzt (100.000 / 400 = 250 m Tiefe, also 210 m), das Verhältnis nicht (4.000 m)
+    expect(zukaufHoechstM(h, "s", g)).toBe(210);
+    // ein Zukauf an der kurzen Seite, der das Verhältnis verbessert, ist erlaubt
+    expect(zukaufen(h, k, "n", 10, g).ok).toBe(true);
+    expect(zukaufHoechstM(h, "o", g)).toBe(100);
+  });
+
   it("Ladeleistung ist einstellbar im Rahmen der Konfiguration", () => {
     const h = hof();
     const l = baue(h, kasse(), "ladeplatz", { x: 0, y: 0, b: 4, t: 14 });
@@ -223,6 +244,98 @@ describe("Betriebshof: Layout-Gültigkeit", () => {
     // liegt dort ein Stellplatz, ist es keine Sackgasse mehr
     baue(h, k, "stellplatz", { x: 46, y: 28, b: 4, t: 14 });
     expect(analysiereHof(h, ctx).warnungen.filter((w) => w.bauteil === stich.id)).toEqual([]);
+  });
+
+  it("zwei getrennte Hofnetze machen das Layout ungültig, mehrere Tore im selben Netz sind erlaubt", () => {
+    const { h, k } = grundlayout();
+    // zweites Tor am Nordrand mit eigenem Fahrweg, ohne Verbindung zum ersten Netz
+    const tor2 = baue(h, k, "tor", { x: 40, y: 0, b: 7, t: 4 });
+    baue(h, k, "fahrweg", { x: 40, y: 4, b: 7, t: 10 });
+    let a = analysiereHof(h, ctx);
+    expect(a.gueltig).toBe(false);
+    expect(a.fehler).toEqual([{ code: "getrennteNetze", bauteil: tor2.id }]);
+    // verbunden: ein Netz mit zwei Toren ist gültig
+    baue(h, k, "fahrweg", { x: 40, y: 14, b: 7, t: 6 });
+    a = analysiereHof(h, ctx);
+    expect(a.fehler).toEqual([]);
+    expect(a.gueltig).toBe(true);
+    expect(a.torSeite.size).toBe(2);
+  });
+
+  describe("Wendemöglichkeit (Annahme A2-31)", () => {
+    const warnt = (h: Betriebshof, id: number) => analysiereHof(h, ctx).warnungen.some((w) => w.code === "keineWendemoeglichkeit" && w.bauteil === id);
+    function stich() {
+      const h = hof(100, 60);
+      const k = kasse();
+      baue(h, k, "tor", { x: 0, y: 20, b: 4, t: 7 });
+      const weg = baue(h, k, "fahrweg", { x: 4, y: 20, b: 60, t: 7 });
+      baue(h, k, "stellplatz", { x: 4, y: 6, b: 4, t: 14 });
+      return { h, k, weg };
+    }
+
+    it("Fahrweg mit Stellplätzen ohne Wendemöglichkeit: Warnung, Layout bleibt gültig", () => {
+      const { h, weg } = stich();
+      expect(config.betriebshof.wendeflaecheMinM).toBe(27);
+      const a = analysiereHof(h, ctx);
+      expect(a.gueltig).toBe(true);
+      expect(a.warnungen).toContainEqual({ code: "keineWendemoeglichkeit", bauteil: weg.id });
+    });
+
+    it("ohne Stellplätze am Weg keine Warnung", () => {
+      const h = hof(100, 60);
+      const k = kasse();
+      baue(h, k, "tor", { x: 0, y: 20, b: 4, t: 7 });
+      const weg = baue(h, k, "fahrweg", { x: 4, y: 20, b: 60, t: 7 });
+      expect(warnt(h, weg.id)).toBe(false);
+    });
+
+    it("Wendefläche hinter dem Weg hebt die Warnung auf, eine zu kleine nicht", () => {
+      const a = stich();
+      baue(a.h, a.k, "fahrweg", { x: 64, y: 10, b: 26, t: 27 });
+      expect(warnt(a.h, a.weg.id)).toBe(true);
+      const b = stich();
+      baue(b.h, b.k, "fahrweg", { x: 64, y: 10, b: 27, t: 27 });
+      expect(warnt(b.h, b.weg.id)).toBe(false);
+    });
+
+    it("Wendefläche vor dem Weg (zwischen Tor und Weg) hilft nicht", () => {
+      const h = hof(120, 60);
+      const k = kasse();
+      baue(h, k, "tor", { x: 0, y: 20, b: 4, t: 7 });
+      const platz = baue(h, k, "fahrweg", { x: 4, y: 10, b: 27, t: 27 });
+      const weg = baue(h, k, "fahrweg", { x: 31, y: 20, b: 60, t: 7 });
+      baue(h, k, "stellplatz", { x: 40, y: 6, b: 4, t: 14 });
+      expect(warnt(h, weg.id)).toBe(true);
+      expect(warnt(h, platz.id)).toBe(false);
+    });
+
+    it("Durchfahrt über ein zweites Tor ist eine Wendemöglichkeit", () => {
+      const h = hof(100, 60);
+      const k = kasse();
+      baue(h, k, "tor", { x: 0, y: 20, b: 4, t: 7 });
+      const weg = baue(h, k, "fahrweg", { x: 4, y: 20, b: 92, t: 7 });
+      baue(h, k, "tor", { x: 96, y: 20, b: 4, t: 7 });
+      baue(h, k, "stellplatz", { x: 4, y: 6, b: 4, t: 14 });
+      expect(warnt(h, weg.id)).toBe(false);
+    });
+
+    it("Rundweg ist eine Wendemöglichkeit, ein Stich davor nicht", () => {
+      const h = hof(100, 60);
+      const k = kasse();
+      baue(h, k, "tor", { x: 0, y: 20, b: 4, t: 7 });
+      const sued = baue(h, k, "fahrweg", { x: 4, y: 20, b: 60, t: 7 });
+      baue(h, k, "fahrweg", { x: 4, y: 0, b: 60, t: 7 });
+      baue(h, k, "fahrweg", { x: 4, y: 7, b: 7, t: 13 });
+      baue(h, k, "fahrweg", { x: 57, y: 7, b: 7, t: 13 });
+      baue(h, k, "stellplatz", { x: 15, y: 7, b: 4, t: 13 });
+      // Stich nach Süden mit Stellplatz: der Rundweg liegt vor ihm, nicht dahinter
+      const stichSued = baue(h, k, "fahrweg", { x: 30, y: 27, b: 7, t: 30 });
+      baue(h, k, "stellplatz", { x: 37, y: 40, b: 14, t: 4 });
+      const a = analysiereHof(h, ctx);
+      expect(a.gueltig).toBe(true);
+      expect(warnt(h, sued.id)).toBe(false);
+      expect(warnt(h, stichSued.id)).toBe(true);
+    });
   });
 
   it("für den Betrieb nötig sind Tor, Stellplatz, Werkstatt und Büro", () => {

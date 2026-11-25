@@ -166,7 +166,12 @@ export function setzeLadeleistung(hof: Betriebshof, id: number, kw: number, cfg:
   return true;
 }
 
-export type ZukaufFehler = "ungueltig" | "zuGross" | "geldFehlt";
+export type ZukaufFehler = "ungueltig" | "zuGross" | "seitenverhaeltnis" | "geldFehlt";
+
+/** Hält das Rechteck das höchste Seitenverhältnis ein (lange Seite höchstens max mal die kurze)? */
+export function seitenverhaeltnisOk(r: { b: number; t: number }, max: number): boolean {
+  return Math.max(r.b, r.t) <= max * Math.min(r.b, r.t) + 1e-9;
+}
 
 /** Neue Grundstücksfläche, wenn Seite s um m Meter verlängert wird. */
 export function erweitert(f: Rechteck, s: Seite, m: number): Rechteck {
@@ -186,6 +191,7 @@ export function zukaufen(hof: Betriebshof, kasse: Kasse, s: Seite, m: number, g:
   if (!Number.isInteger(m) || m < 1) return { ok: false, fehler: "ungueltig" };
   const neu = erweitert(hof.grundstueck.flaeche, s, m);
   if (flaecheM2(neu) > g.hoechstflaecheM2) return { ok: false, fehler: "zuGross" };
+  if (!seitenverhaeltnisOk(neu, g.maxSeitenverhaeltnis)) return { ok: false, fehler: "seitenverhaeltnis" };
   const kostenEur = zukaufKostenEur(hof, s, m);
   if (kasse.kontostandEur < kostenEur) return { ok: false, fehler: "geldFehlt" };
   hof.grundstueck.flaeche = neu;
@@ -194,11 +200,14 @@ export function zukaufen(hof: Betriebshof, kasse: Kasse, s: Seite, m: number, g:
   return { ok: true, kostenEur };
 }
 
-/** Größte Strecke, um die Seite s noch verlängert werden darf, ohne die Höchstfläche zu überschreiten. */
+/** Größte Strecke, um die Seite s noch verlängert werden darf, ohne Höchstfläche oder Seitenverhältnis zu überschreiten. */
 export function zukaufHoechstM(hof: Betriebshof, s: Seite, g: GrundstueckConfig): number {
   const f = hof.grundstueck.flaeche;
-  const quer = s === "n" || s === "s" ? f.b : f.t;
-  return Math.max(0, Math.floor((g.hoechstflaecheM2 - flaecheM2(f)) / quer));
+  // Verlängert wird die Ausdehnung senkrecht zur gewählten Seite; die Seite selbst ("quer") bleibt gleich lang.
+  const [quer, laenge] = s === "n" || s === "s" ? [f.b, f.t] : [f.t, f.b];
+  const nachFlaeche = Math.floor((g.hoechstflaecheM2 - flaecheM2(f)) / quer);
+  const nachVerhaeltnis = Math.floor(g.maxSeitenverhaeltnis * quer + 1e-9) - laenge;
+  return Math.max(0, Math.min(nachFlaeche, nachVerhaeltnis));
 }
 
 // Speichern und Laden (Kriterium 13). Das Format trägt eine Version, damit alte Stände ladbar bleiben.

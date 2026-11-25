@@ -99,7 +99,7 @@ export function oeffneGrundstueck(k: StandortKontext, s: Standort, mitte?: LonLa
     }
     const preis = b * tt * s.preisEurM2;
     kosten.textContent = t("grundstueck.kosten", { flaeche: zahl(b * tt), preis: euro(preis) });
-    if (f) meldung.textContent = t(`grundstueck.fehler.${f}` as TextKey, { min: zahl(g.mindestflaecheM2), seite: g.mindestSeiteM, max: zahl(g.hoechstflaecheM2) });
+    if (f) meldung.textContent = t(`grundstueck.fehler.${f}` as TextKey, { min: zahl(g.mindestflaecheM2), seite: g.mindestSeiteM, max: zahl(g.hoechstflaecheM2), verhaeltnis: g.maxSeitenverhaeltnis });
     else if (k.spiel.kontostandEur < preis) meldung.textContent = t("grundstueck.fehler.geldFehlt");
     kaufen.disabled = !!meldung.textContent && meldung.textContent !== t("grundstueck.fehler.hierNicht");
     zeigeGrundstueck(k.map, f ? null : rechteckRing(nw, b, tt), k.spiel.firma.farbe);
@@ -111,7 +111,7 @@ export function oeffneGrundstueck(k: StandortKontext, s: Standort, mitte?: LonLa
     const { b, t: tt } = masse();
     const e = kaufeStartgrundstueck(k.spiel, s, nw, b, tt, g);
     if (!e.ok) {
-      meldung.textContent = t(`grundstueck.fehler.${e.fehler}` as TextKey, { min: zahl(g.mindestflaecheM2), seite: g.mindestSeiteM, max: zahl(g.hoechstflaecheM2) });
+      meldung.textContent = t(`grundstueck.fehler.${e.fehler}` as TextKey, { min: zahl(g.mindestflaecheM2), seite: g.mindestSeiteM, max: zahl(g.hoechstflaecheM2), verhaeltnis: g.maxSeitenverhaeltnis });
       return;
     }
     k.spiel.betriebshof = neuerHof(e.grundstueck);
@@ -132,7 +132,7 @@ export function oeffneGrundstueck(k: StandortKontext, s: Standort, mitte?: LonLa
         h("dt", { text: t("grundstueck.verfuegbar") }), h("dd", { text: t("einheit.m2", { n: zahl(s.flaecheM2) }) }),
         h("dt", { text: t("standort.spalte.anbindung") }), h("dd", { text: t("grundstueck.anbindungText", { m: zahl(s.anbindungM), strasse: s.strasse || t("grundstueck.ohneName") }) }),
       ),
-      h("p", { class: "hilfe", text: t("grundstueck.hilfe", { min: zahl(g.mindestflaecheM2), max: zahl(g.hoechstflaecheM2), ha: zahl(g.hoechstflaecheM2 / 10000) }) }),
+      h("p", { class: "hilfe", text: t("grundstueck.hilfe", { min: zahl(g.mindestflaecheM2), verhaeltnis: g.maxSeitenverhaeltnis, max: zahl(g.hoechstflaecheM2), ha: zahl(g.hoechstflaecheM2 / 10000) }) }),
       h("div", { class: "zweispaltig" },
         h("label", { for: "g-breite", text: t("grundstueck.breite") }), breite,
         h("label", { for: "g-tiefe", text: t("grundstueck.tiefe") }), tiefe,
