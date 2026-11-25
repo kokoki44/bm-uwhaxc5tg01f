@@ -172,5 +172,96 @@
     "pflichtFuerNutzung": ["modell_id", "hersteller", "modellfamilie", "modell", "fahrzeugart", "bauart", "antrieb", "laenge_mm", "breite_mm"],
     "formelToleranz": 0.000001,
     "batterieStandardSchrittKwh": 50
+  },
+  "optionen": {
+    "fileName": "optionen.xlsx",
+    "sheetName": "Optionen",
+    "frei": "frei"
+  },
+  "fahrzeugmarkt": {
+    "batterieAufpreisEurKwh": 700,
+    "regionenNachLand": { "DE": ["Europa", "weltweit"] },
+    "ausgeschlosseneFahrzeugarten": ["Tram", "O-Bus"],
+    "flottennummer": { "schema": "{nr}", "start": 1 },
+    "kennzeichen": {
+      "schema": "{kreis}-{buchstaben} {zahl}",
+      "buchstaben": "ABCDEFGHIJKLMNOPRSTUVWXYZ",
+      "buchstabenMin": 1,
+      "buchstabenMax": 2,
+      "zahlMin": 1,
+      "zahlMax": 9999,
+      "ersatzKreis": "XX",
+      "kreisNachSchluessel": {
+        "01001": "FL", "01002": "KI", "01003": "HL", "01004": "NMS", "01051": "HEI", "01053": "RZ", "01054": "NF",
+        "01055": "OH", "01056": "PI", "01057": "PLÖ", "01058": "RD", "01059": "SL", "01060": "SE", "01061": "IZ",
+        "01062": "OD", "02000": "HH"
+      }
+    },
+    "haendlerAbschlag": 0.25,
+    "umlackierenEur": 12000,
+    "inspektionEur": 500,
+    "restwertMin": 0.1,
+    "zustandPreisBasis": 0.7,
+    "gebraucht": {
+      "angebote": 12,
+      "laufzeitWochenMin": 2,
+      "laufzeitWochenMax": 4,
+      "mindestAlterJahre": 2,
+      "kmJeJahr": 50000,
+      "kmStreuung": 0.3,
+      "zustandAbnahmeUeberLebensdauer": 50,
+      "zustandAbschlagJeZuverlaessigkeitspunkt": 0.2,
+      "zustandStreuung": 10,
+      "zustandMin": 20,
+      "zustandSpanne": 15,
+      "batterieZustandEnde": 80,
+      "batterieZustandMin": 60,
+      "batterieSpanne": 10,
+      "preisStreuung": 0.1,
+      "assistentenPflichtAbBaujahr": 2024,
+      "assistentenAnteilVorher": 0.5,
+      "palette": ["#f2c500", "#e30613", "#0063a6", "#00843d", "#ffffff", "#f39200", "#6e6e6e", "#7ab51d"]
+    }
+  },
+  "personal": {
+    "arten": ["fahrer", "mechaniker", "buero", "kontrolle", "reinigung", "kundenservice"],
+    "marktlohnEurH": {
+      "fahrer": [20.85, 21.17, 21.48, 21.8, 22.12, 22.44],
+      "mechaniker": [20.85, 21.17, 21.48, 21.8, 22.12, 22.44],
+      "buero": [20.85, 21.17, 21.48, 21.8, 22.12, 22.44],
+      "kontrolle": [20.1, 20.38, 20.67, 20.95, 21.24, 21.52],
+      "reinigung": [17.96],
+      "kundenservice": [20.1, 20.38, 20.67, 20.95, 21.24, 21.52]
+    },
+    "stufeAbJahren": [0, 3, 6, 9, 13, 17],
+    "wochenstundenMin": 10,
+    "wochenstundenMax": 38,
+    "wochenstundenStandard": 38,
+    "wochenFaktor": 4.348,
+    "arbeitgeberAnteil": 0.22,
+    "jahressonderzahlungEur": 1800,
+    "probezeitMonate": 6,
+    "kuendigung": {
+      "probezeitWochen": 2,
+      "bisEinJahrMonate": 1,
+      "abEinJahrWochen": 6,
+      "staffelJahreMonate": [[5, 3], [8, 4], [10, 5], [12, 6]]
+    },
+    "bewerbung": {
+      "laufzeitTage": 28,
+      "wartezeitTageMin": 3,
+      "wartezeitTageMax": 14,
+      "mittelBeiMarktlohn": { "fahrer": 1, "mechaniker": 2, "buero": 2, "kontrolle": 2, "reinigung": 2, "kundenservice": 2 },
+      "lohnExponent": 4,
+      "hoechstens": 8,
+      "stufenGewichte": [30, 25, 20, 12, 8, 5],
+      "stufenJeLohnanteil": 10
+    },
+    "zufriedenheitStart": [60, 90],
+    "gesundheitStart": [70, 100],
+    "einweisungen": ["gelenk", "doppeldecker", "elektro"],
+    "einweisungAnteilBasis": 0.2,
+    "einweisungAnteilJeStufe": 0.1,
+    "fachrichtungen": ["antrieb", "karosserie", "elektrik"]
   }
 }

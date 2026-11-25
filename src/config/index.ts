@@ -70,6 +70,109 @@ export interface Config {
   grundstueck: GrundstueckConfig;
   betriebshof: BetriebshofConfig;
   catalog: CatalogConfig;
+  optionen: OptionenConfig;
+  fahrzeugmarkt: FahrzeugmarktConfig;
+  personal: PersonalConfig;
+}
+
+/** Optionsdatei (Ausstattung beim Neukauf), wie der Katalog nur gelesen. */
+export interface OptionenConfig {
+  fileName: string;
+  sheetName: string;
+  /** Wert der Spalte freischaltung für Optionen ohne Forschung. */
+  frei: string;
+}
+
+export interface FahrzeugmarktConfig {
+  batterieAufpreisEurKwh: number;
+  /** Welche Werte der Katalogspalte region zu Gemeinden eines Landes passen (Land aus dem ISO-Code der Region). */
+  regionenNachLand: Record<string, string[]>;
+  /** Fahrzeugarten, die (noch) nicht kaufbar sind. */
+  ausgeschlosseneFahrzeugarten: string[];
+  flottennummer: { schema: string; start: number };
+  kennzeichen: {
+    schema: string;
+    buchstaben: string;
+    buchstabenMin: number;
+    buchstabenMax: number;
+    zahlMin: number;
+    zahlMax: number;
+    /** Unterscheidungszeichen, wenn der Kreisschlüssel der Startgemeinde unbekannt ist. */
+    ersatzKreis: string;
+    kreisNachSchluessel: Record<string, string>;
+  };
+  haendlerAbschlag: number;
+  umlackierenEur: number;
+  inspektionEur: number;
+  /** Restwert am Ende der Lebensdauer (Anteil am Neupreis). */
+  restwertMin: number;
+  /** Preisanteil, der nicht vom Zustand abhängt: Faktor = Basis + (1 − Basis) × Zustand. */
+  zustandPreisBasis: number;
+  gebraucht: GebrauchtConfig;
+}
+
+export interface GebrauchtConfig {
+  angebote: number;
+  laufzeitWochenMin: number;
+  laufzeitWochenMax: number;
+  mindestAlterJahre: number;
+  kmJeJahr: number;
+  kmStreuung: number;
+  zustandAbnahmeUeberLebensdauer: number;
+  zustandAbschlagJeZuverlaessigkeitspunkt: number;
+  zustandStreuung: number;
+  zustandMin: number;
+  zustandSpanne: number;
+  batterieZustandEnde: number;
+  batterieZustandMin: number;
+  batterieSpanne: number;
+  preisStreuung: number;
+  assistentenPflichtAbBaujahr: number;
+  assistentenAnteilVorher: number;
+  palette: string[];
+}
+
+export type PersonalArt = "fahrer" | "mechaniker" | "buero" | "kontrolle" | "reinigung" | "kundenservice";
+
+export interface PersonalConfig {
+  arten: PersonalArt[];
+  /** Marktlohn je Personalart und Erfahrungsstufe (Index 0 = Stufe 1), Euro je Stunde. */
+  marktlohnEurH: Record<PersonalArt, number[]>;
+  /** Stufe n gilt ab so vielen Jahren Erfahrung (Index 0 = Stufe 1). */
+  stufeAbJahren: number[];
+  wochenstundenMin: number;
+  wochenstundenMax: number;
+  wochenstundenStandard: number;
+  /** Wochen je Monat für den Monatslohn (TV-N SH § 7). */
+  wochenFaktor: number;
+  arbeitgeberAnteil: number;
+  /** Jahressonderzahlung bei Vollzeit (wochenstundenMax), anteilig bei Teilzeit. */
+  jahressonderzahlungEur: number;
+  probezeitMonate: number;
+  kuendigung: {
+    probezeitWochen: number;
+    bisEinJahrMonate: number;
+    abEinJahrWochen: number;
+    /** [ab Jahren Betriebszugehörigkeit, Monate Frist zum Quartalsende] */
+    staffelJahreMonate: [number, number][];
+  };
+  bewerbung: {
+    laufzeitTage: number;
+    wartezeitTageMin: number;
+    wartezeitTageMax: number;
+    mittelBeiMarktlohn: Record<PersonalArt, number>;
+    lohnExponent: number;
+    hoechstens: number;
+    stufenGewichte: number[];
+    /** Stufen mehr je 100 % über dem Marktlohn (10 heißt: je 10 % eine Stufe). */
+    stufenJeLohnanteil: number;
+  };
+  zufriedenheitStart: [number, number];
+  gesundheitStart: [number, number];
+  einweisungen: string[];
+  einweisungAnteilBasis: number;
+  einweisungAnteilJeStufe: number;
+  fachrichtungen: string[];
 }
 
 export interface GrundstueckConfig {
@@ -205,6 +308,22 @@ export function validateConfig(c: unknown): Config {
     const bt = b.bauteile?.[typ];
     if (!bt || !(bt.kostenEurM2 >= 0) || !/^#[0-9a-f]{6}$/i.test(bt.farbe) || (!bt.nachBus && !(bt.minA > 0 && bt.minB >= bt.minA))) bad(`betriebshof.bauteile.${typ}`);
   }
+  if (!cfg.optionen?.fileName || !cfg.optionen.sheetName || !cfg.optionen.frei) bad("optionen");
+  const m = cfg.fahrzeugmarkt;
+  if (!m || !(m.batterieAufpreisEurKwh >= 0) || !(m.haendlerAbschlag >= 0 && m.haendlerAbschlag < 1)) bad("fahrzeugmarkt");
+  if (!(m.restwertMin >= 0 && m.restwertMin <= 1) || !(m.zustandPreisBasis >= 0 && m.zustandPreisBasis <= 1)) bad("fahrzeugmarkt.restwert");
+  const gb = m.gebraucht;
+  if (!gb || !(gb.angebote >= 1) || !(gb.laufzeitWochenMin >= 1 && gb.laufzeitWochenMax >= gb.laufzeitWochenMin) || !gb.palette?.length) bad("fahrzeugmarkt.gebraucht");
+  if (!(m.kennzeichen?.buchstaben?.length > 0) || !(m.kennzeichen.zahlMax >= m.kennzeichen.zahlMin)) bad("fahrzeugmarkt.kennzeichen");
+  const p = cfg.personal;
+  if (!p?.arten?.length || p.stufeAbJahren?.[0] !== 0) bad("personal");
+  for (const a of p.arten) {
+    const l = p.marktlohnEurH[a];
+    if (!l?.length || l.length > p.stufeAbJahren.length || l.some((x) => !(x > 0))) bad(`personal.marktlohnEurH.${a}`);
+    if (!(p.bewerbung.mittelBeiMarktlohn[a] >= 0)) bad(`personal.bewerbung.mittelBeiMarktlohn.${a}`);
+  }
+  if (!(p.wochenstundenMin > 0 && p.wochenstundenMax >= p.wochenstundenMin)) bad("personal.wochenstunden");
+  if (p.bewerbung.stufenGewichte.length !== p.stufeAbJahren.length) bad("personal.bewerbung.stufenGewichte");
   return cfg;
 }
 
