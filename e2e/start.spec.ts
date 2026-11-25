@@ -123,6 +123,9 @@ test("Simulations-Worker schafft 600-fach ohne Stocken", async ({ page }, info) 
   await page.locator("#map canvas").click({ position: { x: 5, y: 5 } });
   await page.keyboard.press("5");
   await expect(page.getByTestId("tempo-600")).toHaveAttribute("aria-pressed", "true");
+  // Regression (macOS, 25.11.2026): Der Knopf zeigt 600-fach, bevor der Worker umgestellt hat. Erst messen, wenn der
+  // Worker selbst 600-fach meldet, sonst zählen einzelne Takte mit 1-fach mit (102 Takte, aber nur 6000,2 s).
+  await expect(page.getByTestId("status")).toContainText("Geschwindigkeit 600-fach", { timeout: 10000 });
   // Statusmeldungen des Workers mitschreiben: Takt und Spielzeit je Meldung mit Zeitstempel
   const messung = await page.evaluate(async () => {
     const status = document.getElementById("status")!;
