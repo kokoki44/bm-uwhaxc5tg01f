@@ -86,6 +86,8 @@
     "mindestSeiteM": 20,
     "hoechstflaecheM2": 100000,
     "anbindungSuchradiusM": 1500,
+    "anbindungStuetzabstandM": 20,
+    "indexZelleM": 100,
     "lageSuchschrittM": 5,
     "startBreiteM": 50,
     "startTiefeM": 40
@@ -93,6 +95,23 @@
   "betriebshof": {
     "raster": [1, 2, 5, 10],
     "rasterStandard": 1,
+    "zukaufStandardM": 10,
+    "zeichnung": {
+      "randAnteil": 0.04,
+      "randMinM": 3,
+      "maxRasterLinien": 400,
+      "farben": {
+        "grund": "#ffffff",
+        "grundRand": "#333333",
+        "raster": "#dcdcdc",
+        "bauteilRand": "#222222",
+        "text": "#111111",
+        "torRand": "#111111",
+        "nichtVerbunden": "#a4161a",
+        "auswahl": "#e8a400",
+        "weg": "#c1121f"
+      }
+    },
     "seitenabstandM": 0.9,
     "rangierraumM": 1.5,
     "zufahrtMinM": 3.5,

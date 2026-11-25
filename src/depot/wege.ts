@@ -74,11 +74,16 @@ class Heap {
 export function berechneWege(hof: Betriebshof, a: HofAnalyse, cfg: BetriebshofConfig): HofWege {
   const f = hof.grundstueck.flaeche;
   const W = f.b, H = f.t;
-  const fahrbar = new Uint8Array(W * H);
+  // Je Rasterzelle die Fahrfläche, zu der sie gehört (0 = nicht befahrbar)
+  const fahrbar = new Int32Array(W * H);
   for (const d of hof.bauteile) {
     if (!BEFAHRBAR.includes(d.typ) || !a.verbunden.has(d.id)) continue;
-    for (let j = d.y - f.y; j < d.y - f.y + d.t; j++) for (let i = d.x - f.x; i < d.x - f.x + d.b; i++) fahrbar[j * W + i] = 1;
+    for (let j = d.y - f.y; j < d.y - f.y + d.t; j++) for (let i = d.x - f.x; i < d.x - f.x + d.b; i++) fahrbar[j * W + i] = d.id;
   }
+  // Übergang zwischen zwei Fahrflächen nur, wenn sie breit genug verbunden sind (wie in der Prüfung des Layouts)
+  const verbundenPaar = new Set<string>();
+  for (const [id, ns] of a.fahrNachbarn) for (const n of ns) verbundenPaar.add(`${id},${n}`);
+  const darf = (p: number, q: number) => fahrbar[p] === fahrbar[q] || verbundenPaar.has(`${fahrbar[p]},${fahrbar[q]}`);
   const dist = new Float64Array(W * H).fill(Infinity);
   const vor = new Int32Array(W * H).fill(-1);
   const heap = new Heap();
@@ -106,9 +111,11 @@ export function berechneWege(hof: Betriebshof, a: HofAnalyse, cfg: BetriebshofCo
         if (!di && !dj) continue;
         const x = i + di, y = j + dj;
         if (x < 0 || y < 0 || x >= W || y >= H || !fahrbar[y * W + x]) continue;
-        // diagonal nur, wenn beide Nachbarzellen befahrbar sind (keine Ecken schneiden)
-        if (di && dj && (!fahrbar[j * W + x] || !fahrbar[y * W + i])) continue;
         const m = y * W + x;
+        if (!darf(n, m)) continue;
+        // diagonal nur, wenn beide Nachbarzellen befahrbar und erlaubt sind (keine Ecken schneiden)
+        const a1 = j * W + x, a2 = y * W + i;
+        if (di && dj && (!fahrbar[a1] || !fahrbar[a2] || !darf(n, a1) || !darf(n, a2) || !darf(a1, m) || !darf(a2, m))) continue;
         const nd = d + (di && dj ? SQRT2 : 1);
         if (nd < dist[m] - 1e-12) {
           dist[m] = nd;

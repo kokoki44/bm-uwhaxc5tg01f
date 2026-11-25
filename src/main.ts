@@ -139,7 +139,7 @@ async function starteEinrichtung(): Promise<void> {
     if (!hof) return;
     const f = hof.grundstueck.flaeche;
     const a = analysiereHof(hof, hofKontext);
-    const linie = [...a.torSeite].map(([id, s]) => torAnbindung(hof, id, s, world.network, config.grundstueck.anbindungSuchradiusM)).find(Boolean);
+    const linie = [...a.torSeite].map(([id, s]) => torAnbindung(hof, id, s, world.network, config.grundstueck)).find(Boolean);
     zeigeGrundstueck(map, rechteckRing(hofZuGeo(hof.grundstueck.ursprung, f.x, f.y), f.b, f.t), sp.firma.farbe, linie ? [linie.tor, linie.punkt] : null);
   };
   const hofEditor = () => {

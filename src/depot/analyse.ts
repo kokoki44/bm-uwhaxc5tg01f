@@ -58,6 +58,8 @@ export interface HofAnalyse {
   zugang: Map<number, Kontakt[]>;
   /** Tor-Seite am Grundstücksrand (Verbindung zur Straße). */
   torSeite: Map<number, Seite>;
+  /** Fahrflächen, die breit genug miteinander verbunden sind (mindestens die kleinste Zufahrtsbreite). */
+  fahrNachbarn: Map<number, number[]>;
   kapazitaet: Map<number, Kapazitaet>;
   summe: HofSumme;
 }
@@ -255,7 +257,7 @@ export function analysiereHof(hof: Betriebshof, ctx: HofKontext): HofAnalyse {
   if (!alle.some((b) => b.typ === "werkstatt" && verbunden.has(b.id))) fehltFuerBetrieb.push("werkstatt");
   if (!alle.some((b) => b.typ === "buero" && verbunden.has(b.id))) fehltFuerBetrieb.push("buero");
   const gueltig = fehler.length === 0;
-  return { gueltig, betriebsbereit: gueltig && fehltFuerBetrieb.length === 0, fehler, warnungen, fehltFuerBetrieb, verbunden, zugang, torSeite, kapazitaet, summe };
+  return { gueltig, betriebsbereit: gueltig && fehltFuerBetrieb.length === 0, fehler, warnungen, fehltFuerBetrieb, verbunden, zugang, torSeite, fahrNachbarn: nachbarn, kapazitaet, summe };
 }
 
 /** Wie viele Busse dieser Größe kann der Hof abstellen? (Stellplätze, auf die er passt, plus Hallenplätze.) */

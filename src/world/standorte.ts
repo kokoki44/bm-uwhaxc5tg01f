@@ -79,20 +79,32 @@ export function findeLage(ring: LonLat[], b: number, t: number, schrittM: number
 }
 
 const indexCache = new WeakMap<RoadNetwork, { proj: LocalProj; index: EdgeIndex }>();
-function edgeIndex(net: RoadNetwork): { proj: LocalProj; index: EdgeIndex } {
+function edgeIndex(net: RoadNetwork, zelleM: number): { proj: LocalProj; index: EdgeIndex } {
   let e = indexCache.get(net);
   if (!e) {
     const c = net.nodeCoords[0] ?? [0, 0];
     const proj = new LocalProj(c[0], c[1]);
-    e = { proj, index: new EdgeIndex(net, proj, 100) };
+    e = { proj, index: new EdgeIndex(net, proj, zelleM) };
     indexCache.set(net, e);
   }
   return e;
 }
 
+/** Punkte entlang eines Rings im Abstand von höchstens abstandM (Ecken eingeschlossen). */
+export function verdichte(ring: LonLat[], abstandM: number): LonLat[] {
+  const out: LonLat[] = [];
+  for (let i = 1; i < ring.length; i++) {
+    const a = ring[i - 1], b = ring[i];
+    const n = Math.max(1, Math.ceil(haversine(a, b) / abstandM));
+    for (let k = 0; k < n; k++) out.push([a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n]);
+  }
+  out.push(ring[ring.length - 1]);
+  return out;
+}
+
 /** Nächster Punkt des Busnetzes zu einem der Punkte. */
-export function naechsteStrasse(net: RoadNetwork, punkte: LonLat[], radiusM: number): { edge: number; distM: number; punkt: LonLat; strasse: string } | null {
-  const { proj, index } = edgeIndex(net);
+export function naechsteStrasse(net: RoadNetwork, punkte: LonLat[], radiusM: number, zelleM: number): { edge: number; distM: number; punkt: LonLat; strasse: string } | null {
+  const { proj, index } = edgeIndex(net, zelleM);
   let best: { edge: number; distM: number; punkt: LonLat; strasse: string } | null = null;
   for (const q of punkte)
     for (const id of index.near(q, radiusM)) {
@@ -118,7 +130,8 @@ export function buildStandorte(extract: OsmExtract, gemeinde: AdminArea, net: Ro
     if (flaecheM2 < cfg.mindestflaecheM2) continue;
     const startLage = findeLage(ring, cfg.startBreiteM, cfg.startTiefeM, cfg.lageSuchschrittM);
     if (!startLage) continue;
-    const str = naechsteStrasse(net, ring, cfg.anbindungSuchradiusM);
+    // Anbindung entlang der ganzen Grenze messen, nicht nur an den Ecken
+    const str = naechsteStrasse(net, verdichte(ring, cfg.anbindungStuetzabstandM), cfg.anbindungSuchradiusM, cfg.indexZelleM);
     if (!str) continue;
     let dichte = 0;
     for (const c of zellen) if (haversine(c.center, zentrum) <= cfg.dichteRadiusM) dichte += c.einwohner + c.arbeitsplaetze;
@@ -161,12 +174,12 @@ export function kaufeStartgrundstueck(kasse: Kasse, s: Standort, nw: LonLat, b: 
 }
 
 /** Anbindung des Tors an die nächste Busstraße: Mitte der Torseite am Grundstücksrand. */
-export function torAnbindung(hof: Betriebshof, torId: number, seite: Seite, net: RoadNetwork, radiusM: number) {
+export function torAnbindung(hof: Betriebshof, torId: number, seite: Seite, net: RoadNetwork, cfg: GrundstueckConfig) {
   const t = hof.bauteile.find((b) => b.id === torId);
   if (!t) return null;
   const [x, y] =
     seite === "n" ? [t.x + t.b / 2, t.y] : seite === "s" ? [t.x + t.b / 2, t.y + t.t] : seite === "w" ? [t.x, t.y + t.t / 2] : [t.x + t.b, t.y + t.t / 2];
   const geo = hofZuGeo(hof.grundstueck.ursprung, x, y);
-  const s = naechsteStrasse(net, [geo], radiusM);
+  const s = naechsteStrasse(net, [geo], cfg.anbindungSuchradiusM, cfg.indexZelleM);
   return s ? { ...s, tor: geo } : null;
 }

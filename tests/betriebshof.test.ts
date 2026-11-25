@@ -345,6 +345,25 @@ describe("Betriebshof: Wege im Hof", () => {
     expect(w.laengeM).toBeLessThan(80);
   });
 
+  it("Regression: der Weg nutzt keine Durchgänge, die schmaler als die kleinste Zufahrt sind", () => {
+    // Gegenbeispiel der unabhängigen Prüfung: Fahrweg D berührt Tor und A nur auf 1 m und 3 m,
+    // er ist nur über A, B und C verbunden. Vorher lief der Weg direkt durch den schmalen Durchgang (64,5 m).
+    const h = hof(60, 60);
+    const k = kasse();
+    baue(h, k, "tor", { x: 0, y: 0, b: 4, t: 4 });
+    baue(h, k, "fahrweg", { x: 4, y: 0, b: 50, t: 4 }); // A
+    baue(h, k, "fahrweg", { x: 54, y: 0, b: 4, t: 40 }); // B
+    baue(h, k, "fahrweg", { x: 7, y: 40, b: 51, t: 4 }); // C
+    baue(h, k, "fahrweg", { x: 3, y: 4, b: 4, t: 40 }); // D
+    const p = baue(h, k, "stellplatz", { x: 20, y: 44, b: 4, t: 14 });
+    const a = analysiereHof(h, ctx);
+    expect(a.gueltig).toBe(true);
+    const w = berechneWege(h, a, cfg).je.get(p.id)!;
+    expect(w.laengeM).toBeGreaterThan(120);
+    // jeder Schritt des Weges bleibt in einer Fahrfläche oder wechselt über eine breite Verbindung
+    expect(w.punkte.every(([x, y]) => x < 4 || y < 4 || x >= 54 || (y >= 40 && x >= 7) || y >= 44)).toBe(true);
+  });
+
   it("Pauschalwerte für hohen Zeitraffer: mittlere Fahrzeit je Ziel", () => {
     const { h } = grundlayout();
     const a = analysiereHof(h, ctx);

@@ -109,6 +109,18 @@ test("Betriebshof: Katalogfehler, Standort wählen, Grundstück kaufen, Layout b
   await expect(page.getByTestId("weg-linie")).toHaveCount(1);
   await page.screenshot({ path: info.outputPath("editor.png") });
 
+  // Auswahl auch per Tastatur über die Bauteilliste: Tor zeigt die Anbindung an die Straße
+  await page.getByTestId("editor-liste").locator("button", { hasText: "Zufahrt und Tor" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByTestId("auswahl-anbindung")).toContainText(/Anbindung: [\d,.]+ m/);
+  // Zukauf an der Torseite (Westen) warnt vorher
+  await page.getByTestId("zukauf-seite").selectOption("w");
+  await expect(page.getByTestId("zukauf-info")).toContainText("Tor");
+  await page.getByTestId("zukauf-seite").selectOption("o");
+  await expect(page.getByTestId("zukauf-info")).not.toContainText("Tor");
+  await page.getByTestId("zukauf-kaufen").click();
+  await expect(page.getByTestId("editor-grundstueck")).toContainText("60 × 40 m");
+
   // Zurück zur Karte: Betriebshof ist eingezeichnet, Menü öffnet den Editor wieder
   await page.getByTestId("editor-schliessen").click();
   await expect(editor).toHaveCount(0);

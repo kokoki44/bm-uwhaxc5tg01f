@@ -83,6 +83,10 @@ export interface GrundstueckConfig {
   mindestSeiteM: number;
   hoechstflaecheM2: number;
   anbindungSuchradiusM: number;
+  /** Abstand der Messpunkte entlang der Grenze einer Fläche für die Anbindung. */
+  anbindungStuetzabstandM: number;
+  /** Zellgröße des räumlichen Index der Straßenabschnitte. */
+  indexZelleM: number;
   lageSuchschrittM: number;
   startBreiteM: number;
   startTiefeM: number;
@@ -104,6 +108,14 @@ export interface BauteilConfig {
 export interface BetriebshofConfig {
   raster: number[];
   rasterStandard: number;
+  zukaufStandardM: number;
+  /** Darstellung im Editor: Rand um das Grundstück, Höchstzahl Rasterlinien, Farben. */
+  zeichnung: {
+    randAnteil: number;
+    randMinM: number;
+    maxRasterLinien: number;
+    farben: Record<"grund" | "grundRand" | "raster" | "bauteilRand" | "text" | "torRand" | "nichtVerbunden" | "auswahl" | "weg", string>;
+  };
   seitenabstandM: number;
   rangierraumM: number;
   zufahrtMinM: number;

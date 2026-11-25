@@ -23,6 +23,7 @@ export interface EditorKontext {
 }
 
 const cfg = config.betriebshof;
+const Z = cfg.zeichnung.farben;
 const SVG = "http://www.w3.org/2000/svg";
 const NS = (tag: string, attrs: Record<string, string | number> = {}): SVGElement => {
   const el = document.createElementNS(SVG, tag);
@@ -48,7 +49,7 @@ export function schliesseEditor(): void {
 export function kapazitaetText(k: Kapazitaet): string {
   switch (k.art) {
     case "tor": return t("kap.tor");
-    case "fahrweg": return t(k.gegenverkehr ? "kap.fahrweg.gegenverkehr" : "kap.fahrweg.einspurig");
+    case "fahrweg": return t(k.gegenverkehr ? "kap.fahrweg.gegenverkehr" : "kap.fahrweg.einspurig", { m: zahl(cfg.gegenverkehrAbM) });
     case "stellplatz": return t("kap.stellplatz", { laenge: zahl(k.maxLaengeM), breite: zahl(k.maxBreiteM) });
     case "ladeplatz": return t("kap.ladeplatz", { laenge: zahl(k.maxLaengeM), breite: zahl(k.maxBreiteM), kw: k.ladeleistungKw });
     case "halle": return t("kap.halle", { plaetze: k.plaetze, je: Object.entries(k.jeBauart).map(([b, n]) => `${b} ${n}`).join(", ") });
@@ -88,7 +89,7 @@ export function oeffneEditor(k: EditorKontext): void {
     const m = mindestmass(typ, k.ctx);
     werkzeuge.append(radio(typ, `${symbol(typ)}: ${bauteilName(typ)}`, cfg.bauteile[typ].farbe, t("editor.werkzeugHilfe", { kosten: euro(cfg.bauteile[typ].kostenEurM2), kurz: zahl(m.kurz), lang: zahl(m.lang) })));
   }
-  const rasterWahl = h("select", { id: "e-raster", "data-testid": "editor-raster" }, ...cfg.raster.map((r) => h("option", { value: r, text: `${r} m`, selected: r === raster })));
+  const rasterWahl = h("select", { id: "e-raster", "data-testid": "editor-raster" }, ...cfg.raster.map((r) => h("option", { value: r, text: t("einheit.m", { n: r }), selected: r === raster })));
   rasterWahl.addEventListener("change", () => ((raster = Number(rasterWahl.value)), zeichne()));
   const feld = (id: string, label: string) => {
     const i = h("input", { id, type: "number", step: 1, "data-testid": id });
@@ -109,19 +110,23 @@ export function oeffneEditor(k: EditorKontext): void {
   for (const i of [eb, et]) i.addEventListener("input", zeigeBaukosten);
 
   const seiteWahl = h("select", { id: "e-seite", "data-testid": "zukauf-seite" }, ...(["n", "o", "s", "w"] as Seite[]).map((s) => h("option", { value: s, text: t(`seite.${s}` as TextKey) })));
-  const zukaufM = h("input", { id: "e-zukauf", type: "number", min: 1, step: 1, value: 10, "data-testid": "zukauf-meter" });
+  const zukaufM = h("input", { id: "e-zukauf", type: "number", min: 1, step: 1, value: cfg.zukaufStandardM, "data-testid": "zukauf-meter" });
   const zukaufInfo = h("p", { class: "hilfe", "data-testid": "zukauf-info" });
   const zukaufKnopf = h("button", { type: "button", "data-testid": "zukauf-kaufen", text: t("editor.zukaufen") });
   const zukaufInfoSetzen = () => {
     const s = seiteWahl.value as Seite, m = Number(zukaufM.value);
     zukaufInfo.textContent = t("editor.zukaufInfo", { kosten: Number.isInteger(m) && m > 0 ? euro(zukaufKostenEur(hof, s, m)) : "", max: zukaufHoechstM(hof, s, config.grundstueck) });
+    // Ein Tor an dieser Seite läge nach dem Zukauf nicht mehr am Rand
+    const f = hof.grundstueck.flaeche;
+    const anSeite = (b: Bauteil) => (s === "n" ? b.y === f.y : s === "s" ? b.y + b.t === f.y + f.t : s === "w" ? b.x === f.x : b.x + b.b === f.x + f.b);
+    if (hof.bauteile.some((b) => b.typ === "tor" && anSeite(b))) zukaufInfo.textContent += " " + t("editor.zukaufTorWarnung");
   };
   seiteWahl.addEventListener("change", zukaufInfoSetzen);
   zukaufM.addEventListener("input", zukaufInfoSetzen);
   zukaufKnopf.addEventListener("click", () => {
     const e = zukaufen(hof, k.spiel, seiteWahl.value as Seite, Number(zukaufM.value), config.grundstueck);
     if (e.ok) melde(t("editor.zukaufOk", { kosten: euro(e.kostenEur) }), true);
-    else melde(t(`editor.zukaufFehler.${e.fehler}` as TextKey, { max: zahl(config.grundstueck.hoechstflaecheM2) }));
+    else melde(t(`editor.zukaufFehler.${e.fehler}` as TextKey, { max: zahl(config.grundstueck.hoechstflaecheM2), ha: zahl(config.grundstueck.hoechstflaecheM2 / 10000) }));
     if (e.ok) aenderung();
   });
   const zukauf = h("div", { class: "zukauf" }, h("h3", { text: t("editor.zukauf") }), h("div", { class: "zweispaltig" }, h("label", { for: "e-seite", text: t("editor.seite") }), seiteWahl, h("label", { for: "e-zukauf", text: t("editor.meter") }), zukaufM), zukaufInfo, zukaufKnopf);
@@ -179,7 +184,7 @@ export function oeffneEditor(k: EditorKontext): void {
   /** Meldung unter dem Bauen: Fehler rot mit Warnzeichen, Erfolg neutral. */
   function melde(text: string, ok = false) {
     meldung.className = ok ? "erfolg" : "meldung";
-    meldung.textContent = ok ? text : `⚠ ${text}`;
+    meldung.textContent = ok ? text : t("zeichen.warnung", { text });
   }
 
   function versucheBau(r: { x: number; y: number; b: number; t: number }) {
@@ -212,15 +217,15 @@ export function oeffneEditor(k: EditorKontext): void {
     pruefung.replaceChildren(
       ...[
       h("h3", { text: t("editor.pruefung") }),
-      h("p", { class: a.gueltig ? "ok" : "schlecht", "data-testid": "editor-gueltig", text: a.gueltig ? `✔ ${t("editor.gueltig")}` : `✖ ${t("editor.ungueltig")}` }),
+      h("p", { class: a.gueltig ? "ok" : "schlecht", "data-testid": "editor-gueltig", text: a.gueltig ? t("editor.gueltig") : t("editor.ungueltig") }),
       a.fehler.length ? h("ul", { "data-testid": "editor-fehler" }, ...a.fehler.map((f) => h("li", { text: meldungText(f) }))) : null,
-      a.warnungen.length ? h("ul", { class: "warnung", "data-testid": "editor-warnungen" }, ...a.warnungen.map((f) => h("li", { text: `⚠ ${meldungText(f)}` }))) : null,
-      h("p", { "data-testid": "editor-betrieb", class: a.betriebsbereit ? "ok" : "schlecht", text: a.betriebsbereit ? `✔ ${t("editor.betriebsbereit")}` : `✖ ${t("editor.nichtBetriebsbereit", { fehlt: a.fehltFuerBetrieb.map(bauteilName).join(", ") || t("editor.keinWert") })}` }),
+      a.warnungen.length ? h("ul", { class: "warnung", "data-testid": "editor-warnungen" }, ...a.warnungen.map((f) => h("li", { text: t("zeichen.warnung", { text: meldungText(f) }) }))) : null,
+      h("p", { "data-testid": "editor-betrieb", class: a.betriebsbereit ? "ok" : "schlecht", text: a.betriebsbereit ? t("editor.betriebsbereit") : t("editor.nichtBetriebsbereit", { fehlt: a.fehltFuerBetrieb.map(bauteilName).join(", ") || t("editor.keinWert") }) }),
       ].filter((x) => x !== null),
     );
     const s = a.summe, p = wege.pauschal;
     const f = hof.grundstueck.flaeche;
-    const sek = (x: number | null) => (x === null ? t("editor.keinWert") : `${zahl(x)} s`);
+    const sek = (x: number | null) => (x === null ? t("editor.keinWert") : t("einheit.s", { n: zahl(x) }));
     summen.replaceChildren(
       h("h3", { text: t("editor.kapazitaeten") }),
       h("dl", { class: "werte" },
@@ -237,7 +242,7 @@ export function oeffneEditor(k: EditorKontext): void {
     );
     liste.replaceChildren(
       ...hof.bauteile.map((b) => {
-        const knopf = h("button", { type: "button", class: "listeneintrag", "aria-pressed": String(b.id === ausgewaehlt), "data-testid": `bauteil-${b.id}`, text: `${bezeichnung(b)} ${b.b} × ${b.t} m${analyse.verbunden.has(b.id) ? "" : " ⚠"}` });
+        const knopf = h("button", { type: "button", class: "listeneintrag", "aria-pressed": String(b.id === ausgewaehlt), "data-testid": `bauteil-${b.id}`, text: t(analyse.verbunden.has(b.id) ? "editor.listeneintrag" : "editor.listeneintragFehler", { name: bezeichnung(b), b: b.b, t: b.t }) });
         knopf.addEventListener("click", () => ((ausgewaehlt = b.id), zeichne()));
         return knopf;
       }),
@@ -257,7 +262,7 @@ export function oeffneEditor(k: EditorKontext): void {
       h("h3", { text: bezeichnung(b) }),
       h("p", { text: t("editor.lageMasse", { x: b.x, y: b.y, b: b.b, t: b.t, flaeche: zahl(b.b * b.t) }) }),
       h("p", { "data-testid": "auswahl-kapazitaet", text: kapazitaetText(analyse.kapazitaet.get(b.id)!) }),
-      h("p", { text: analyse.verbunden.has(b.id) ? `✔ ${t("editor.verbunden")}` : `✖ ${t("editor.nichtVerbunden")}` }),
+      h("p", { text: analyse.verbunden.has(b.id) ? t("editor.verbunden") : t("editor.nichtVerbunden") }),
     ];
     if (w) zeilen.push(h("p", { "data-testid": "auswahl-weg", class: "fett", text: t("editor.weg", { m: zahl(w.laengeM), s: zahl(w.fahrzeitS), kmh: cfg.hofGeschwindigkeitKmh }) }));
     if (b.typ === "stellplatz" || b.typ === "ladeplatz") {
@@ -266,7 +271,7 @@ export function oeffneEditor(k: EditorKontext): void {
     }
     if (b.typ === "tor") {
       const s = analyse.torSeite.get(b.id);
-      const anb = s ? torAnbindung(hof, b.id, s, k.world.network, config.grundstueck.anbindungSuchradiusM) : null;
+      const anb = s ? torAnbindung(hof, b.id, s, k.world.network, config.grundstueck) : null;
       zeilen.push(h("p", { "data-testid": "auswahl-anbindung", text: anb ? t("editor.anbindung", { m: zahl(anb.distM), strasse: anb.strasse || t("grundstueck.ohneName") }) : t("editor.keineAnbindung") }));
     }
     if (b.typ === "ladeplatz") {
@@ -293,45 +298,47 @@ export function oeffneEditor(k: EditorKontext): void {
   let vorschau: SVGElement | null = null;
   function zeichne() {
     const f = hof.grundstueck.flaeche;
-    const rand = Math.max(3, Math.max(f.b, f.t) * 0.04);
+    const rand = Math.max(cfg.zeichnung.randMinM, Math.max(f.b, f.t) * cfg.zeichnung.randAnteil);
     svg.setAttribute("viewBox", `${f.x - rand} ${f.y - rand} ${f.b + 2 * rand} ${f.t + 2 * rand}`);
     svg.replaceChildren();
     const defs = NS("defs");
     const muster = NS("pattern", { id: "schraffur", width: 2, height: 2, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" });
-    muster.append(NS("rect", { width: 1, height: 2, fill: "#a4161a", "fill-opacity": 0.45 }));
+    muster.append(NS("rect", { width: 1, height: 2, fill: Z.nichtVerbunden, "fill-opacity": 0.45 }));
     defs.append(muster);
     svg.append(defs);
-    svg.append(NS("rect", { x: f.x, y: f.y, width: f.b, height: f.t, fill: "#ffffff", stroke: "#333", "stroke-width": 2, "vector-effect": "non-scaling-stroke" }));
+    svg.append(NS("rect", { x: f.x, y: f.y, width: f.b, height: f.t, fill: Z.grund, stroke: Z.grundRand, "stroke-width": 2, "vector-effect": "non-scaling-stroke" }));
     // Rasterlinien
-    const linien = NS("g", { stroke: "#dcdcdc", "stroke-width": 1, "vector-effect": "non-scaling-stroke", "data-testid": "raster" });
-    const schritt = (f.b / raster > 400 || f.t / raster > 400) ? raster * 5 : raster;
+    const linien = NS("g", { stroke: Z.raster, "stroke-width": 1, "vector-effect": "non-scaling-stroke", "data-testid": "raster" });
+    // bei sehr vielen Linien nur jede fünfte zeichnen, damit die Ansicht lesbar und schnell bleibt
+    const viele = cfg.zeichnung.maxRasterLinien;
+    const schritt = f.b / raster > viele || f.t / raster > viele ? raster * 5 : raster;
     for (let x = f.x + schritt; x < f.x + f.b; x += schritt) linien.append(NS("line", { x1: x, y1: f.y, x2: x, y2: f.y + f.t, "vector-effect": "non-scaling-stroke" }));
     for (let y = f.y + schritt; y < f.y + f.t; y += schritt) linien.append(NS("line", { x1: f.x, y1: y, x2: f.x + f.b, y2: y, "vector-effect": "non-scaling-stroke" }));
     svg.append(linien);
     for (const b of hof.bauteile) {
       const g = NS("g", { "data-bauteil": b.id, "data-typ": b.typ });
-      g.append(NS("rect", { x: b.x, y: b.y, width: b.b, height: b.t, fill: cfg.bauteile[b.typ].farbe, stroke: "#222", "stroke-width": 1, "vector-effect": "non-scaling-stroke" }));
+      g.append(NS("rect", { x: b.x, y: b.y, width: b.b, height: b.t, fill: cfg.bauteile[b.typ].farbe, stroke: Z.bauteilRand, "stroke-width": 1, "vector-effect": "non-scaling-stroke" }));
       const verbunden = analyse.verbunden.has(b.id);
-      if (!verbunden) g.append(NS("rect", { x: b.x, y: b.y, width: b.b, height: b.t, fill: "url(#schraffur)", stroke: "#a4161a", "stroke-width": 2, "stroke-dasharray": "4 3", "vector-effect": "non-scaling-stroke" }));
+      if (!verbunden) g.append(NS("rect", { x: b.x, y: b.y, width: b.b, height: b.t, fill: "url(#schraffur)", stroke: Z.nichtVerbunden, "stroke-width": 2, "stroke-dasharray": "4 3", "vector-effect": "non-scaling-stroke" }));
       const seite = analyse.torSeite.get(b.id);
       if (seite) {
         const [x1, y1, x2, y2] = seite === "n" ? [b.x, b.y, b.x + b.b, b.y] : seite === "s" ? [b.x, b.y + b.t, b.x + b.b, b.y + b.t] : seite === "w" ? [b.x, b.y, b.x, b.y + b.t] : [b.x + b.b, b.y, b.x + b.b, b.y + b.t];
-        g.append(NS("line", { x1, y1, x2, y2, stroke: "#111", "stroke-width": 5, "vector-effect": "non-scaling-stroke" }));
+        g.append(NS("line", { x1, y1, x2, y2, stroke: Z.torRand, "stroke-width": 5, "vector-effect": "non-scaling-stroke" }));
       }
-      if (b.id === ausgewaehlt) g.append(NS("rect", { x: b.x, y: b.y, width: b.b, height: b.t, fill: "none", stroke: "#e8a400", "stroke-width": 4, "vector-effect": "non-scaling-stroke" }));
-      const beschriftung = verbunden ? symbol(b.typ) : `${symbol(b.typ)} !`;
+      if (b.id === ausgewaehlt) g.append(NS("rect", { x: b.x, y: b.y, width: b.b, height: b.t, fill: "none", stroke: Z.auswahl, "stroke-width": 4, "vector-effect": "non-scaling-stroke" }));
+      const beschriftung = verbunden ? symbol(b.typ) : t("editor.symbolFehler", { symbol: symbol(b.typ) });
       // Schrift passt in das Rechteck: höchstens 45 % der kurzen Seite und so schmal, dass der Text in die Breite passt
       const groesse = Math.max(0.6, Math.min(4, Math.min(b.b, b.t) * 0.45, (b.b * 0.9) / (beschriftung.length * 0.6)));
-      const text = NS("text", { x: b.x + b.b / 2, y: b.y + b.t / 2, "font-size": groesse, "text-anchor": "middle", "dominant-baseline": "central", fill: "#111", "pointer-events": "none" });
+      const text = NS("text", { x: b.x + b.b / 2, y: b.y + b.t / 2, "font-size": groesse, "text-anchor": "middle", "dominant-baseline": "central", fill: Z.text, "pointer-events": "none" });
       text.textContent = beschriftung;
       g.append(text);
       svg.append(g);
     }
     const w = ausgewaehlt !== null ? wege.je.get(ausgewaehlt) : undefined;
     if (w) {
-      svg.append(NS("polyline", { points: w.punkte.map((p) => p.join(",")).join(" "), fill: "none", stroke: "#c1121f", "stroke-width": 3, "stroke-dasharray": "6 3", "vector-effect": "non-scaling-stroke", "data-testid": "weg-linie" }));
+      svg.append(NS("polyline", { points: w.punkte.map((p) => p.join(",")).join(" "), fill: "none", stroke: Z.weg, "stroke-width": 3, "stroke-dasharray": "6 3", "vector-effect": "non-scaling-stroke", "data-testid": "weg-linie" }));
       const [sx, sy] = w.punkte[0];
-      svg.append(NS("circle", { cx: sx, cy: sy, r: 0.6, fill: "#c1121f" }));
+      svg.append(NS("circle", { cx: sx, cy: sy, r: 0.6, fill: Z.weg }));
     }
     vorschau = null;
     zeichneInfo();
@@ -358,7 +365,7 @@ export function oeffneEditor(k: EditorKontext): void {
     if (!start || werkzeug === "auswahl") return;
     const r = rechteckAus(hofPunkt(e));
     if (!vorschau) {
-      vorschau = NS("rect", { fill: cfg.bauteile[werkzeug].farbe, "fill-opacity": 0.5, stroke: "#111", "stroke-dasharray": "4 2", "stroke-width": 2, "vector-effect": "non-scaling-stroke", "data-testid": "vorschau" });
+      vorschau = NS("rect", { fill: cfg.bauteile[werkzeug].farbe, "fill-opacity": 0.5, stroke: Z.text, "stroke-dasharray": "4 2", "stroke-width": 2, "vector-effect": "non-scaling-stroke", "data-testid": "vorschau" });
       svg.append(vorschau);
     }
     vorschau.setAttribute("x", String(r.x));

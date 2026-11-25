@@ -95,3 +95,61 @@ Das Modell schätzt Arbeitsplätze, die mit sozialversicherungspflichtig Beschä
 | A1-31 | Fahrzeiten | Ohne Verkehrsdichte nach Tageszeit bis Etappe 4a | Von Koko akzeptiert. Die Verkehrsdichte gehört zum Betrieb. |
 | A1-32 | Ortsteile von Norderstedt | In OSM nicht als Verwaltungsgrenzen erfasst. Die Teilung in Subdivisionen ist nur an einer Teststadt geprüft | Von Koko akzeptiert. |
 | A1-33 | Leistung bei 600-fach | Gemessen im Browsertest: 100 von 100 Takten in 10 s, Spielzeit genau 600 mal Echtzeit, längste Lücke zwischen zwei Takten 102 ms | Der Worker rechnet bisher nur die Zeit. Die Messung läuft bei jeder Abgabe weiter mit und wird mit jeder Etappe aussagekräftiger. Zählwerte statt Einzelfahrgästen kommen mit Etappe 4a. |
+
+## Etappe 2
+
+Von Koko am 25.11.2026 bestätigte Werte. "Schätzung, in Etappe 6 prüfen" heißt: Es gibt keine belastbare Quelle, der Wert wird beim Balancing geprüft. Alle Werte stehen in `src/config/config.json` (Abschnitte `grundstueck` und `betriebshof`).
+
+### Grundstück und Standortwahl
+
+| Nr. | Thema | Festlegung | Begründung |
+| --- | --- | --- | --- |
+| A2-1 | Bodenpreis | 150 €/m² in der Randlage bis 300 €/m² in der zentralen Lage. Linear nach der Dichte: Einwohner plus Arbeitsplätze im Umkreis von 1.000 m um die Mitte der Fläche, bezogen auf den dichtesten Standort der Gemeinde. Ganze Euro | **Schätzung, in Etappe 6 prüfen.** BORIS-SH und der Gutachterausschuss Segeberg waren nicht abfragbar, nur private Portale (etwa 150 €/m² im Süden Norderstedts, bis 300 €/m² in Garstedt, Median Kreis Segeberg 80 €/m²). Besonders zu prüfen: Die Spanne gilt in jeder Gemeinde gleich, unabhängig von ihrer Größe. |
+| A2-2 | Mindestgröße des Startgrundstücks | 2.000 m², jede Seite mindestens 20 m. Vorschlag beim Öffnen 50 × 40 m | 2.000 m²: Richtwert aus der Betriebshofrichtlinie Baden-Württemberg 2025 (Fläche = (1 + Fahrzeuge/5) × 1.000 m², verweist auf VDV 822). 20 m Mindestseite: **Schätzung, in Etappe 6 prüfen**, damit keine unbrauchbar schmalen Streifen entstehen. |
+| A2-3 | Höchstfläche | 100.000 m² (10 Hektar) einschließlich aller Zukäufe | Konzept. |
+| A2-4 | Standorte | Geschlossene OSM-Wege mit landuse=commercial oder industrial, Mittelpunkt in der Gemeinde, mindestens 2.000 m² und Platz für ein Rechteck 50 × 40 m (Suche in 5-m-Schritten, möglichst nah an der Mitte der Fläche). Norderstedt: 42 Standorte, davon 15 Industrieflächen, 152 bis 300 €/m² | Konzept: "vor allem Gewerbe- und Industrieflächen". Flächen als Multipolygon-Relation sind im Auszug nicht enthalten und werden nicht angeboten. |
+| A2-5 | Anbindung | Kürzeste Entfernung von der Grenze der Fläche (Messpunkte höchstens 20 m auseinander) zur nächsten Straße, die ein Bus befahren darf (Suchradius 1.500 m). Das Tor wird von der Mitte seiner Seite am Grundstücksrand an die nächste Busstraße angebunden | Vorgabe Koko (Tor an die nächste Busstraße). Erschließungsstraßen mit highway=service zählen nicht, weil sie nicht zum Busnetz gehören. Die Entfernung zählt später als Leerweg. |
+| A2-6 | Lage und Ausrichtung | Das Grundstück ist ein nach Norden ausgerichtetes Rechteck. Ein Klick in die Fläche setzt seine Mitte | Einfachste eindeutige Form. Hofkoordinaten: x nach Osten, y nach Süden, in ganzen Metern. |
+
+### Bauteile und Kosten
+
+| Nr. | Thema | Festlegung | Begründung |
+| --- | --- | --- | --- |
+| A2-7 | Baukosten je m² | Fahrweg, Stellplatz, Zufahrt und Tor 120 €; Halle 1.400 €; Werkstatt 2.300 €; Büro 2.200 €; Toiletten, Küche, Pausenraum 2.400 €; Lager 600 € | Teils umgerechnete Richtsätze, teils Schätzungen, gegengeprüft mit den Förderobergrenzen Baden-Württemberg (270.000 € je Fahrzeug bis 10 Fahrzeuge) und dem E-Bus-Hof Meiendorf. **Schätzung, in Etappe 6 prüfen.** |
+| A2-8 | Baukosten ohne Quelle | Waschanlage 4.400 €/m² (rund 400.000 € für die Mindestanlage 5 × 18 m), Tankstelle 3.100 €/m² (rund 100.000 € für 4 × 8 m), Ladeplatz 1.200 €/m² (Ladepunkt 150 kW rund 75.000 €) | **Schätzung, in Etappe 6 prüfen.** Keine Quelle gefunden. |
+| A2-9 | Beispiel-Layout und Startkapital | Komplettes erstes Layout mit jedem Bauteiltyp auf 50 × 40 m: Bau 1.015.620 €. Mit Grundstück am billigsten Standort (152 €/m²) 1.319.620 €, am teuersten (300 €/m²) 1.615.620 €. Bei 2 Mio. € Startkapital bleiben 680.380 € bzw. 384.380 € | Vorgabe Koko: Mit 2 Mio. € muss ein komplettes erstes Layout bezahlbar sein. Geprüft in `tests/standorte.test.ts`. Die Waschanlage ist mit 396.000 € der größte Posten. |
+| A2-10 | Stell- und Ladeplatz | Länge des Busses plus 1,5 m Rangierraum, Breite plus 0,9 m Seitenabstand. Mindestmaß nach dem kleinsten Bus im Katalog (Mini 5,998 × 1,993 m, also 7,5 × 2,9 m, auf ganzen Metern 8 × 3 m) | Seitenabstand: VDV-Schrift 825. Rangierraum: **Schätzung, in Etappe 6 prüfen.** |
+| A2-11 | Raster und Maße | Rasterstufen 1, 2, 5 und 10 m. Bauteile liegen auf ganzen Metern. Mindestmaße gelten in beiden Ausrichtungen (Rechteck darf gedreht sein). Der Fahrweg mit 3,5 m Mindestbreite wird auf dem Meterraster damit mindestens 4 m breit | Kleinste Stufe 1 m laut Konzept, die übrigen Stufen **Schätzung**. |
+| A2-12 | Gegenverkehr | Ein Fahrweg ab 7 m Breite wird als "breit genug für Gegenverkehr" angezeigt. Bis Etappe 4a ohne weitere Wirkung | Konzept (Bauteiltabelle). Wirkung auf Staus im Hof kommt mit dem Betrieb. |
+| A2-13 | Ladeleistung | Einstellbar von 22 bis 450 kW, Standard 150 kW | **Schätzung, in Etappe 6 prüfen.** 450 kW ist die höchste Ladeleistung im Katalog. |
+
+### Kapazitäten
+
+| Nr. | Thema | Festlegung | Begründung |
+| --- | --- | --- | --- |
+| A2-14 | Halle | Plätze nebeneinander an der Seite mit Zufahrt, Platzbreite = Busbreite + 0,9 m, Hallentiefe mindestens Buslänge + 1,5 m. Gezählt wird die beste Seite, Zufahrten von zwei Seiten zählen nicht doppelt. Anzeige je Bauart mit dem größten Bus dieser Bauart | Vorgabe Koko (keine Blockabstellung). |
+| A2-15 | Werkstatt, Tankstelle | Arbeitsplätze = volle Felder 5 × 15 m, Zapfsäulen = volle Felder 4 × 8 m (beide Ausrichtungen geprüft) | Werkstatt: Vorgabe Koko. Tankstelle: gleiche Regel mit dem Mindestmaß, weil die Tabelle "ein Bus pro Zapfsäule" nennt. |
+| A2-16 | Abstellplätze und Fuhrpark | Abstellplätze = erreichbare Stellplätze plus Hallenplätze (für den kleinsten Bus). Für einen bestimmten Bus zählen nur Stellplätze, auf die er passt, und Hallenplätze für seine Größe. Ladeplätze zählen nicht als Abstellplätze | Konzept: "Er parkt auf einem freien Stellplatz oder in der Halle." Die Halle besteht aus überdachten Stellplätzen, deshalb erfüllt ein Hallenplatz auch die Bedingung "Stellplatz" für den Betrieb. |
+| A2-17 | Betankung und Waschanlage | Betankung 8 Minuten, Waschanlage 10 Busse je Stunde | Waschanlage: Konzept (Herstellerangaben 8 bis 24). Betankung: **Schätzung, in Etappe 6 prüfen.** Beide wirken erst ab Etappe 4a. |
+| A2-18 | Sozialräume | Pausenraum: 6 m² Grundfläche plus 1 m² je Person. Toiletten: 1 Toilette je 4 m², Beschäftigte nach ASR A4.1 Tabelle 2 bei niedriger Gleichzeitigkeit (bis 10: 1, bis 25: 2, bis 50: 3, bis 75: 5, bis 100: 6, bis 130: 7, bis 160: 8, bis 190: 9, bis 220: 10, bis 250: 11, darüber 1 je weitere 30). Küche 1,5 m² je Platz | Pausenraum: ASR A4.2. Toiletten: ASR A4.1, Abschnitt 5.2. Fläche je Toilette (aus dem Mindestmaß 2 × 2 m) und Küche: **Schätzung, in Etappe 6 prüfen.** Die Wirkung auf die Schichten kommt mit Etappe 3c. |
+| A2-19 | Lager | 1 Lagereinheit je m² | **Schätzung, in Etappe 6 prüfen.** Teile mit ihrem Platzbedarf kommen in Etappe 5. |
+
+### Layout-Gültigkeit und Wege
+
+| Nr. | Thema | Festlegung | Begründung |
+| --- | --- | --- | --- |
+| A2-20 | Verbindung | Tor muss mit einer Seite am Grundstücksrand liegen (dort ist die Straße). Tor und Fahrwege sind verbunden, wenn sie mindestens 3,5 m gemeinsame Kante haben. Stell- und Ladeplatz: eine Stirnseite (kurze Seite) liegt ganz an Tor oder Fahrweg. Werkstatt, Waschanlage, Tankstelle: mindestens 3,5 m zusammenhängende Kante an Tor oder Fahrweg. Halle: mindestens ein Platz erreichbar. Büro, Lager und Sozialräume: mindestens 1 m Kante an Tor, Fahrweg oder einem verbundenen Gebäude (Halle, Werkstatt, Waschanlage, Büro, Lager, Sozialräume) | Konzept: "Ein Layout ist nur gültig, wenn Tor, Fahrwege und alle Bauteile verbunden sind und ein Bus jeden Stellplatz erreichen kann." 3,5 m ist die Mindestbreite des Fahrwegs. Dass Räume an Gebäude grenzen dürfen (Büro an der Werkstatt), entspricht üblichen Höfen. |
+| A2-21 | Meldungen | Fehler (Layout ungültig): kein Tor, Tor nicht am Rand, Bauteil nicht verbunden ("fehlende Zufahrt"), Stellplatz nicht erreichbar, Halle ohne erreichbaren Platz. Warnung: Sackgasse = Fahrweg mit höchstens einem Anschluss an andere Fahrflächen, an dem kein Bauteil liegt | Konzept: "Das Spiel warnt bei Sackgassen und fehlenden Zufahrten". |
+| A2-22 | Wege im Hof | Kürzester Weg auf dem 1-m-Raster über Tor und Fahrwege, in 8 Richtungen, diagonal nur ohne Ecken zu schneiden. Von einer Fahrfläche in die nächste nur dort, wo sie mindestens 3,5 m breit verbunden sind (gleiche Regel wie bei der Gültigkeit). Start an der Torseite am Grundstücksrand, Ende in der Mitte des Bauteils (Stellplätze über die Stirnseite). Fahrzeit = Weglänge / 10 km/h | Hofgeschwindigkeit: **Schätzung, in Etappe 6 prüfen** (Anhalt nur die Schrittgeschwindigkeit am ZOB Hamburg). |
+| A2-23 | Pauschalwerte | Für hohen Zeitraffer die mittlere Fahrzeit vom Tor je Zielart (Abstellplatz, Werkstatt, Waschanlage, Tankstelle, Ladeplatz) | Konzept: "Bei hohem Zeitraffer rechnet das Spiel pauschal mit Wegzeit und Auslastung des Hofs". Die Auslastung kommt mit dem Betrieb in Etappe 4a. |
+
+### Fahrzeugkatalog
+
+| Nr. | Thema | Festlegung | Begründung |
+| --- | --- | --- | --- |
+| A2-24 | Pflichtfelder | Fehlt Identität, Länge oder Breite: Fehler mit Zeilennummer, Modell wird nicht genutzt. Fehlen andere Pflichtfelder: Hinweis, Modell wird genutzt. Fehler erscheinen beim Start in einem Fenster, Hinweise nur in der Testansicht (F3) | Kriterium 2 und Vorgabe Koko. Ohne diese Trennung wären 100 Modelle unbrauchbar: 98 Zeilen haben keine spitzenleistung_kw, die das Spiel bis jetzt nicht braucht. Ergebnis v19: 206 von 208 Zeilen nutzbar, 2 Fehler (Altas Novus Cityline und Ecoline ohne Länge), 144 Hinweise zu Pflichtfeldern, 235 Hinweise zu Elektro-Pflichtfeldern. |
+| A2-25 | Batterie | Ohne Schritt eine feste Größe: das Maximum. Fehlt das Minimum, gilt Minimum = Maximum (und umgekehrt). Mit Schritt endet der Bereich beim letzten vollen Schritt (Iveco Crossway LE City 12 Elec: 346, 415, 484 kWh) | Vorgabe Koko. Bei Zeilen mit Bereich, aber ohne Schritt, geht dadurch das Minimum verloren (zum Beispiel Ebusco 2.2 mit 350 bis 500 kWh, Volvo 7900 Electric mit 280 bis 500 kWh), siehe offene Fragen. |
+| A2-26 | Leere Felder | "Standardwert der Klasse" aus dem Blatt Standardwerte; fahrzeugart leer = Bus; fiktiv leer = real. Felder, die das Spiel schätzen soll (Wendekreis, Leergewicht, Türbreite, Einstiegshöhe, Stehplätze, Farbe), bleiben leer, bis eine Etappe sie braucht | Kein Vorgriff auf spätere Etappen. Fehlt in der Klassenzeile ein Wert (zum Beispiel Batterielebensdauer bei Diesel), bleibt das Feld leer. |
+| A2-27 | Laden im Spiel | Die Datei wird beim Bauen unverändert neben das Spiel gelegt und beim Start gelesen, in App und Web gleich. Der Leser (ExcelJS) wird erst dann nachgeladen | Konzept: das Spiel liest die Datei direkt. Das Nachladen hält den Start der Web-Version klein. |
+| A2-29 | Zukauf an der Torseite | Erlaubt, aber das Fenster warnt vorher: Das Tor liegt danach nicht mehr am Rand, das Layout wird ungültig, bis das Tor versetzt ist | Der Zukauf verlängert laut Festlegung eine frei gewählte Seite. Verhindern wäre eine neue Regel. |
+| A2-28 | Bereich Betriebshof in der Oberfläche | Ein Knopf "Betriebshof" in der Kopfleiste öffnet die Standortliste (vor dem Kauf) oder den Editor | Die Menüleiste am Rand mit allen Bereichen entsteht, sobald es weitere Bereiche gibt. |

@@ -1,11 +1,14 @@
 import type { KatalogErgebnis, Meldung } from "../catalog/katalog";
+import { config } from "../config";
 import { t, type TextKey } from "../i18n";
 import { h } from "./dom";
 import { oeffneFenster } from "./windows";
 
 /** Text einer Katalogmeldung aus der Sprachdatei. */
 export function katalogMeldungText(m: Meldung): string {
-  return t(`katalog.${m.code}` as TextKey, { zeile: m.zeile ?? "", spalte: m.spalte ?? "", modell: m.modellId ?? "", wert: m.wert ?? "" });
+  // Eine leere Kopfzelle hat keinen Namen: lesbar statt leer melden
+  const spalte = m.spalte === "" ? t("katalog.leererName") : (m.spalte ?? "");
+  return t(`katalog.${m.code}` as TextKey, { zeile: m.zeile ?? "", spalte, modell: m.modellId ?? "", wert: m.wert ?? "", soll: config.catalog.columnCount });
 }
 
 /** Zeile für die Testansicht (F3). */

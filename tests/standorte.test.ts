@@ -7,7 +7,7 @@ import { busMasseAusKatalog, neuerHof, type HofKontext } from "../src/depot/hof"
 import { berechneWege } from "../src/depot/wege";
 import { haversine, LocalProj, type LonLat } from "../src/world/geo";
 import {
-  findeLage, hofZuGeo, kaufeStartgrundstueck, pruefeStartgrundstueck, rechteckInFlaeche, torAnbindung, type Standort,
+  findeLage, hofZuGeo, kaufeStartgrundstueck, naechsteStrasse, verdichte, pruefeStartgrundstueck, rechteckInFlaeche, torAnbindung, type Standort,
 } from "../src/world/standorte";
 import { buildWorld, type World } from "../src/world/world";
 import { BEISPIEL_B, BEISPIEL_T, baueBeispiel } from "./helpers/beispiel-hof";
@@ -67,6 +67,19 @@ describe("Standortwahl", () => {
     expect(Math.min(...s.map((x) => x.preisEurM2))).toBeLessThan(g.bodenpreisMinEurM2 + 30);
   });
 
+  it("Regression: Anbindung wird entlang der ganzen Grenze gemessen, nicht nur an den Ecken", () => {
+    const m: LonLat = [10, 53.7];
+    const ring = ringUm(m, [[0, 0], [100, 0], [100, 40], [0, 40]]);
+    const punkte = verdichte(ring, g.anbindungStuetzabstandM);
+    expect(punkte.length).toBeGreaterThanOrEqual(Math.ceil(280 / g.anbindungStuetzabstandM));
+    for (let i = 1; i < punkte.length; i++) expect(haversine(punkte[i - 1], punkte[i])).toBeLessThanOrEqual(g.anbindungStuetzabstandM + 0.01);
+    // nie schlechter als die Messung nur an den Ecken
+    for (const s of world.standorte) {
+      const ecken = naechsteStrasse(world.network, s.ring, g.anbindungSuchradiusM, g.indexZelleM)!;
+      expect(s.anbindungM).toBeLessThanOrEqual(Math.round(ecken.distM));
+    }
+  });
+
   it("Rechteck in der Fläche: auch bei einer L-förmigen Fläche wird die Aussparung erkannt", () => {
     const m: LonLat = [10, 53.7];
     // L-Form 100 × 100 m, das Viertel oben rechts fehlt
@@ -119,7 +132,7 @@ describe("Beispiel-Layout: mit 2 Mio. Euro Startkapital bezahlbar", () => {
       const w = berechneWege(hof, a, ctx.cfg);
       for (const b of hof.bauteile.filter((x) => x.typ === "stellplatz")) expect(w.je.get(b.id)).toBeDefined();
       const [torId, seite] = [...a.torSeite][0];
-      const anb = torAnbindung(hof, torId, seite, world.network, g.anbindungSuchradiusM);
+      const anb = torAnbindung(hof, torId, seite, world.network, g);
       expect(anb).not.toBeNull();
       expect(anb!.distM).toBeLessThanOrEqual(g.anbindungSuchradiusM);
     });

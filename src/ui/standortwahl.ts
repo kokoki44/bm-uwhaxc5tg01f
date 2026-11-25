@@ -37,9 +37,9 @@ export function oeffneStandortliste(k: StandortKontext): void {
     b.addEventListener("click", () => oeffneGrundstueck(k, s));
     return h("tr", {},
       h("td", {}, b),
-      h("td", { class: "zahl", text: `${s.preisEurM2} €/m²` }),
-      h("td", { class: "zahl", text: `${zahl(s.flaecheM2)} m²` }),
-      h("td", { class: "zahl", text: `${zahl(s.anbindungM)} m` }),
+      h("td", { class: "zahl", text: t("einheit.eurM2", { n: s.preisEurM2 }) }),
+      h("td", { class: "zahl", text: t("einheit.m2", { n: zahl(s.flaecheM2) }) }),
+      h("td", { class: "zahl", text: t("einheit.m", { n: zahl(s.anbindungM) }) }),
     );
   });
   oeffneFenster(
@@ -128,11 +128,11 @@ export function oeffneGrundstueck(k: StandortKontext, s: Standort, mitte?: LonLa
     h("div", {},
       h("p", { class: "fett", text: standortName(s) }),
       h("dl", { class: "werte" },
-        h("dt", { text: t("standort.spalte.preis") }), h("dd", { "data-testid": "grundstueck-preis", text: `${s.preisEurM2} €/m²` }),
-        h("dt", { text: t("grundstueck.verfuegbar") }), h("dd", { text: `${zahl(s.flaecheM2)} m²` }),
+        h("dt", { text: t("standort.spalte.preis") }), h("dd", { "data-testid": "grundstueck-preis", text: t("einheit.eurM2", { n: s.preisEurM2 }) }),
+        h("dt", { text: t("grundstueck.verfuegbar") }), h("dd", { text: t("einheit.m2", { n: zahl(s.flaecheM2) }) }),
         h("dt", { text: t("standort.spalte.anbindung") }), h("dd", { text: t("grundstueck.anbindungText", { m: zahl(s.anbindungM), strasse: s.strasse || t("grundstueck.ohneName") }) }),
       ),
-      h("p", { class: "hilfe", text: t("grundstueck.hilfe", { min: zahl(g.mindestflaecheM2), max: zahl(g.hoechstflaecheM2) }) }),
+      h("p", { class: "hilfe", text: t("grundstueck.hilfe", { min: zahl(g.mindestflaecheM2), max: zahl(g.hoechstflaecheM2), ha: zahl(g.hoechstflaecheM2 / 10000) }) }),
       h("div", { class: "zweispaltig" },
         h("label", { for: "g-breite", text: t("grundstueck.breite") }), breite,
         h("label", { for: "g-tiefe", text: t("grundstueck.tiefe") }), tiefe,

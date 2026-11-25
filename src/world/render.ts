@@ -72,7 +72,7 @@ export function buildRenderLayers(extract: OsmExtract, world: World): RenderLaye
   const grenze: GeoJSON.Feature[] = world.gemeinde.rings.map((r) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: r } }));
   const standorte: GeoJSON.Feature[] = world.standorte.map((s) => ({
     type: "Feature",
-    properties: { id: s.id, preis: s.preisEurM2, text: `${s.preisEurM2} €/m²` },
+    properties: { id: s.id, preis: s.preisEurM2 },
     geometry: { type: "Polygon", coordinates: [s.ring] },
   }));
   return { strassen: fc(strassen), gebaeude: fc(gebaeude), gruen: fc(gruen), wasser: fc(wasser), gewaesser: fc(gewaesser), haltestellen: fc(haltestellen), grenze: fc(grenze), standorte: fc(standorte) };
