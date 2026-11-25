@@ -138,6 +138,8 @@ Fertig:
 
 Unabhängige Prüfung (Subagent, 25.11.2026): keine erfundenen Funktionen, keine Gedankenstriche, Annahmen passen zum Code. Behoben nach der Prüfung (mit Regressionstests): Abriss belegter Plätze ohne Test; Scheintest zum HU-Datum; schwacher Speichertest der Ausschreibungen; Ecken-Kontakt galt als Rundweg; Zahlen im Code (Erfahrungsspanne, Fahrerqualifikationen, HU-Standard); Laden kaputter Fuhrpark-Daten warf falsche Fehler und prüfte Kennzeichen, Plätze und Modelle nicht; gemischte Reihen öffneten die falsche Variante; Gebrauchtangebote zeigten die Standardausstattung nicht; Lackierung und Auswahl nur über Farbe; Neuzeichnen beim Tageswechsel zerstörte Eingaben und Bestätigungen; Personaltabelle ohne Zufriedenheit, Gesundheit, Qualifikationen und Erfahrung; abgelaufene Angebote noch kaufbar; Bewerber erschienen erst zum Tageswechsel; Testzugang im normalen Spiel; doppelte Formeln; Batterieeinheiten bei Maximum ohne volles Vielfaches.
 
+Ebenfalls behoben (Regressionstest): Der Oberflächentest aus Etappe 1 prüfte die Pause, bevor der Worker angehalten hatte (im Workflow kam auf Windows und macOS noch ein Takt dazu).
+
 Offene Fragen an Koko:
 1. Arbeitgeberanteil auf die Jahressonderzahlung: Gerechnet wird (Bruttolohn + Sonderzahlung / 12) × 1,22, also der Arbeitgeberanteil auch auf die Sonderzahlung (sachlich richtig, A3-18). Bestätigen?
 2. Yutong U12 LE hat einen Batteriebereich von 465 bis 466 kWh ohne Schritt; nach der Regel A2-30 sind beide Größen wählbar (1 kWh für 700 €). Katalogwert prüfen?
