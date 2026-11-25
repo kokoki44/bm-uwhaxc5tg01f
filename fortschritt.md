@@ -148,3 +148,7 @@ Offene Fragen an Koko:
 3. Annahmen A3-20 bis A3-32 bestätigen.
 
 Geändert gegenüber Konzept: nichts.
+
+## Etappe 3b: Linien und Fahrplan (Vorbereitung, wartet auf Kokos Bestätigung)
+
+Noch nicht begonnen. Entwurf der Abnahmekriterien, offene Fragen (F1 bis F16) und vorgeschlagene Annahmen (A3b-1 bis A3b-14) stehen im Bericht vom 25.11.2026. Grundlagen aus Etappe 1: Busnetz Norderstedt mit 5.162 Knoten, 11.242 gerichteten Abschnitten (rund 690 km Straße), 452 Ampelknoten, 202 Abbiegeverboten, 259 Haltestellen; als Daten rund 3,7 MB, Aufbau rund 3 s im Welt-Worker. Haltestellenausstattung und Verkehrsinfrastruktur kommen laut Phasenplan in Etappe 7a und bleiben in 3b weg.
