@@ -1,6 +1,6 @@
 import katalogUrl from "../fahrzeugkatalog.xlsx?url";
 import optionenUrl from "../optionen.xlsx?url";
-import { jetztCivil, parts } from "./calendar/civil";
+import { jetztCivil } from "./calendar/civil";
 import type { KatalogErgebnis } from "./catalog/katalog";
 import type { OptionenErgebnis } from "./catalog/optionen";
 import { belegung, busMass, kreisVon, marktOptionen } from "./fleet/fuhrpark";
@@ -207,7 +207,7 @@ async function starteEinrichtung(): Promise<void> {
   kopf.setzeZeit(spiel.startZeit);
 
   const startZeit = spiel.startZeit;
-  let letzterTag = parts(startZeit).tag;
+  let letzteStunde = Math.floor(startZeit / 3600000);
   const sim = startSimulation((s) => {
     zeilen.sim = t("status.simulation", { ticks: s.ticks, sekunden: s.gameSeconds.toFixed(1), tempo: s.speed });
     const jetzt = startZeit + Math.floor(s.gameSeconds) * 1000;
@@ -215,20 +215,23 @@ async function starteEinrichtung(): Promise<void> {
     // Ereignisse der Spielzeit (Wochenwechsel, Monatsende) genau einmal, auch bei 600-fach
     const ereignisse = fortschreiben(sp, jetzt, spielKontext);
     if (ereignisse.length) kopf.setzeKontostand(sp.kontostandEur);
-    // neue Bewerber erscheinen tageweise: offene Fenster beim Tageswechsel und nach Ereignissen neu zeichnen
-    const tag = parts(jetzt).tag;
-    if (ereignisse.length || tag !== letzterTag) aktualisiereFenster();
-    letzterTag = tag;
+    // Bewerber erscheinen im Lauf des Tages: offene Fenster zu jeder vollen Spielstunde und nach Ereignissen neu zeichnen
+    const stunde = Math.floor(jetzt / 3600000);
+    if (ereignisse.length || stunde !== letzteStunde) aktualisiereFenster();
+    letzteStunde = stunde;
     zeigen();
   });
-  // Nur für Oberflächentests: Spielzeit der Spielregeln vorspulen (Bewerber erscheinen erst nach Tagen)
-  (window as unknown as { __spieltest: unknown }).__spieltest = {
-    vorspulenTage: (tage: number) => {
-      fortschreiben(sp, sp.zeit + tage * 86400000, spielKontext);
-      kopf.setzeKontostand(sp.kontostandEur);
-      aktualisiereFenster();
-    },
-  };
+  // Nur für Oberflächentests und nur mit "?test" in der Adresse: Spielzeit der Spielregeln vorspulen
+  // (Bewerber erscheinen erst nach Tagen). Im normalen Spiel gibt es diesen Zugang nicht.
+  if (new URLSearchParams(location.search).has("test")) {
+    (window as unknown as { __spieltest: unknown }).__spieltest = {
+      vorspulenTage: (tage: number) => {
+        fortschreiben(sp, sp.zeit + tage * 86400000, spielKontext);
+        kopf.setzeKontostand(sp.kontostandEur);
+        aktualisiereFenster();
+      },
+    };
+  }
   const setzeTempo = (tempo: number) => {
     sim.setSpeed(tempo);
     kopf.setzeTempo(tempo);

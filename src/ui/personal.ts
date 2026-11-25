@@ -2,7 +2,7 @@ import { addDays } from "../calendar/civil";
 import { config, type PersonalArt } from "../config";
 import { t, tOder, type TextKey } from "../i18n";
 import {
-  inProbezeit, kuendige, schreibeAus, setzeLohn, sichtbareBewerber, stelleEin, stufeDerPerson, stufeFuer, stundenlohn, type Bewerber,
+  erfahrungJahre, inProbezeit, kuendige, monatskostenVoll, schreibeAus, setzeLohn, sichtbareBewerber, stelleEin, stufeDerPerson, stufeFuer, stundenlohn, type Bewerber,
 } from "../personal/personal";
 import { h } from "./dom";
 import { datum, euro, euroRund, zahl } from "./format";
@@ -13,9 +13,7 @@ const p = config.personal;
 export const artName = (a: PersonalArt) => t(`personal.art.${a}` as TextKey);
 const qualiName = (q: string) => tOder(`personal.quali.${q}`, q);
 
-/** Monatliche Kosten einer Vollzeitstelle bzw. Teilzeitstelle bei einem Stundenlohn (Lohn, Sonderzahlung, Arbeitgeberanteil). */
-export const monatskosten = (eurH: number, wochenstunden: number) =>
-  (eurH * wochenstunden * p.wochenFaktor + (p.jahressonderzahlungEur * (wochenstunden / p.wochenstundenMax)) / 12) * (1 + p.arbeitgeberAnteil);
+const monatskosten = (eurH: number, wochenstunden: number) => monatskostenVoll(eurH, wochenstunden, p);
 
 /** Personal: Personen, Stellen ausschreiben, Bewerber einstellen, kündigen, Lohntabelle. */
 export function oeffnePersonal(ui: SpielUi): void {
@@ -44,8 +42,9 @@ export function oeffnePersonal(ui: SpielUi): void {
       h("h3", { text: t("personal.personen", { n: liste.length }) }),
       liste.length
         ? h("div", { class: "rollen kurz" }, h("table", { class: "tabelle", "data-testid": "personal-tabelle" },
-          h("thead", {}, h("tr", {}, ...(["personal.spalte.name", "personal.spalte.art", "personal.spalte.stufe", "personal.spalte.lohn", "personal.spalte.stunden",
-            "personal.spalte.kosten", "personal.spalte.eintritt", "personal.spalte.status", "personal.spalte.aktion"] as TextKey[]).map((x) => h("th", { text: t(x) })))),
+          h("thead", {}, h("tr", {}, ...(["personal.spalte.name", "personal.spalte.art", "personal.spalte.erfahrung", "personal.spalte.lohn", "personal.spalte.stunden",
+            "personal.spalte.kosten", "personal.spalte.eintritt", "personal.spalte.zufriedenheit", "personal.spalte.gesundheit", "personal.spalte.quali",
+            "personal.spalte.status", "personal.spalte.aktion"] as TextKey[]).map((x) => h("th", { text: t(x) })))),
           h("tbody", {}, ...liste.map((x) => {
             const eurH = stundenlohn(ui.spiel.personal, x, jetzt, p);
             const status = x.austritt !== null ? t("personal.gekuendigtZum", { datum: datum(addDays(x.austritt, -1)) }) : inProbezeit(x, jetzt, p) ? t("personal.probezeit") : t("personal.aktiv");
@@ -60,11 +59,14 @@ export function oeffnePersonal(ui: SpielUi): void {
             return h("tr", { "data-testid": `person-${x.id}` },
               h("td", { text: x.name }),
               h("td", { text: artName(x.art) }),
-              h("td", { text: String(stufeDerPerson(x, jetzt, p)) }),
+              h("td", { text: t("personal.erfahrung", { jahre: Math.floor(erfahrungJahre(x, jetzt)), stufe: stufeDerPerson(x, jetzt, p) }) }),
               h("td", { class: "zahl", text: t("personal.eurH", { n: euro(eurH) }) }),
               h("td", { class: "zahl", text: String(x.wochenstunden) }),
               h("td", { class: "zahl", text: euroRund(monatskosten(eurH, x.wochenstunden)) }),
               h("td", { text: datum(x.eintritt) }),
+              h("td", { class: "zahl", text: t("personal.prozent", { n: x.zufriedenheit }) }),
+              h("td", { class: "zahl", text: t("personal.prozent", { n: x.gesundheit }) }),
+              h("td", { class: "hilfe", text: x.qualifikationen.map(qualiName).join(", ") }),
               h("td", { text: status }),
               h("td", {}, knopf),
             );
@@ -87,6 +89,8 @@ export function oeffnePersonal(ui: SpielUi): void {
       h("td", { text: t("personal.erfahrung", { jahre: b.erfahrungJahre, stufe }) }),
       h("td", { class: "zahl", text: t("personal.eurH", { n: euro(eurH) }) }),
       h("td", { class: "zahl", text: euroRund(monatskosten(eurH, std)) }),
+      h("td", { class: "zahl", text: t("personal.prozent", { n: b.zufriedenheit }) }),
+      h("td", { class: "zahl", text: t("personal.prozent", { n: b.gesundheit }) }),
       h("td", { class: "hilfe", text: b.qualifikationen.map(qualiName).join(", ") }),
       h("td", {}, knopf),
     );
@@ -107,7 +111,7 @@ export function oeffnePersonal(ui: SpielUi): void {
           h("p", { class: "fett", text: t("personal.ausschreibung", { art: artName(a.art), stunden: a.wochenstunden, bis: datum(addDays(a.ende, -1)), n: sichtbar.length }) }),
           sichtbar.length
             ? h("table", { class: "tabelle" },
-              h("thead", {}, h("tr", {}, ...(["personal.spalte.name", "personal.spalte.erfahrung", "personal.spalte.lohn", "personal.spalte.kosten", "personal.spalte.quali", "personal.spalte.aktion"] as TextKey[]).map((x) => h("th", { text: t(x) })))),
+              h("thead", {}, h("tr", {}, ...(["personal.spalte.name", "personal.spalte.erfahrung", "personal.spalte.lohn", "personal.spalte.kosten", "personal.spalte.zufriedenheit", "personal.spalte.gesundheit", "personal.spalte.quali", "personal.spalte.aktion"] as TextKey[]).map((x) => h("th", { text: t(x) })))),
               h("tbody", {}, ...sichtbar.map((b) => bewerberZeile(a.id, a.art, a.wochenstunden, b))))
             : h("p", { class: "hilfe", text: t("personal.nochKeineBewerber") }),
         );
@@ -144,8 +148,6 @@ export function oeffnePersonal(ui: SpielUi): void {
   }
   zeichne();
   oeffneFenster("personal", t("personal.titel"), h("div", {}, personen, ausschreibungen, meldung, lohn), { links: true, breit: true });
-  // Neue Bewerber erscheinen mit der Spielzeit; Eingabefelder nicht unter den Händen neu zeichnen
-  beobachte("personal", () => {
-    if (!(document.activeElement instanceof HTMLInputElement)) zeichnePersonen(), zeichneAusschreibungen();
-  });
+  // Neue Bewerber erscheinen mit der Spielzeit (nicht während der Bedienung, siehe aktualisiereFenster)
+  beobachte("personal", () => (zeichnePersonen(), zeichneAusschreibungen()));
 }

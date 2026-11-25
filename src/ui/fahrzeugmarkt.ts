@@ -1,3 +1,4 @@
+import { addDays } from "../calendar/civil";
 import type { Bus } from "../catalog/katalog";
 import {
   batterien, kaufeGebraucht, kaufeNeu, neupreis, neuKaufbar, plaetzeMitBatterie, pruefeKonfig, standardKonfig, type Angebot, type Konfiguration,
@@ -82,16 +83,16 @@ function neukauf(ui: SpielUi): { el: HTMLElement } {
   let gewaehlt: string | null = null;
 
   function zeichneListe() {
-    const passend = [...reihen.entries()].filter(([, ms]) =>
-      ms.some((m) => (!fH.s.value || m.hersteller === fH.s.value) && (!fB.s.value || m.bauart === fB.s.value) && (!fA.s.value || m.antrieb === fA.s.value)),
-    );
+    const trifft = (m: Bus) => (!fH.s.value || m.hersteller === fH.s.value) && (!fB.s.value || m.bauart === fB.s.value) && (!fA.s.value || m.antrieb === fA.s.value);
+    // Je Reihe nur die Varianten, die zum Filter passen (zum Beispiel nur die Elektro-Variante einer gemischten Reihe)
+    const passend = [...reihen.entries()].map(([key, ms]) => [key, ms.filter(trifft)] as const).filter(([, ms]) => ms.length > 0);
     passend.sort((a, b) => reihenName(a[1][0]).localeCompare(reihenName(b[1][0])));
     liste.replaceChildren(
       ...passend.map(([key, ms]) => {
         const ab = Math.min(...ms.map((m) => m.neupreis_eur ?? Infinity));
-        const b = h("button", { type: "button", "data-testid": "markt-modell", text: reihenName(ms[0]) });
+        const b = h("button", { type: "button", "data-testid": "markt-modell", "aria-pressed": String(key === gewaehlt), text: reihenName(ms[0]) });
         b.addEventListener("click", () => ((gewaehlt = key), zeichneListe(), zeichneDetail(ms[0])));
-        return h("tr", { class: key === gewaehlt ? "gewaehlt" : undefined },
+        return h("tr", { class: key === gewaehlt ? "gewaehlt" : undefined, "aria-selected": String(key === gewaehlt) },
           h("td", {}, b),
           h("td", { text: [...new Set(ms.map((m) => m.bauart))].join(", ") }),
           h("td", { text: [...new Set(ms.map((m) => m.antrieb))].join(", ") }),
@@ -210,8 +211,9 @@ function gebrauchtmarkt(ui: SpielUi): { el: HTMLElement; zeichne(): void } {
       koerper)),
     meldung,
   );
+  // Ganze Konfiguration: Bestuhlung, Spiegel und weitere Ausstattung (Konzept: jedes Angebot zeigt eine Konfiguration)
   const ausstattung = (a: Angebot) =>
-    a.konfig.optionen.map((id) => k.optionen.find((o) => o.id === id)).filter((o): o is MarktOption => !!o && !o.standard).map(optionName).join(", ") || t("gebraucht.grundausstattung");
+    a.konfig.optionen.map((id) => k.optionen.find((o) => o.id === id)).filter((o): o is MarktOption => !!o).map(optionName).join(", ") || t("gebraucht.grundausstattung");
 
   function zeichne() {
     const angebote = [...ui.spiel.fuhrpark.angebote].sort((a, b) => a.id - b.id);
@@ -241,8 +243,10 @@ function gebrauchtmarkt(ui: SpielUi): { el: HTMLElement; zeichne(): void } {
           ? t("gebraucht.batterieGenau", { kwh: zahl(a.konfig.batterieKwh), n: a.batterieZustand! })
           : t("gebraucht.batterieSpanne", { kwh: zahl(a.konfig.batterieKwh), von: a.batterieVon!, bis: a.batterieBis! });
         return h("tr", { "data-testid": `angebot-${a.id}` },
-          h("td", {}, h("span", { class: "farbpunkt", style: `background:${a.konfig.lackierung}`, title: t("gebraucht.lackierung"), "aria-hidden": "true" }), modellName(m), h("br", {}),
-            h("span", { class: "hilfe", text: t("gebraucht.laeuftAb", { datum: datum(a.ablauf) }) })),
+          h("td", {}, modellName(m), h("br", {}),
+            h("span", { class: "farbpunkt", style: `background:${a.konfig.lackierung}`, "aria-hidden": "true" }),
+            h("span", { class: "hilfe", text: t("gebraucht.lackierungText", { farbe: a.konfig.lackierung }) }), h("br", {}),
+            h("span", { class: "hilfe", text: t("gebraucht.laeuftAb", { datum: datum(addDays(a.ablauf, -1)) }) })),
           h("td", { text: String(a.baujahr) }),
           h("td", { class: "zahl", text: t("markt.km", { n: zahl(a.laufleistungKm) }) }),
           h("td", { "data-testid": `angebot-zustand-${a.id}`, text: zustand }),

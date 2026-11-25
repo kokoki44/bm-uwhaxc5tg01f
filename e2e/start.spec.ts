@@ -45,6 +45,8 @@ test("Web-Version startet: Norderstedt laden, Karte, Zeit, Tasten, Fenster", asy
   page.on("pageerror", (e) => fehler.push(String(e)));
   await neuesSpielMitTastatur(page);
   await startfensterSchliessen(page);
+  // Der Testzugang zum Vorspulen gibt es nur mit "?test" in der Adresse
+  expect(await page.evaluate(() => "__spieltest" in window)).toBe(false);
 
   // Testansicht (Statuszeile): standardmäßig aus, F3 schaltet sie ein
   const status = page.getByTestId("status");

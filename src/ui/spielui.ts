@@ -23,11 +23,18 @@ export function vergiss(id: string): void {
   beobachter.delete(id);
 }
 
-/** Alle offenen Fenster aktualisieren (nur solche, die noch im Dokument sind). */
+/**
+ * Alle offenen Fenster aktualisieren (nur solche, die noch im Dokument sind). Ein Fenster, in dem gerade ein Eingabefeld,
+ * eine Auswahlliste oder eine offene Bestätigung (data-halten) den Fokus hat, wird nicht neu gezeichnet, damit Eingabe,
+ * Auswahl und Bestätigung erhalten bleiben; es folgt beim nächsten Mal.
+ */
 export function aktualisiereFenster(): void {
+  const fokus = document.activeElement;
+  const halten = !!fokus && (fokus.matches("input, select, textarea") || fokus.hasAttribute("data-halten"));
   for (const [id, f] of beobachter) {
-    if (!document.querySelector(`[data-testid="fenster-${id}"]`)) beobachter.delete(id);
-    else f();
+    const el = document.querySelector(`[data-testid="fenster-${id}"]`);
+    if (!el) beobachter.delete(id);
+    else if (!(halten && el.contains(fokus))) f();
   }
 }
 

@@ -23,11 +23,11 @@ export function oeffneFahrzeuge(ui: SpielUi): void {
     koerper.replaceChildren(
       ...busse.map((b) => {
         const m = k.modelle.get(b.modellId)!;
-        const knopf = h("button", { type: "button", "data-testid": `fahrzeug-${b.id}`, text: b.flottennummer });
+        const knopf = h("button", { type: "button", "data-testid": `fahrzeug-${b.id}`, "aria-pressed": String(b.id === gewaehlt), text: b.flottennummer });
         knopf.addEventListener("click", () => ((gewaehlt = b.id), zeichne()));
-        return h("tr", { class: b.id === gewaehlt ? "gewaehlt" : undefined },
+        return h("tr", { class: b.id === gewaehlt ? "gewaehlt" : undefined, "aria-selected": String(b.id === gewaehlt) },
           h("td", {}, knopf),
-          h("td", {}, h("span", { class: "farbpunkt", style: `background:${b.konfig.lackierung}`, "aria-hidden": "true" }), b.kennzeichen),
+          h("td", { title: t("fahrzeuge.lackierungText", { farbe: b.konfig.lackierung }) }, h("span", { class: "farbpunkt", style: `background:${b.konfig.lackierung}`, "aria-hidden": "true" }), b.kennzeichen),
           h("td", { text: modellName(m) }),
           h("td", { text: String(b.baujahr) }),
           h("td", { text: t("fahrzeuge.zustand", { n: b.zustand }) }),
@@ -70,7 +70,7 @@ export function oeffneFahrzeuge(ui: SpielUi): void {
     });
     const erloes = verkaufserloes(b, ui.spiel.zeit, k);
     const verkaufen = h("button", { type: "button", "data-testid": "fahrzeug-verkaufen", text: t("fahrzeuge.verkaufen", { preis: euro(erloes) }) });
-    const bestaetigen = h("button", { type: "button", class: "primaer", "data-testid": "fahrzeug-verkaufen-ja", hidden: true, text: t("fahrzeuge.verkaufenJa", { preis: euro(erloes) }) });
+    const bestaetigen = h("button", { type: "button", class: "primaer", "data-testid": "fahrzeug-verkaufen-ja", "data-halten": true, hidden: true, text: t("fahrzeuge.verkaufenJa", { preis: euro(erloes) }) });
     verkaufen.addEventListener("click", () => ((bestaetigen.hidden = false), bestaetigen.focus()));
     bestaetigen.addEventListener("click", () => {
       const r = verkaufe(kaufKontext(ui.spiel, ui.k), b.id);
@@ -83,6 +83,7 @@ export function oeffneFahrzeuge(ui: SpielUi): void {
       h("h3", { text: t("fahrzeuge.detailTitel", { nr: b.flottennummer, modell: modellName(m) }) }),
       h("dl", { class: "werte" },
         h("dt", { text: t("fahrzeuge.kennzeichen") }), h("dd", { text: b.kennzeichen }),
+        h("dt", { text: t("fahrzeuge.lackierung") }), h("dd", {}, h("span", { class: "farbpunkt", style: `background:${b.konfig.lackierung}`, "aria-hidden": "true" }), t("fahrzeuge.lackierungText", { farbe: b.konfig.lackierung })),
         h("dt", { text: t("fahrzeuge.herkunft") }), h("dd", { text: t(`fahrzeuge.herkunft.${b.herkunft}` as TextKey, { datum: datum(b.kaufzeit), preis: euro(b.kaufpreisEur) }) }),
         h("dt", { text: t("fahrzeuge.laufleistung") }), h("dd", { text: t("markt.km", { n: zahl(b.laufleistungKm) }) }),
         h("dt", { text: t("fahrzeuge.plaetze") }), h("dd", { text: t("markt.plaetze", { sitz: b.sitzplaetze ?? t("markt.keineAngabe"), steh: b.stehplaetze ?? t("markt.keineAngabe") }) }),

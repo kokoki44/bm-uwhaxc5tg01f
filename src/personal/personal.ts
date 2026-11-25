@@ -289,6 +289,14 @@ const aufCent = (x: number): number => Math.round(x * 100) / 100;
  * Lohnkosten eines Monats (Abbuchung am Monatsende). Je Person: Stundenlohn × Wochenstunden × wochenFaktor
  * plus anteilige Jahressonderzahlung, mal (1 + Arbeitgeberanteil), anteilig nach beschäftigten Kalendertagen.
  */
+/**
+ * Kosten eines vollen Monats: (Stundenlohn × Wochenstunden × Wochenfaktor + Jahressonderzahlung anteilig / 12)
+ * × (1 + Arbeitgeberanteil). Der Arbeitgeberanteil fällt auch auf die Sonderzahlung an (A3-18).
+ */
+export function monatskostenVoll(eurH: number, wochenstunden: number, cfg: PersonalConfig = config.personal): number {
+  return (eurH * wochenstunden * cfg.wochenFaktor + (cfg.jahressonderzahlungEur * (wochenstunden / cfg.wochenstundenMax)) / 12) * (1 + cfg.arbeitgeberAnteil);
+}
+
 export function monatslohn(personal: Personal, jahr: number, monat: number, cfg: PersonalConfig = config.personal): Lohnabrechnung {
   const anfang = civil(jahr, monat, 1);
   const ende = civil(jahr, monat + 1, 1);
@@ -300,11 +308,7 @@ export function monatslohn(personal: Personal, jahr: number, monat: number, cfg:
     const tage = Math.round((bis - von) / TAG_MS);
     if (tage <= 0) continue;
     // Stufe am Monatsende bzw. am letzten Arbeitstag (letzter Augenblick vor dem Stichtag).
-    const lohnEurH = stundenlohn(personal, person, bis - 1, cfg);
-    const voll =
-      (lohnEurH * person.wochenstunden * cfg.wochenFaktor +
-        (cfg.jahressonderzahlungEur * (person.wochenstunden / cfg.wochenstundenMax)) / 12) *
-      (1 + cfg.arbeitgeberAnteil);
+    const voll = monatskostenVoll(stundenlohn(personal, person, bis - 1, cfg), person.wochenstunden, cfg);
     posten.push({ personId: person.id, eur: aufCent((voll * tage) / tageMonat) });
   }
   return { summeEur: aufCent(posten.reduce((s, p) => s + p.eur, 0)), posten };

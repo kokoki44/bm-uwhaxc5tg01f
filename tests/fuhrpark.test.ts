@@ -242,6 +242,19 @@ describe("Gebrauchtmarkt", () => {
     expect(mittel(relAlt)).toBeLessThan(mittel(relJung));
   });
 
+  it("Preis: Handrechnung und Streuung höchstens ±10 % um den Wert", () => {
+    // 400.000 € Neupreis, 6 von 12 Jahren, Zustand 80: 400.000 × 0,55 × (0,7 + 0,3 × 0,8) = 206.800 €
+    expect(wert(400000, 6, 12, 80, mk)).toBe(206800);
+    const k = kaufKontext(M);
+    const z = neuerZufall(21);
+    for (let i = 0; i < 300; i++) {
+      const a = erzeugeAngebot(k.fuhrpark, JETZT, land, z, k)!;
+      const w = wert(a.neupreisKonfigEur, a.alterJahre, M.get(a.modellId)!.lebensdauer_jahre!, a.zustand, mk);
+      expect(a.preisEur).toBeGreaterThanOrEqual(w * (1 - mk.gebraucht.preisStreuung) - 0.01);
+      expect(a.preisEur).toBeLessThanOrEqual(w * (1 + mk.gebraucht.preisStreuung) + 0.01);
+    }
+  });
+
   it("gleicher Startwert ergibt dieselben Angebote", () => {
     const a = kaufKontext(M), b = kaufKontext(M);
     erneuereAngebote(a.fuhrpark, JETZT, land, neuerZufall(99), a);

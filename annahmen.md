@@ -166,7 +166,7 @@ Von Koko am 25.11.2026 bestätigte Werte. "Schätzung, in Etappe 6 prüfen" hei�
 
 ## Etappe 3a
 
-Von Koko am 25.11.2026 bestätigt: A3-1 bis A3-19. "Schätzung, in Etappe 6 prüfen" heißt: Es gibt keine belastbare Quelle, der Wert wird beim Balancing geprüft. Alle Werte stehen in `src/config/config.json` (Abschnitte `fahrzeugmarkt`, `personal`, `optionen`) oder in der Optionsdatei `optionen.xlsx`.
+Von Koko am 25.11.2026 bestätigt: A3-1 bis A3-19. A3-20 bis A3-32 sind beim Bau entstanden und warten auf Kokos Bestätigung. "Schätzung, in Etappe 6 prüfen" heißt: Es gibt keine belastbare Quelle, der Wert wird beim Balancing geprüft. Alle Werte stehen in `src/config/config.json` (Abschnitte `fahrzeugmarkt`, `personal`, `optionen`) oder in der Optionsdatei `optionen.xlsx`.
 
 ### Personal
 
@@ -206,4 +206,6 @@ Von Koko am 25.11.2026 bestätigt: A3-1 bis A3-19. "Schätzung, in Etappe 6 prü
 | A3-24 | Flottennummer | Fortlaufend ab 1, Schema "{nr}" in der Konfiguration (auch "{jahr}{nr}" möglich) | Konzept: fortlaufend, Schema einstellbar. Details zurückgestellt. |
 | A3-28 | Gebrauchte Ausstattung | Je Gruppe eine Option nach gebraucht_anteil als Gewicht, einzelne Optionen mit gebraucht_anteil als Wahrscheinlichkeit, auch Optionen, die im Neukauf noch gesperrt sind. Abbiege- und Notbremsassistent ab Baujahr 2024 immer, davor mit 50 % | Vorgabe Koko. Gebrauchtanteile und Wirkungswerte (wirkung_*) in `optionen.xlsx`: **Schätzung, in Etappe 6 prüfen**; die Wirkungen gelten erst ab Etappe 4a bzw. 5. |
 | A3-29 | Neue Busse | Baujahr = aktuelles Jahr, Zustand 100, Batteriezustand 100 %. Wert eigener Busse: Alter = Alter beim Kauf + Zeit seit dem Kauf, Neupreis der Konfiguration (ohne Serienausstattung) | Phase 1 kennt keinen Verschleiß; der Wert sinkt nur mit dem Alter. |
+| A3-31 | Farbe der Busse im Editor | Bis Etappe 3b in ihrer Lackierung, weil es noch keine Linien gibt | Konzept (Optik): Busse in der Linienfarbe; die Linienfarbe gibt es erst mit den Linien. |
+| A3-32 | Testzugang | Nur mit "?test" in der Adresse gibt es einen Zugang zum Vorspulen der Spielzeit für den Oberflächentest (Bewerber erscheinen erst nach Tagen). Im normalen Spiel fehlt er | Sonst müsste der Test viele Minuten warten. |
 | A3-30 | Optionsdatei | Spalten fest wie beim Katalog, standard und serie_neukauf sind Pflicht (ja/nein). Fehlerhafte Zeilen und Gruppen ohne genau eine Standardoption werden nicht genutzt und beim Start gemeldet | Vorgabe Koko: Spaltennamen prüfen wie beim Katalog. |

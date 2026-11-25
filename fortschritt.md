@@ -102,30 +102,15 @@ Ebenfalls behoben (Regressionstest): Der Oberflächentest "600-fach" schlug auf 
 
 Geändert gegenüber Konzept: nichts.
 
-## Etappe 3a: Fahrzeugmarkt und Personal (im Bau)
+## Etappe 3a: Fahrzeugmarkt und Personal (gebaut, wartet auf Kokos Freigabe)
 
-Koko hat am 25.11.2026 die Kriterien 1 bis 16 bestätigt, mit zwei Änderungen: Kriterium 3 enthält die Batterie- und Plätzeregel (Preis und Platzzahl nach gewählter Batterie, Handrechnung an einem MAN-Modell), neues Kriterium 17: Verkauf an den Händler (Wert ohne Streuung minus Abschlag, Bus weg, Platz frei, im Spielstand abgebildet, Test für Betrag und Platz). Antworten 1 bis 15 und Annahmen A3-1 bis A3-19 bestätigt. Konzept mit den Festlegungen zu Kauf, Ausstattung und Lohn committet.
+Stand vor Beginn: Git-Tag `etappe-2-fertig`. Konzept mit Kokos Festlegungen zu Kauf, Ausstattung und Lohn (25.11.2026) committet.
 
-Stand (wird bei Unterbrechung aktualisiert):
-- Fertig:
-  - Zufall mit Startwert (`src/game/zufall.ts`), Konfiguration (`optionen`, `fahrzeugmarkt`, `personal`), Kreisschlüssel der Gemeinde.
-  - Optionsdatei `optionen.xlsx` mit Leser und Prüfung der Spalten (`src/catalog/optionen.ts`, Subagent).
-  - Fuhrpark (`src/fleet`): Plätze im Hof, Neukauf mit Konfiguration, Plätze und Preis nach Batterie, Wert, Verkauf, Umsetzen, Umlackieren, Kennzeichen, Flottennummer, Gebrauchtmarkt mit Inspektion, Speichern und Laden.
-  - Personal (`src/personal`, Subagent): Lohntabelle, Ausschreibung, Bewerber, Einstellen, Kündigung, Stufenaufstieg, Monatslohn, Speichern und Laden.
-  - Spielzustand und Zeitereignisse (`src/game/spiel.ts`): Wochenwechsel und Monatsende genau einmal.
-  - Oberfläche: Menüleiste am linken Rand, Fenster Fahrzeugmarkt (Neukauf, Gebrauchtmarkt), Fahrzeuge, Personal; Busse im Editor; Abriss belegter Plätze gesperrt; Fehler der Optionsdatei im Startfenster und in F3.
-  - Tests: `tests/fuhrpark.test.ts`, `tests/spiel.test.ts`, `tests/optionen.test.ts`, `tests/personal.test.ts`, Rauchtest mit "Bus kaufen" und "Fahrer einstellen", Oberflächentest `e2e/markt.spec.ts`.
-  - Nachtrag Etappe 2 (Antwort 15): Durchfahrt nur bei mindestens 27 m Torabstand, Rundweg nur wenn er eine Fläche umschließt, mit Regressionstests.
-  - Annahmen A3-1 bis A3-30 in `annahmen.md`.
-- Offen: unabhängige Prüfung durch einen Subagenten, Workflow auf Windows, macOS und Pages.
-
-Entwurf der Abnahmekriterien (bestätigt, siehe oben):
-
-Entwurf der Abnahmekriterien:
+Bestätigte Abnahmekriterien (Koko, 25.11.2026):
 1. Neukauf: Liste der neu kaufbaren Modelle (im_neukauf = ja, nur Fahrzeugart Bus), filterbar nach Hersteller, Bauart und Antrieb. Zeilen mit gleichem Hersteller, Modellfamilie und Modell erscheinen als ein Modell mit wählbarer Variante. Die Ansicht zeigt die Daten aus dem Katalog.
 2. Konfiguration: Batteriegröße (nur Elektro), Lackierung (Standard Firmenfarbe), Bestuhlung, Spiegelart, weitere Ausstattung aus der Optionsdatei. Preis = neupreis_eur plus Aufpreise, laufend angezeigt, geprüft gegen Handrechnung.
-3. Kauf nur mit freiem Platz, auf den der Bus passt (Stellplatz nach passtBus, Hallenplatz nach Busgröße), und ausreichendem Kontostand, sonst lesbare Meldung ohne Buchung. Der Neukauf bucht genau den Preis ab und stellt den Bus sofort auf einen freien Platz.
-4. Jeder gekaufte Bus bekommt automatisch eine Flottennummer (Kennzeichen je nach Antwort auf Frage 4).
+3. Kauf nur mit freiem Platz, auf den der Bus passt (Stellplatz nach passtBus, Hallenplatz nach Busgröße), und ausreichendem Kontostand, sonst lesbare Meldung ohne Buchung. Der Neukauf bucht genau den Preis ab und stellt den Bus sofort auf einen freien Platz. Die gewählte Batteriegröße bestimmt Preis und Platzzahl, geprüft gegen Handrechnung an einem MAN-Modell.
+4. Jeder gekaufte Bus bekommt automatisch Flottennummer und Kennzeichen (vorläufig aus dem Kreisschlüssel der Startgemeinde und einem Zufallsrest).
 5. Gebrauchtmarkt: Angebote aus dem Katalog, auch eingestellte Modelle, passend zu Region und Zeitraum (A2-34). Jedes Angebot zeigt Modell, Baujahr, Laufleistung, Preis, Restzeit der HU, Konfiguration, Lackierung des Vorbesitzers und den Zustand als Spanne (Elektro auch Batteriezustand). Mit fester Zufallszahl immer dieselben Angebote.
 6. Preis aus Neupreis, Wertverlust nach Alter und Zustand, Streuung; geprüft gegen Handrechnung.
 7. Die Angebote erneuern sich wöchentlich, geprüft über einen Wochenwechsel der Spielzeit.
@@ -138,5 +123,24 @@ Entwurf der Abnahmekriterien:
 14. Menüleiste am Rand mit Fahrzeuge, Fahrzeugmarkt, Personal und Betriebshof, alles per Tastatur, Texte in der Sprachdatei.
 15. Fuhrpark, Angebote, Ausschreibungen und Personal lassen sich als Datenstruktur speichern und laden und ergeben denselben Zustand.
 16. Rauchtest mit den echten Schritten "Bus kaufen" und "Fahrer einstellen", Oberflächentest mit Screenshot, alle Tests und Workflow grün inklusive Pages-Adresse.
+17. Verkauf an den Händler: Wert ohne Streuung abzüglich Abschlag, der Bus verschwindet aus der Flotte, der Platz ist wieder frei, im Spielstand abgebildet; ein Test prüft Betrag und Platz.
 
-Offene Fragen zu Funktionen: siehe Bericht vom 25.11.2026 (Fragen 1 bis 15). Vorgeschlagene Annahmen: siehe Bericht (A3-1 bis A3-19), sie werden nach der Bestätigung in annahmen.md eingetragen.
+Fertig:
+- Zufall mit Startwert (`src/game/zufall.ts`), Konfiguration (`optionen`, `fahrzeugmarkt`, `personal`), Kreisschlüssel der Gemeinde, Monatsaddition im Kalender.
+- Optionsdatei `optionen.xlsx` mit Leser und Prüfung der Spalten (`src/catalog/optionen.ts`, Subagent). Batteriegrößen als eigenes kleines Modul ohne Excel-Leser.
+- Fuhrpark (`src/fleet`): Plätze im Hof, Neukauf mit Konfiguration, Plätze und Preis nach Batterie, Wert, Verkauf, Umsetzen, Umlackieren, Kennzeichen, Flottennummer, Gebrauchtmarkt mit Inspektion, Speichern und Laden, Abriss belegter Plätze gesperrt.
+- Personal (`src/personal`, Subagent): Lohntabelle, Ausschreibung, Bewerber, Einstellen, Kündigung, Stufenaufstieg, Monatslohn, Speichern und Laden.
+- Spielzustand und Zeitereignisse (`src/game/spiel.ts`): Wochenwechsel und Monatsende genau einmal.
+- Oberfläche: Menüleiste am linken Rand, Fenster Fahrzeugmarkt (Neukauf, Gebrauchtmarkt), Fahrzeuge, Personal; Busse im Editor; Fehler der Optionsdatei im Startfenster und in F3; Hilfe ergänzt.
+- Tests: `tests/fuhrpark.test.ts`, `tests/spiel.test.ts`, `tests/optionen.test.ts`, `tests/personal.test.ts`, Ergänzungen in `tests/betriebshof.test.ts` und `tests/texte.test.ts`, Rauchtest mit "Bus kaufen" und "Fahrer einstellen", Oberflächentest `e2e/markt.spec.ts` mit drei Screenshots.
+- Nachtrag Etappe 2 (Antwort 15): Durchfahrt nur bei mindestens 27 m Torabstand, Rundweg nur wenn er eine Fläche umschließt und im Netz einen Kreis bildet.
+- Annahmen A3-1 bis A3-32 in `annahmen.md` (A3-20 bis A3-32 warten auf Bestätigung).
+
+Unabhängige Prüfung (Subagent, 25.11.2026): keine erfundenen Funktionen, keine Gedankenstriche, Annahmen passen zum Code. Behoben nach der Prüfung (mit Regressionstests): Abriss belegter Plätze ohne Test; Scheintest zum HU-Datum; schwacher Speichertest der Ausschreibungen; Ecken-Kontakt galt als Rundweg; Zahlen im Code (Erfahrungsspanne, Fahrerqualifikationen, HU-Standard); Laden kaputter Fuhrpark-Daten warf falsche Fehler und prüfte Kennzeichen, Plätze und Modelle nicht; gemischte Reihen öffneten die falsche Variante; Gebrauchtangebote zeigten die Standardausstattung nicht; Lackierung und Auswahl nur über Farbe; Neuzeichnen beim Tageswechsel zerstörte Eingaben und Bestätigungen; Personaltabelle ohne Zufriedenheit, Gesundheit, Qualifikationen und Erfahrung; abgelaufene Angebote noch kaufbar; Bewerber erschienen erst zum Tageswechsel; Testzugang im normalen Spiel; doppelte Formeln; Batterieeinheiten bei Maximum ohne volles Vielfaches.
+
+Offene Fragen an Koko:
+1. Arbeitgeberanteil auf die Jahressonderzahlung: Gerechnet wird (Bruttolohn + Sonderzahlung / 12) × 1,22, also der Arbeitgeberanteil auch auf die Sonderzahlung (sachlich richtig, A3-18). Bestätigen?
+2. Yutong U12 LE hat einen Batteriebereich von 465 bis 466 kWh ohne Schritt; nach der Regel A2-30 sind beide Größen wählbar (1 kWh für 700 €). Katalogwert prüfen?
+3. Annahmen A3-20 bis A3-32 bestätigen.
+
+Geändert gegenüber Konzept: nichts.

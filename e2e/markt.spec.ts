@@ -5,7 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 const euroZahl = (s: string) => Number(s.replace(/[^\d,-]/g, "").replace(",", "."));
 
 async function spielMitHof(page: Page) {
-  await page.goto("./");
+  await page.goto("./?test");
   await expect(page.locator("#s-name")).toBeFocused();
   await page.keyboard.type("Markt Test");
   await page.keyboard.press("Enter");
@@ -47,6 +47,22 @@ test("Fahrzeugmarkt und Personal: Neukauf, Gebrauchtkauf, Verkauf, Einstellen, L
   await page.keyboard.press("Enter");
   const markt = page.getByTestId("fenster-fahrzeugmarkt");
   await expect(markt).toBeVisible();
+
+  // Regression: Bei gemischten Reihen öffnet sich die Variante, die zum Filter passt (Elektro mit Batteriewahl)
+  await markt.getByTestId("markt-filter-antrieb").selectOption("Elektro");
+  await markt.getByTestId("markt-filter-hersteller").selectOption("Iveco Bus");
+  await markt.getByTestId("markt-modell").filter({ hasText: /^Iveco Bus Crossway LE City 12 m$/ }).click();
+  await expect(markt.getByTestId("markt-batterie")).toBeVisible();
+  await expect(markt.getByTestId("markt-werte")).toContainText("Elektro");
+  // Bauart-Filter: nur Reihen mit Gelenkbussen, die Spalte Bauart nennt nur Gelenk
+  await markt.getByTestId("markt-filter-hersteller").selectOption("");
+  const alleElektro = await markt.getByTestId("markt-modell").count();
+  await markt.getByTestId("markt-filter-bauart").selectOption("Gelenk");
+  const gelenk = await markt.getByTestId("markt-modell").count();
+  expect(gelenk).toBeGreaterThan(0);
+  expect(gelenk).toBeLessThan(alleElektro);
+  for (const z of await markt.locator("tbody tr td:nth-child(2)").allInnerTexts()) expect(z).toBe("Gelenk");
+  await markt.getByTestId("markt-filter-bauart").selectOption("");
 
   // Neukauf MAN Lion's City E 12 mit 534 kWh: Preis 520.000 + 178 kWh × 700 €, 16 Stehplätze weniger
   await markt.getByTestId("markt-filter-hersteller").selectOption("MAN");
