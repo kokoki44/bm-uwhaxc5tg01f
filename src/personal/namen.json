@@ -1,0 +1,23 @@
+{
+  "quelle": "Auswahl aus allgemein bekannten Häufigkeitslisten: häufige Vornamen nach den Vornamenstatistiken der Gesellschaft für deutsche Sprache (verschiedene Geburtsjahrgänge, weiblich und männlich gemischt), häufige Familiennamen nach der Liste der häufigsten Familiennamen in Deutschland (Wikipedia, Auswertung von Telefonbucheinträgen). Keine exakte Rangfolge.",
+  "vornamen": [
+    "Anna", "Maria", "Julia", "Laura", "Lea", "Sarah", "Lisa", "Katharina", "Sabine", "Petra",
+    "Andrea", "Claudia", "Susanne", "Nicole", "Stefanie", "Christina", "Melanie", "Sandra", "Birgit", "Monika",
+    "Karin", "Ursula", "Heike", "Martina", "Kerstin", "Jennifer", "Jessica", "Anja", "Tanja", "Kathrin",
+    "Nina", "Lena", "Hannah", "Sophie", "Emma", "Mia", "Johanna", "Franziska", "Christine", "Gabriele",
+    "Thomas", "Michael", "Andreas", "Stefan", "Christian", "Daniel", "Markus", "Frank", "Peter", "Jürgen",
+    "Klaus", "Wolfgang", "Uwe", "Matthias", "Martin", "Alexander", "Sebastian", "Tobias", "Jan", "Dirk",
+    "Jens", "Torsten", "Sven", "Florian", "Lukas", "Jonas", "Leon", "Felix", "Paul", "Maximilian",
+    "Tim", "Niklas", "Philipp", "Dennis", "Patrick", "Holger", "Ralf", "Bernd", "Karl", "Hans"
+  ],
+  "nachnamen": [
+    "Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Schulz", "Hoffmann",
+    "Schäfer", "Koch", "Bauer", "Richter", "Klein", "Wolf", "Schröder", "Neumann", "Schwarz", "Zimmermann",
+    "Braun", "Krüger", "Hofmann", "Hartmann", "Lange", "Schmitt", "Werner", "Schmitz", "Krause", "Meier",
+    "Lehmann", "Schmid", "Schulze", "Maier", "Köhler", "Herrmann", "König", "Walter", "Mayer", "Huber",
+    "Kaiser", "Fuchs", "Peters", "Lang", "Scholz", "Möller", "Weiß", "Jung", "Hahn", "Schubert",
+    "Vogel", "Friedrich", "Keller", "Günther", "Frank", "Berger", "Winkler", "Roth", "Beck", "Lorenz",
+    "Baumann", "Franke", "Albrecht", "Schuster", "Simon", "Ludwig", "Böhm", "Winter", "Kraus", "Martin",
+    "Schumacher", "Krämer", "Vogt", "Stein", "Jäger", "Otto", "Sommer", "Groß", "Seidel", "Heinrich"
+  ]
+}
