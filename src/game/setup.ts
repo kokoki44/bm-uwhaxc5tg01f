@@ -1,4 +1,7 @@
-import type { Config } from "../config";
+import { config, type Config } from "../config";
+import { neuerFuhrpark, type Fuhrpark } from "../fleet/fuhrpark";
+import { neuesPersonal, type Personal } from "../personal/personal";
+import { neuerZufall, type Zufall } from "./zufall";
 import type { CivilMs } from "../calendar/civil";
 import type { Betriebshof } from "../depot/hof";
 import type { TextKey } from "../i18n";
@@ -47,10 +50,23 @@ export interface SpielZustand {
   freischaltungen: Freischaltungen;
   /** Erster Betriebshof, sobald ein Grundstück gekauft ist. */
   betriebshof: Betriebshof | null;
+  /** Bis zu diesem Zeitpunkt sind die Ereignisse der Spielzeit (Wochenwechsel, Monatsende) abgearbeitet. */
+  zeit: CivilMs;
+  /** Zufall mit festem Startwert je Spielstand. */
+  zufall: Zufall;
+  fuhrpark: Fuhrpark;
+  personal: Personal;
 }
 
-export function neuesSpiel(s: SetupGeprueft, world: World, startZeit: CivilMs): SpielZustand {
+/** Startwert für den Zufall eines neuen Spielstands. */
+export const neuerStartwert = (): number => Math.floor(Math.random() * 2 ** 32);
+
+export function neuesSpiel(s: SetupGeprueft, world: World, startZeit: CivilMs, startwert = neuerStartwert()): SpielZustand {
   return {
+    zeit: startZeit,
+    zufall: neuerZufall(startwert),
+    fuhrpark: neuerFuhrpark(config.fahrzeugmarkt),
+    personal: neuesPersonal(config.personal),
     firma: { name: s.firmenname, farbe: s.firmenfarbe },
     kontostandEur: s.startkapital,
     startZeit,

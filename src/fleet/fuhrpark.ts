@@ -1,5 +1,7 @@
 import { civil, parts, type CivilMs } from "../calendar/civil";
-import { batterieOptionen, type Bus } from "../catalog/katalog";
+import { batterieOptionen } from "../catalog/batterie";
+import type { Bus } from "../catalog/katalog";
+import type { Option } from "../catalog/optionen";
 import type { BetriebshofConfig, CatalogConfig, FahrzeugmarktConfig } from "../config";
 import type { HofAnalyse } from "../depot/analyse";
 import type { Betriebshof, BusMass, Kasse } from "../depot/hof";
@@ -9,6 +11,7 @@ import { freiePlaetze, platzFrei, type Belegung, type PlatzRef } from "./plaetze
 /** Ausstattungsoption, wie sie der Fahrzeugmarkt braucht (aus der Optionsdatei). */
 export interface MarktOption {
   id: string;
+  name?: string;
   /** Optionen derselben Gruppe schließen sich aus, genau eine ist gewählt. null = einzeln an- und abwählbar. */
   gruppe: string | null;
   aufpreisEur: number;
@@ -100,6 +103,14 @@ export interface MarktKontext {
   frei: string;
   /** Unterscheidungszeichen der Startgemeinde für Kennzeichen. */
   kreis: string;
+}
+
+/** Optionen aus der Optionsdatei für den Fahrzeugmarkt. */
+export function marktOptionen(liste: readonly Option[]): MarktOption[] {
+  return liste.map((o) => ({
+    id: o.option_id, name: o.name, gruppe: o.gruppe, aufpreisEur: o.aufpreis_eur, nurAntrieb: o.nur_antrieb, standard: o.standard,
+    serieNeukauf: o.serie_neukauf, freischaltung: o.freischaltung, gebrauchtAnteil: o.gebraucht_anteil,
+  }));
 }
 
 export const JAHR_MS = 365.25 * 86400000;

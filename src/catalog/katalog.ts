@@ -1,6 +1,9 @@
 import type { CatalogConfig } from "../config";
 import { CATALOG_COLUMNS } from "./columns";
+import { hatBatterieBereich } from "./batterie";
 import { checkHeader, leseKatalogDatei, type KatalogRoh, type SpaltenRegel, type Wert } from "./reader";
+
+export { batterieOptionen, hatBatterieBereich } from "./batterie";
 
 export type Spalte = (typeof CATALOG_COLUMNS)[number];
 
@@ -81,8 +84,6 @@ const ZAHL_EINHEITEN = new Set([
 ]);
 const STANDARDWERT_DER_KLASSE = "standardwert der klasse";
 const ANTRIEB_ELEKTRO = "Elektro";
-/** Kleine technische Toleranz für Gleitkommavergleiche bei Batterieschritten (keine Spielregel). */
-const GLEITKOMMA_EPS = 1e-9;
 
 function statischeArt(s: string): SpaltenArt {
   if (s === "fiktiv") return "wahrheitswert";
@@ -316,38 +317,6 @@ export function pruefeKatalog(roh: KatalogRoh, cfg: CatalogConfig): KatalogErgeb
     if (nutzbar) modelle.push({ ...(w as Omit<Bus, "zeile">), zeile: z.zeile } as Bus);
   }
   return ergebnis(modelle);
-}
-
-/**
- * Wählbare Batteriegrößen in kWh: von batterie_kwh_min bis batterie_kwh_max in Schritten von batterie_kwh_schritt.
- * Der Bereich endet beim letzten vollen Schritt.
- * Bereich ohne Schritt: Schritte des Standardschritts aus der Konfiguration ab dem Minimum; das Maximum aus dem
- * Datenblatt ist immer wählbar, auch wenn es kein volles Vielfaches ist (Annahme A2-30).
- */
-export function batterieOptionen(
-  bus: Pick<Bus, "batterie_kwh_min" | "batterie_kwh_max" | "batterie_kwh_schritt">,
-  standardSchrittKwh: number,
-): number[] {
-  const min = bus.batterie_kwh_min ?? bus.batterie_kwh_max;
-  const max = bus.batterie_kwh_max ?? bus.batterie_kwh_min;
-  if (min === null || max === null || min > max) return [];
-  const eps = GLEITKOMMA_EPS * Math.max(1, Math.abs(max));
-  if (max - min <= eps) return [max];
-  const eigenerSchritt = bus.batterie_kwh_schritt !== null && bus.batterie_kwh_schritt > 0;
-  const schritt = eigenerSchritt ? bus.batterie_kwh_schritt! : standardSchrittKwh;
-  const out: number[] = [];
-  for (let i = 0; ; i++) {
-    const v = min + i * schritt;
-    if (v > max + eps) break;
-    out.push(Number(v.toFixed(9)));
-  }
-  if (!eigenerSchritt && Math.abs(out[out.length - 1] - max) > eps) out.push(max);
-  return out;
-}
-
-/** Ist ein Batteriebereich (min kleiner als max) angegeben? */
-export function hatBatterieBereich(min: number | null, max: number | null): boolean {
-  return min !== null && max !== null && max - min > GLEITKOMMA_EPS * Math.max(1, Math.abs(max));
 }
 
 /** Liest und prüft den Katalog. Wirft nie: eine unlesbare Datei ergibt den Fehler dateiUnlesbar. */
