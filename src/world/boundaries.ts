@@ -51,6 +51,12 @@ export function regionOf(area: AdminArea | null): string | null {
   return null;
 }
 
+/** Kreisschlüssel (erste fünf Stellen des amtlichen Gemeindeschlüssels), zum Beispiel 01060 für den Kreis Segeberg. */
+export function kreisschluesselOf(area: AdminArea | null): string | null {
+  const ags = area?.tags["de:amtlicher_gemeindeschluessel"] ?? area?.tags["de:regionalschluessel"];
+  return ags && /^\d{5}/.test(ags) ? ags.slice(0, 5) : null;
+}
+
 export function inArea(p: LonLat, a: AdminArea): boolean {
   return pointInRings(p, a.rings);
 }

@@ -1,7 +1,7 @@
 import type { Config } from "../config";
 import type { OsmExtract } from "../data/osm";
 import type { TextKey } from "../i18n";
-import { extractBoundaries, inArea, regionOf, type AdminArea } from "./boundaries";
+import { extractBoundaries, inArea, kreisschluesselOf, regionOf, type AdminArea } from "./boundaries";
 import { buildDemandGrid, type DemandGrid } from "./demand";
 import { bboxOf, LocalProj, type LonLat } from "./geo";
 import { buildRoadNetwork, type RoadNetwork } from "./roads";
@@ -18,7 +18,16 @@ export interface Gebiet {
 }
 
 export interface World {
-  gemeinde: { id: string; name: string; region: string | null; rings: LonLat[][]; einwohner: number; arbeitsplaetze: number };
+  gemeinde: {
+    id: string;
+    name: string;
+    region: string | null;
+    /** Kreisschlüssel (erste fünf Stellen des amtlichen Gemeindeschlüssels), oder null. */
+    kreisschluessel: string | null;
+    rings: LonLat[][];
+    einwohner: number;
+    arbeitsplaetze: number;
+  };
   /** true, wenn die Gemeinde über dem Schwellenwert liegt und in Subdivisionen geteilt ist. */
   geteilt: boolean;
   gebiete: Gebiet[];
@@ -81,6 +90,7 @@ export function buildWorld(extract: OsmExtract, cfg: Config, fortschritt: Fortsc
       id: gemeinde.id,
       name: gemeinde.name,
       region: regionOf(gemeinde),
+      kreisschluessel: kreisschluesselOf(gemeinde),
       rings: gemeinde.rings,
       einwohner: demand.summe.einwohner,
       arbeitsplaetze: demand.summe.arbeitsplaetze,

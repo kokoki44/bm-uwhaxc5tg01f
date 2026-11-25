@@ -102,9 +102,16 @@ Ebenfalls behoben (Regressionstest): Der Oberflächentest "600-fach" schlug auf 
 
 Geändert gegenüber Konzept: nichts.
 
-## Etappe 3a: Fahrzeugmarkt und Personal (Vorbereitung, wartet auf Kokos Bestätigung)
+## Etappe 3a: Fahrzeugmarkt und Personal (im Bau)
 
-Noch nicht begonnen. Entwurf der Abnahmekriterien, offene Fragen und vorgeschlagene Annahmen stehen im Bericht vom 25.11.2026 und hier.
+Koko hat am 25.11.2026 die Kriterien 1 bis 16 bestätigt, mit zwei Änderungen: Kriterium 3 enthält die Batterie- und Plätzeregel (Preis und Platzzahl nach gewählter Batterie, Handrechnung an einem MAN-Modell), neues Kriterium 17: Verkauf an den Händler (Wert ohne Streuung minus Abschlag, Bus weg, Platz frei, im Spielstand abgebildet, Test für Betrag und Platz). Antworten 1 bis 15 und Annahmen A3-1 bis A3-19 bestätigt. Konzept mit den Festlegungen zu Kauf, Ausstattung und Lohn committet.
+
+Stand (wird bei Unterbrechung aktualisiert):
+- Fertig: Zufall mit Startwert (`src/game/zufall.ts`), Konfiguration (`optionen`, `fahrzeugmarkt`, `personal`), Kreisschlüssel der Gemeinde, Plätze im Hof (`src/fleet/plaetze.ts`), Fuhrpark mit Neukauf, Konfiguration, Plätzen nach Batterie, Wert, Verkauf, Umsetzen, Umlackieren, Kennzeichen (`src/fleet/fuhrpark.ts`), Gebrauchtmarkt (`src/fleet/markt.ts`).
+- In Arbeit (Subagenten, nach dem Nutzungslimit fortgesetzt): Optionsdatei `optionen.xlsx` mit Leser und Tests; Personal-Kern `src/personal/personal.ts` mit Tests.
+- Offen: Tests für Fuhrpark und Markt, Zeitereignisse (Wochenwechsel, Monatsende), Spielzustand, Oberfläche (Menüleiste, Fahrzeugmarkt, Fahrzeuge, Personal, Busse im Editor), Rauchtest, Oberflächentest, Annahmen eintragen, unabhängige Prüfung.
+
+Entwurf der Abnahmekriterien (bestätigt, siehe oben):
 
 Entwurf der Abnahmekriterien:
 1. Neukauf: Liste der neu kaufbaren Modelle (im_neukauf = ja, nur Fahrzeugart Bus), filterbar nach Hersteller, Bauart und Antrieb. Zeilen mit gleichem Hersteller, Modellfamilie und Modell erscheinen als ein Modell mit wählbarer Variante. Die Ansicht zeigt die Daten aus dem Katalog.
