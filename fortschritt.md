@@ -96,4 +96,32 @@ Nachträge nach der Freigabe (25.11.2026), Antworten von Koko auf die offenen Fr
 - baujahr_von leer: Regel für den Gebrauchtmarkt als A2-34 festgehalten, gebaut wird sie in 3a. Die 16 fehlenden Standardwerte für fiktive Busse bleiben bis Etappe 7a liegen.
 - Altas Novus Cityline und Ecoline bleiben gemeldet und ungenutzt, bis Koko die Länge ergänzt.
 
+Prüfung der Nachträge (Subagent): alle Vorgaben erfüllt. Behoben mit Regressionstest: Die Meldung "getrennte Netze" hing am zuletzt gebauten Tor statt am kleineren Netz; ein Zukauf, der ein schon zu schmales Grundstück verbessert, wurde abgelehnt. Offen als Frage: Die Wendemöglichkeit wird über das Netz der Rechtecke erkannt. Zwei Tore direkt nebeneinander oder drei Fahrwege, die sich an einer Einmündung gegenseitig berühren, gelten dadurch als Rundweg, obwohl ein Bus dort nicht wenden kann.
+
+Ebenfalls behoben (Regressionstest): Der Oberflächentest "600-fach" schlug auf macOS fehl, weil die Messung begann, bevor der Worker umgestellt hatte. Der Welttest bekam für den Aufbau der Welt dasselbe Zeitlimit wie der Standorttest.
+
 Geändert gegenüber Konzept: nichts.
+
+## Etappe 3a: Fahrzeugmarkt und Personal (Vorbereitung, wartet auf Kokos Bestätigung)
+
+Noch nicht begonnen. Entwurf der Abnahmekriterien, offene Fragen und vorgeschlagene Annahmen stehen im Bericht vom 25.11.2026 und hier.
+
+Entwurf der Abnahmekriterien:
+1. Neukauf: Liste der neu kaufbaren Modelle (im_neukauf = ja, nur Fahrzeugart Bus), filterbar nach Hersteller, Bauart und Antrieb. Zeilen mit gleichem Hersteller, Modellfamilie und Modell erscheinen als ein Modell mit wählbarer Variante. Die Ansicht zeigt die Daten aus dem Katalog.
+2. Konfiguration: Batteriegröße (nur Elektro), Lackierung (Standard Firmenfarbe), Bestuhlung, Spiegelart, weitere Ausstattung aus der Optionsdatei. Preis = neupreis_eur plus Aufpreise, laufend angezeigt, geprüft gegen Handrechnung.
+3. Kauf nur mit freiem Platz, auf den der Bus passt (Stellplatz nach passtBus, Hallenplatz nach Busgröße), und ausreichendem Kontostand, sonst lesbare Meldung ohne Buchung. Der Neukauf bucht genau den Preis ab und stellt den Bus sofort auf einen freien Platz.
+4. Jeder gekaufte Bus bekommt automatisch eine Flottennummer (Kennzeichen je nach Antwort auf Frage 4).
+5. Gebrauchtmarkt: Angebote aus dem Katalog, auch eingestellte Modelle, passend zu Region und Zeitraum (A2-34). Jedes Angebot zeigt Modell, Baujahr, Laufleistung, Preis, Restzeit der HU, Konfiguration, Lackierung des Vorbesitzers und den Zustand als Spanne (Elektro auch Batteriezustand). Mit fester Zufallszahl immer dieselben Angebote.
+6. Preis aus Neupreis, Wertverlust nach Alter und Zustand, Streuung; geprüft gegen Handrechnung.
+7. Die Angebote erneuern sich wöchentlich, geprüft über einen Wochenwechsel der Spielzeit.
+8. Inspektion gegen Gebühr zeigt den genauen Zustand. Gebrauchtkauf mit denselben Bedingungen wie Neukauf, der Bus startet mit seinem Zustand. Umlackieren gegen Bezahlung.
+9. Fahrzeugliste mit Flottennummer, Modell, Baujahr, Zustand und Platz; im Editor stehen die Busse als kleine Rechtecke auf ihren Plätzen.
+10. Personal: Ausschreibung für alle sechs Personalarten; nach einer Wartezeit erscheinen Bewerber, Zahl und Erfahrung hängen vom Lohn im Verhältnis zum Marktlohn ab (Test mit fester Zufallszahl). Einstellen ergibt eine Person mit Namen, Personalart, Lohn, Arbeitszeit, Erfahrung, Zufriedenheit, Gesundheit und Qualifikationen.
+11. Probezeit und Kündigungsfrist: Der Spieler kann kündigen, der Lohn läuft bis zum Ende der Frist.
+12. Lohn je Personalart und Erfahrungsstufe pro Stunde (Marktlohn nach TV-N SH in der Konfiguration). Abbuchung am Monatsende, anteilig bei Eintritt oder Austritt im Monat; das Konto darf dadurch ins Minus. Test: eine eingestellte Person kostet genau den erwarteten Betrag.
+13. Wochenwechsel und Monatsende werden aus der Spielzeit auch bei 600-fach genau einmal ausgelöst.
+14. Menüleiste am Rand mit Fahrzeuge, Fahrzeugmarkt, Personal und Betriebshof, alles per Tastatur, Texte in der Sprachdatei.
+15. Fuhrpark, Angebote, Ausschreibungen und Personal lassen sich als Datenstruktur speichern und laden und ergeben denselben Zustand.
+16. Rauchtest mit den echten Schritten "Bus kaufen" und "Fahrer einstellen", Oberflächentest mit Screenshot, alle Tests und Workflow grün inklusive Pages-Adresse.
+
+Offene Fragen zu Funktionen: siehe Bericht vom 25.11.2026 (Fragen 1 bis 15). Vorgeschlagene Annahmen: siehe Bericht (A3-1 bis A3-19), sie werden nach der Bestätigung in annahmen.md eingetragen.
