@@ -19,6 +19,10 @@ import { kaufeNeu, kreisVon, marktOptionen, standardKonfig } from "../src/fleet/
 import { ladeFuhrpark, serialisiereFuhrpark } from "../src/fleet/speichern";
 import { fortschreiben, kaufKontext, starteMarkt, type SpielKontext } from "../src/game/spiel";
 import { ladePersonal, schreibeAus, serialisierePersonal, sichtbareBewerber, stelleEin } from "../src/personal/personal";
+import { ladeSpielstand, spielstandDaten } from "../src/game/spielstand";
+import { erzeugeRichtungen, fuegeFahrtHinzu, fuegeHaltEin, Haltestellen, legeKurzlaeuferAn, legeLinieAn, osmHaltId, planAnfrage, setzeTakt, weiseBusZu } from "../src/linien/linien";
+import { berechneLinie, type LinienPlan } from "../src/linien/plan";
+import { passtZurLinie } from "../src/linien/pruefung";
 
 /**
  * Rauchtest durch den Kernzyklus. Wird mit jeder Etappe um echte Schritte erweitert.
@@ -30,6 +34,8 @@ interface Ctx {
   world?: World;
   spiel?: SpielZustand;
   k?: SpielKontext;
+  halte?: Haltestellen;
+  plan?: LinienPlan;
 }
 
 const schritte: { name: string; seit: string; run?: (c: Ctx) => Promise<void> | void }[] = [
@@ -138,16 +144,76 @@ const schritte: { name: string; seit: string; run?: (c: Ctx) => Promise<void> | 
       expect(spiel.kontostandEur).toBeLessThan(vorher);
     },
   },
-  { name: "Linie anlegen", seit: "3b" },
+  {
+    name: "Linie anlegen (vorhandene Haltestellen als Perlenkette, Hin- und Rückrichtung, Route über das Busnetz)",
+    seit: "3b",
+    run: (c) => {
+      const s = c.spiel!;
+      c.halte = new Haltestellen(c.world!.stops, s.netz);
+      const r = legeLinieAn(s.netz, { nummer: "1", name: "Rauchtest", farbe: "#e30613" }, config.linien);
+      expect(r.ok).toBe(true);
+      if (!r.ok) return;
+      for (const id of [333727165, 333727166, 333727173]) expect(fuegeHaltEin(r.linie.perlen, c.halte, osmHaltId(id), () => true, config.linien)).toBeNull();
+      erzeugeRichtungen(s.netz, r.linie, c.halte, config.linien, "nach");
+      expect(r.linie.varianten.map((v) => v.art)).toEqual(["hin", "rueck"]);
+      const k = legeKurzlaeuferAn(s.netz, r.linie, r.linie.varianten[0].id, 0, 1, c.halte, config.linien, "nach");
+      expect(k.ok).toBe(true);
+    },
+  },
+  {
+    name: "Takt setzen (Werktag alle 20 min, Kurzläufer dazwischen, eine zusätzliche Fahrt)",
+    seit: "3b",
+    run: (c) => {
+      const s = c.spiel!;
+      const [hin, rueck, kurz] = s.netz.linien[0].varianten;
+      for (const v of [hin, rueck]) expect(setzeTakt(v, "werktag", [{ vonMin: 360, bisMin: 1200, taktMin: 20 }], config.linien).ok).toBe(true);
+      expect(setzeTakt(kurz, "werktag", [{ vonMin: 370, bisMin: 540, taktMin: 20 }], config.linien).ok).toBe(true);
+      expect(fuegeFahrtHinzu(s.netz, hin, "werktag", 7 * 3600 + 25 * 60, config.linien).ok).toBe(true);
+    },
+  },
+  {
+    name: "Fahrplan erzeugen (Fahrten, Fahrzeiten auf 10 s, Bedarf an Bussen, Ausrückzeit vom Betriebshof)",
+    seit: "3b",
+    run: (c) => {
+      const s = c.spiel!;
+      const l = s.netz.linien[0];
+      // Anschluss des Hofs: Anfang des Abschnitts der ersten Haltestelle (die echte Toranbindung prüft der Oberflächentest)
+      const erste = c.world!.stops.find((x) => x.id === 333727165)!;
+      const hof = [{ edge: erste.snaps[0].edge, t: 0, dist: 0, point: erste.coord }];
+      c.plan = berechneLinie(c.world!.network, planAnfrage(l, c.halte!, hof), config.linien, config.roads);
+      expect(c.plan.varianten.every((v) => v.vollstaendig)).toBe(true);
+      const w = c.plan.tage.werktag;
+      // 42 + 42 nach Takt, 9 Kurzläufer (6:10 bis 8:50), 1 zusätzliche Fahrt
+      expect(w.fahrten).toHaveLength(84 + 9 + 1);
+      for (const f of w.fahrten) for (const [an, ab] of f.zeiten) expect([an % 10, ab % 10]).toEqual([0, 0]);
+      expect(w.busbedarf).toBeGreaterThanOrEqual(2);
+      expect(w.umlaeufe.every((u) => u.ausrueck !== null)).toBe(true);
+      expect(c.plan.tage.sonnFeiertag.fahrten).toEqual([]);
+    },
+  },
+  {
+    name: "Bus zuweisen (Stammlinie, Prüfung Länge und Wendekreis)",
+    seit: "3b",
+    run: async (c) => {
+      const s = c.spiel!;
+      const bus = s.fuhrpark.busse[0];
+      expect(weiseBusZu(s.netz, s.netz.linien[0].id, bus.id)).toBe(true);
+      const kat = await ladeKatalog(readFileSync(config.catalog.fileName), config.catalog);
+      const m = kat.modelle.find((x) => x.modell_id === bus.modellId)!;
+      expect(passtZurLinie(m, c.plan!.varianten, config.linien)).toEqual([]);
+      expect(s.netz.linien[0].busse).toEqual([bus.id]);
+    },
+  },
   { name: "Einen Spieltag simulieren", seit: "4a" },
   {
-    name: "Speichern",
+    name: "Speichern (ganzer Spielstand mit Linien, wie der Autosave)",
     seit: "0",
     run: async (c) => {
       const s = c.spiel!;
       await c.store.save("rauch", {
         ticks: c.sim.status().ticks, betriebshof: serialisiereHof(s.betriebshof!), fuhrpark: serialisiereFuhrpark(s.fuhrpark), personal: serialisierePersonal(s.personal),
       });
+      await c.store.save(config.storage.autosaveSlot, spielstandDaten(s));
     },
   },
   {
@@ -160,6 +226,10 @@ const schritte: { name: string; seit: string; run?: (c: Ctx) => Promise<void> | 
       expect(ladeHof(p.betriebshof)).toEqual(s.betriebshof);
       expect(ladeFuhrpark(p.fuhrpark)).toEqual(s.fuhrpark);
       expect(ladePersonal(p.personal, config.personal)).toEqual(s.personal);
+      const geladen = ladeSpielstand((await c.store.load(config.storage.autosaveSlot))!);
+      expect(geladen).toEqual(s);
+      // Der geladene Stand ergibt denselben Fahrplan
+      expect(berechneLinie(c.world!.network, planAnfrage(geladen.netz.linien[0], new Haltestellen(c.world!.stops, geladen.netz), null), config.linien, config.roads).tage.werktag.fahrten).toEqual(c.plan!.tage.werktag.fahrten);
     },
   },
 ];

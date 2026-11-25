@@ -210,3 +210,45 @@ Von Koko am 25.11.2026 bestätigt: A3-1 bis A3-32 (A3-20 bis A3-32 nach dem Bau)
 | A3-32 | Testzugang | Nur mit "?test" in der Adresse gibt es einen Zugang zum Vorspulen der Spielzeit für den Oberflächentest (Bewerber erscheinen erst nach Tagen). Im normalen Spiel fehlt er | Sonst müsste der Test viele Minuten warten. |
 | A3-33 | Batteriebereich kleiner als der Standardschritt | Hat ein Modell keinen eigenen Schritt und ist die Spanne (Maximum minus Minimum) kleiner als der Standardschritt (50 kWh), ist nur das Maximum wählbar. Beispiel: Yutong U12 LE (465 bis 466 kWh) nur 466 kWh. Modelle mit eigenem Schritt sind nicht betroffen | Vorgabe Koko (25.11.2026): Rundungsfehler im Katalog ("Batterie bis 465,99 kWh"), richtig ist fest 466 kWh. Koko korrigiert die Zelle in der nächsten Katalogversion. |
 | A3-30 | Optionsdatei | Spalten fest wie beim Katalog, standard und serie_neukauf sind Pflicht (ja/nein). Fehlerhafte Zeilen und Gruppen ohne genau eine Standardoption werden nicht genutzt und beim Start gemeldet | Vorgabe Koko: Spaltennamen prüfen wie beim Katalog. |
+
+## Etappe 3b
+
+Von Koko am 25.11.2026 bestätigt: A3b-1 bis A3b-14 (A3b-1, A3b-3 und A3b-12 mit Kokos Änderungen). A3b-15 bis A3b-28 sind beim Bau entstanden und warten auf Kokos Bestätigung. Ein Stern (*) heißt: Schätzung ohne belastbare Quelle, Prüfung in Etappe 6. Alle Werte stehen in `src/config/config.json`, Abschnitt `linien` (Autosave: Abschnitt `storage`).
+
+### Bestätigt
+
+| Nr. | Thema | Festlegung | Begründung |
+| --- | --- | --- | --- |
+| A3b-1* | Verkehrsdichte | Faktor auf die reine Fahrzeit bei erlaubter Geschwindigkeit, nie unter 1,00. Werktag: 0 bis 6 Uhr 1,05; 6 bis 9 Uhr 1,35; 9 bis 15 Uhr 1,20; 15 bis 19 Uhr 1,35; 19 bis 24 Uhr 1,10. Samstag: 10 bis 18 Uhr 1,20, sonst 1,10. Sonn- und Feiertag: 1,10. Schulferien: Spitzen 1,25 statt 1,35. Maßgeblich ist die Abfahrtszeit am Beginn des Abschnitts; nach Mitternacht (Betriebstag bis 4 Uhr) gilt wieder die Zeile ab 0 Uhr | Vorgabe Koko: Faktoren unter 1 würden Busse schneller machen als erlaubt. Die Konfiguration wird beim Start geprüft (lückenlos 0 bis 24 Uhr, kein Faktor unter 1). |
+| A3b-2 | Ampeln und Kreuzungen | 15 s je Ampel, 2 s je Kreuzung ohne Ampel (wie A1-1, A1-2). Die Zuschläge werden nach dem Verkehrsfaktor addiert und nicht mit ihm multipliziert | Vorgabe Koko. |
+| A3b-3* | Höchstgeschwindigkeit | Busse fahren im Spiel höchstens 80 km/h, auch wo mehr erlaubt ist | Spielwert (Annahme), keine Aussage über eine gesetzliche Grenze. |
+| A3b-4* | Bremsen und Anfahren | 10 s Zuschlag je Halt (Umsetzung siehe A3b-15) | Vorgabe Koko (F7). |
+| A3b-5* | Standzeit | Standard 20 s je Haltestelle, einstellbar von 0 bis 1.800 s in Schritten von 10 s | F5. |
+| A3b-6* | Wendezeit | Standard 5 min, einstellbar von 0 bis 3.600 s in Schritten von 10 s | Konzept: Wendezeit am Endpunkt jeder Variante. |
+| A3b-7 | Takt | Ganze Minuten von 2 bis 240 | F8. |
+| A3b-8* | Vorlagen für den Takt | Werktag: 5 bis 6 Uhr alle 30 min, 6 bis 9 Uhr alle 10, 9 bis 15 Uhr alle 15, 15 bis 19 Uhr alle 10, 19 bis 23 Uhr alle 30. Samstag: 6 bis 23 Uhr alle 20. Sonn- und Feiertag: 8 bis 23 Uhr alle 30 | Nur Knopf "Vorlage einsetzen", nichts wird automatisch gesetzt. |
+| A3b-9 | Betriebstag | 4 Uhr bis 4 Uhr. Fahrten bis 3:59 Uhr gehören zur Tagesart des Vortags | F9. |
+| A3b-10 | Neue Haltestellen | Fangradius 60 m wie A1-8, neben der Straße die rechte Fahrbahnseite (gleiche Regel wie bei den OSM-Haltestellen), in Phase 1 kostenlos | F1. |
+| A3b-11 | Gegenhaltestelle | Haltestelle mit gleichem Namen im Umkreis von 100 m, die nächste zuerst; sonst dieselbe Haltestelle. Im Varianteneditor mit ⇄ änderbar | F2. |
+| A3b-12* | Enge Strecke | Warnung für Busse über 15 m auf Spielstraßen (living_street) oder Erschließungswegen (service) und für Busse mit Wendekreis über 25 m, wenn die Route in einer Sackgasse wendet. Der Wendekreis im Katalog ist der **Durchmesser** (Blatt "Spalten": "Wendekreisdurchmesser", mm); die 25 m gelten deshalb als Durchmesser. Betroffen (203 nutzbare Busmodelle): 57 sind länger als 15 m, 5 haben einen Wendekreis über 25 m (alle Solobusse um 14,9 m), 6 haben keinen Wendekreis | F13. Fehlt der Wendekreis, meldet das Spiel das und prüft nur die Länge (Kriterium 11). |
+| A3b-13 | Linienfarben | Vorschlagspalette mit 10 Farben in der Konfiguration, die nächste noch freie wird vorgeschlagen, frei wählbar | |
+| A3b-14 | Ausrückzeit | Route von der Anbindung des Tors (Mitte der Torseite, nächste Busstraße, beide Fahrtrichtungen) zur ersten Haltestelle des Umlaufs, Fahrzeit nach A3b-1 bis A3b-4 | Umsetzung siehe A3b-21. |
+
+### Neu beim Bau (zur Bestätigung)
+
+| Nr. | Thema | Festlegung | Begründung |
+| --- | --- | --- | --- |
+| A3b-15 | Halt-Zuschlag | Der Zuschlag aus A3b-4 kommt einmal je Haltestellenabschnitt dazu (Anfahren am Beginn und Bremsen am Ende zusammen). Rundung: (reine Fahrzeit × Faktor + Ampeln + Kreuzungen + 10 s) auf 10 s, halbe Schritte aufwärts, mindestens 10 s | "Je Halt" ließ offen, ob Start und Ziel mitzählen. So zählt jeder Halt, an dem der Bus ankommt. |
+| A3b-16 | Routenwahl | Schnellste Route nach der reinen Fahrzeit mit Ampel- und Kreuzungszuschlägen (wie Etappe 1), ohne Verkehrsfaktor, damit die Route über den Tag gleich bleibt. Die nächste Teilroute beginnt auf dem Abschnitt, auf dem die vorige angekommen ist (kein Richtungswechsel an einer Perle). Zuschläge eines Abschnitts zählen, wenn der Bus sein Ende erreicht | Konzept und Vorgabe Koko: kürzeste Fahrzeit. |
+| A3b-17 | Standzeit an Endpunkten | Standzeiten gelten an Zwischenhalten. Die Abfahrt einer Fahrt ist die Abfahrt an der ersten Haltestelle; an der letzten gilt die Wendezeit | Sonst zählte die Pause am Endpunkt doppelt. |
+| A3b-18 | Fahrten bei Lücken | Eine Variante ohne vollständige Route erzeugt keine Fahrten, die übrigen Varianten der Linie fahren weiter. Eine deaktivierte Linie erzeugt keine Fahrten | Vorgabe Koko ("Linie ohne vollständige Route erzeugt keine Fahrten"), je Variante umgesetzt, damit ein neuer Kurzläufer mit Lücke nicht die ganze Linie stilllegt. Bitte bestätigen. |
+| A3b-19 | Ferientakt | Ohne eigenen Ferientakt gelten Takt **und** Fahrtänderungen des Tages ohne Ferien. Beim Einschalten übernimmt der Ferientag beides als Ausgangspunkt, beim Ausschalten wird der eigene Ferientakt gelöscht | F8: Ferientakt nur auf Wunsch eigen. |
+| A3b-20 | Umläufe | Je Linie und Tagesart. Gleicher Ort = gleiche Haltestelle oder gleicher Name im Umkreis von 100 m (A3b-11). Fahrten nach Abfahrt; von mehreren freien Bussen am Ort fährt der, der am längsten wartet. Gestrichene Fahrten zählen nicht. Busse wechseln nicht zwischen Linien (Stammlinie). Gesamtbedarf = Summe der aktiven Linien je Tagesart, gewarnt wird beim größten Wert | F11, F12. Die Handrechnung ⌈Umlaufzeit / Takt⌉ ergibt sich, wenn die Rückfahrten zur Ankunft passen; liegen sie ungünstig, braucht es einen Bus mehr (Test vorhanden). |
+| A3b-21 | Ausrückzeit je Umlauf | Abfahrt am Betriebshof = erste Abfahrt des Umlaufs minus Fahrzeit; Verkehrsfaktor zur ersten Abfahrt | A3b-14. Ob der Bus rechtzeitig ankommt, prüft erst Etappe 3c (F12). |
+| A3b-22 | Bus zur Linie | Ein Bus gehört zu höchstens einer Linie (Stammlinie); eine neue Zuweisung beendet die alte. Ein verkaufter Bus verlässt seine Linie | Kriterium 11; die Zahl der zugewiesenen Busse ist Grundlage der Warnung "zu wenige Busse". |
+| A3b-23 | Autosave | Ohne eigene Oberfläche: alle 10 s Echtzeit, wenn sich etwas geändert hat, und beim Verlassen der Seite in einen festen Platz "autosave" (Browser: IndexedDB, Desktop: SQLite). Beim nächsten Start bietet der Einrichtungsdialog "Weiterspielen" an; ein neues Spiel ersetzt den Stand. Stände mit eigener Datei brauchen die Datei erneut, weil Karten nicht gespeichert werden. Strg+S bleibt bis 4b ohne Wirkung | Vorgabe Koko (Punkt 2: minimaler Autosave). Vorher ging der Stand beim Neuladen verloren. |
+| A3b-24 | Uhrzeiten | Eingaben "HH:MM" oder "HH:MM:SS". Zeiten vor 4 Uhr gehören zum Ende des Betriebstags (00:30 ist 24:30). "bis 04:00" im Takt heißt Ende des Betriebstags (28:00). Verschobene und zusätzliche Fahrten liegen auf 10 s | Folgt aus A3b-9 und der 10-s-Regel. |
+| A3b-25 | Liniennummer | Eindeutig ohne Unterschied von Groß- und Kleinschreibung ("n1" gleich "N1") | F4. |
+| A3b-26 | Neue Haltestellen | Name vorgeschlagen aus dem Straßennamen, Löschen nur, solange keine Linie sie nutzt. Wegpunkte dürfen in nicht freigeschalteten Gebieten liegen, Haltestellen nicht | Konzept: Durchfahrt ohne Halt. |
+| A3b-27 | Suche nach Haltestellen | Treffer zeigen Straße und Fahrtrichtung (zum Beispiel "Segeberger Chaussee, Fahrtrichtung Osten"), weil viele Haltestellen je Straßenseite gleich heißen | Bedienbarkeit, keine neue Funktion. |
+| A3b-28 | Fenster | Der Linieneditor ersetzt die Linienliste (links), Varianteneditor und Fahrplan öffnen rechts; ein angeklicktes Fenster kommt nach vorn | Damit die Karte zum Anklicken frei bleibt. |

@@ -155,9 +155,11 @@
     "firmenfarbeStandard": "#0b6e4f"
   },
   "storage": {
-    "saveVersion": 1,
+    "saveVersion": 2,
     "databaseName": "busmanager",
-    "indexedDbStore": "spielstaende"
+    "indexedDbStore": "spielstaende",
+    "autosaveSlot": "autosave",
+    "autosaveSekunden": 10
   },
   "data": {
     "norderstedtPath": "data/norderstedt/norderstedt.osm.json.gz"
@@ -266,5 +268,39 @@
     "einweisungAnteilBasis": 0.2,
     "einweisungAnteilJeStufe": 0.1,
     "fachrichtungen": ["antrieb", "karosserie", "elektrik"]
+  },
+  "linien": {
+    "nummerMaxLaenge": 6,
+    "nameMaxLaenge": 60,
+    "rundungS": 10,
+    "abschnittMinS": 10,
+    "haltZuschlagS": 10,
+    "hoechstgeschwindigkeitKmh": 80,
+    "standzeitStandardS": 20,
+    "standzeitMaxS": 1800,
+    "wendezeitStandardS": 300,
+    "wendezeitMaxS": 3600,
+    "taktMinMin": 2,
+    "taktMaxMin": 240,
+    "betriebstagBeginnH": 4,
+    "gegenhaltestelleRadiusM": 100,
+    "engLaengeM": 15,
+    "engKlassen": ["living_street", "service"],
+    "wendekreisMaxM": 25,
+    "farben": ["#e30613", "#0063a6", "#00843d", "#f39200", "#7a1e99", "#00a0b0", "#a05a2c", "#d6007e", "#4d4d4d", "#8db600"],
+    "verkehrsfaktor": {
+      "werktag": [[0, 6, 1.05], [6, 9, 1.35], [9, 15, 1.2], [15, 19, 1.35], [19, 24, 1.1]],
+      "werktagFerien": [[0, 6, 1.05], [6, 9, 1.25], [9, 15, 1.2], [15, 19, 1.25], [19, 24, 1.1]],
+      "samstag": [[0, 10, 1.1], [10, 18, 1.2], [18, 24, 1.1]],
+      "samstagFerien": [[0, 10, 1.1], [10, 18, 1.2], [18, 24, 1.1]],
+      "sonnFeiertag": [[0, 24, 1.1]],
+      "sonnFeiertagFerien": [[0, 24, 1.1]]
+    },
+    "taktVorlage": {
+      "werktag": [[5, 6, 30], [6, 9, 10], [9, 15, 15], [15, 19, 10], [19, 23, 30]],
+      "samstag": [[6, 23, 20]],
+      "sonnFeiertag": [[8, 23, 30]]
+    },
+    "routenCacheGroesse": 20000
   }
 }

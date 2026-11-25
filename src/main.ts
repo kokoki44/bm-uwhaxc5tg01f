@@ -18,7 +18,13 @@ import { oeffneEditor } from "./ui/editor";
 import { katalogFehlerZeilen, katalogStatus, optionenStatus, zeigeKatalogFehler, zeigeOptionenFehler } from "./ui/katalogfenster";
 import { oeffneStandortliste, standortKlick, type StandortKontext } from "./ui/standortwahl";
 import { hofZuGeo, rechteckRing, torAnbindung } from "./world/standorte";
-import { neuesSpiel, type SpielZustand } from "./game/setup";
+import { neuesSpiel, type GemeindeQuelle, type SpielZustand } from "./game/setup";
+import { ladeSpielstand, SpielstandFehler, spielstandDaten, spielstandInfo, type SpielstandDaten } from "./game/spielstand";
+import { linieVonBus } from "./linien/linien";
+import type { SaveRecord, SaveStore } from "./storage/types";
+import { oeffneHaltestelle, oeffneLinien } from "./ui/linien";
+import { baueLinienUi, berechne, haltKlick, zeichneKarte, type LinienUi } from "./ui/linienbereich";
+import type { GespeicherterStand } from "./ui/setup";
 import { t, type TextKey } from "./i18n";
 import { createMap, zeigeWelt } from "./map/map";
 import { startSimulation } from "./sim/client";
@@ -57,10 +63,17 @@ document.addEventListener("keydown", (e) => {
   status.hidden = !status.hidden;
 });
 
-createStore().then((store) => {
-  zeilen.speicher = t("status.speicher", { art: t(store.kind === "sqlite" ? "status.speicher.desktop" : "status.speicher.browser") });
-  zeigen();
-});
+const speicher: Promise<SaveStore | null> = createStore()
+  .then((store) => {
+    zeilen.speicher = t("status.speicher", { art: t(store.kind === "sqlite" ? "status.speicher.desktop" : "status.speicher.browser") });
+    zeigen();
+    return store;
+  })
+  .catch((e: unknown) => {
+    zeilen.speicher = t("status.speicherFehler", { grund: String(e) });
+    zeigen();
+    return null;
+  });
 
 /** Lädt die Welt im Worker; die Oberfläche bleibt dabei bedienbar. */
 function ladeWelt(auftrag: WeltAuftrag, laden: ReturnType<typeof zeigeLaden>): Promise<{ world: World; antwort: Extract<WeltAntwort, { type: "fertig" }> } | null> {
@@ -101,23 +114,56 @@ function zeigeHilfe(): void {
 
 let spiel: SpielZustand | null = null;
 
-async function starteEinrichtung(): Promise<void> {
-  const { werte, datei } = await zeigeSetup();
+/** Automatisch gespeicherter Stand, falls vorhanden und lesbar (Version wird geprüft). */
+async function gespeicherterStand(store: SaveStore | null): Promise<{ rec: SaveRecord; info: GespeicherterStand } | { fehler: string } | null> {
+  if (!store) return null;
+  try {
+    const rec = await store.load(config.storage.autosaveSlot);
+    const info = spielstandInfo(rec);
+    return rec && info ? { rec, info } : null;
+  } catch (e) {
+    return { fehler: t("setup.standUnlesbar", { grund: String(e instanceof Error ? e.message : e) }) };
+  }
+}
+
+async function starteEinrichtung(hinweis = ""): Promise<void> {
+  const store = await speicher;
+  const gespeichert = await gespeicherterStand(store);
+  const stand = gespeichert && "rec" in gespeichert ? gespeichert : null;
+  const wahl = await zeigeSetup(stand?.info ?? null, hinweis || (gespeichert && "fehler" in gespeichert ? gespeichert.fehler : ""));
+  const weiter = "weiter" in wahl && stand ? stand.rec : null;
+  const quelle: GemeindeQuelle = weiter ? (weiter.payload as SpielstandDaten).gemeinde.quelle : "werte" in wahl ? wahl.werte.gemeinde : { art: "norderstedt" };
   const laden = zeigeLaden();
-  const auftrag: WeltAuftrag = datei
-    ? { type: "laden", quelle: { art: "bytes", bytes: datei } }
+  const auftrag: WeltAuftrag = wahl.datei
+    ? { type: "laden", quelle: { art: "bytes", bytes: wahl.datei } }
     : { type: "laden", quelle: { art: "url", url: new URL(import.meta.env.BASE_URL + config.data.norderstedtPath, location.href).href } };
   const ergebnis = await ladeWelt(auftrag, laden);
   if (!ergebnis) return;
   const { world, antwort } = ergebnis;
+
+  // Spielstand laden (Weiterspielen) oder neues Spiel. Der Katalog muss dafür bekannt sein.
+  const katalog = await katalogLaden;
+  const optionen = await optionenLaden;
+  if (weiter) {
+    try {
+      if (world.gemeinde.name !== (weiter.payload as SpielstandDaten).gemeinde.name) throw new SpielstandFehler(t("setup.andereGemeinde", { gemeinde: world.gemeinde.name }));
+      spiel = ladeSpielstand(weiter, new Set(katalog.modelle.map((m) => m.modell_id!)));
+    } catch (e) {
+      laden.fehler(t("setup.ladenFehler", { grund: String(e instanceof Error ? e.message : e) }), () => void starteEinrichtung());
+      return;
+    }
+  } else if ("werte" in wahl) spiel = neuesSpiel(wahl.werte, world, jetztCivil());
+  else return;
+
   laden.setze(t("laden.karte"), 0.98);
-  zeigeWelt(map, antwort.render, world.bbox, (s) =>
-    oeffneFenster("haltestelle", t("haltestelle.titel"), h("div", {}, h("p", { text: s.name || t("haltestelle.ohneName") }), h("p", { class: "klein", text: t("haltestelle.osm", { id: s.id }) }))),
-  );
+  let linienUiRef: LinienUi | null = null;
+  zeigeWelt(map, antwort.render, world.bbox, (s) => {
+    if (!linienUiRef || haltKlick(s.id)) return;
+    oeffneHaltestelle(linienUiRef, s.id);
+  });
   laden.schliessen();
 
-  spiel = neuesSpiel(werte, world, jetztCivil());
-  zeilen.daten = werte.gemeinde.art === "norderstedt" ? t("status.daten", { anzahl: antwort.elemente }) : t("status.datenDatei", { datei: werte.gemeinde.dateiname, anzahl: antwort.elemente });
+  zeilen.daten = quelle.art === "norderstedt" ? t("status.daten", { anzahl: antwort.elemente }) : t("status.datenDatei", { datei: quelle.dateiname, anzahl: antwort.elemente });
   zeilen.welt = t("status.welt", {
     gemeinde: world.gemeinde.name,
     haltestellen: world.stops.length,
@@ -128,8 +174,6 @@ async function starteEinrichtung(): Promise<void> {
   });
   zeigen();
 
-  const katalog = await katalogLaden;
-  const optionen = await optionenLaden;
   zeilen.katalog = [katalogStatus(katalog), ...katalogFehlerZeilen(katalog), ...optionenStatus(optionen)].join("\n");
   zeigen();
   const hofKontext: HofKontext = { cfg: config.betriebshof, busse: busMasseAusKatalog(katalog.modelle) };
@@ -149,7 +193,26 @@ async function starteEinrichtung(): Promise<void> {
     hof: hofKontext,
     region: world.gemeinde.region,
   };
-  starteMarkt(sp, spielKontext);
+  // Neues Spiel: Gebrauchtmarkt füllen; ein geladener Stand bringt seine Angebote mit
+  if (!weiter) starteMarkt(sp, spielKontext);
+
+  // Simulations-Worker: bekommt das Straßennetz einmal und rechnet Linien ohne Netzzugriff (Kriterium 13)
+  const basisZeit = sp.zeit;
+  let letzteStunde = Math.floor(basisZeit / 3600000);
+  const sim = startSimulation((s) => {
+    zeilen.sim = t("status.simulation", { ticks: s.ticks, sekunden: s.gameSeconds.toFixed(1), tempo: s.speed });
+    const jetzt = basisZeit + Math.floor(s.gameSeconds) * 1000;
+    kopf.setzeZeit(jetzt);
+    // Ereignisse der Spielzeit (Wochenwechsel, Monatsende) genau einmal, auch bei 600-fach
+    const ereignisse = fortschreiben(sp, jetzt, spielKontext);
+    if (ereignisse.length) kopf.setzeKontostand(sp.kontostandEur);
+    // Bewerber erscheinen im Lauf des Tages: offene Fenster zu jeder vollen Spielstunde und nach Ereignissen neu zeichnen
+    const stunde = Math.floor(jetzt / 3600000);
+    if (ereignisse.length || stunde !== letzteStunde) aktualisiereFenster();
+    letzteStunde = stunde;
+    zeigen();
+  });
+  sim.setzeNetz(world.network, [(world.bbox[0] + world.bbox[2]) / 2, (world.bbox[1] + world.bbox[3]) / 2]);
 
   const zeitsteuerung = new Zeitsteuerung(config.sim.speeds, config.sim.startSpeed);
   const kopf = baueKopfleiste(spiel.firma, world.gemeinde.region, world.bbox[1] < 0, {
@@ -162,8 +225,11 @@ async function starteEinrichtung(): Promise<void> {
     kontoGeaendert: () => kopf.setzeKontostand(sp.kontostandEur),
     betriebshof: () => (sp.betriebshof ? hofEditor() : oeffneStandortliste(standortKontext)),
   };
+  const lu = baueLinienUi({ ...ui, map, world, sim, modelle });
+  linienUiRef = lu;
   baueMenueleiste((b) => {
     if (b === "betriebshof") ui.betriebshof();
+    else if (b === "linien") oeffneLinien();
     else if (b === "fahrzeuge") oeffneFahrzeuge(ui);
     else if (b === "fahrzeugmarkt") oeffneFahrzeugmarkt(ui);
     else oeffnePersonal(ui);
@@ -198,31 +264,48 @@ async function starteEinrichtung(): Promise<void> {
       kontoGeaendert: () => kopf.setzeKontostand(sp.kontostandEur),
       geschlossen: () => (hofAufKarte(), map.resize()),
       belegung: () => belegung(sp.fuhrpark, modelle),
-      busse: () => sp.fuhrpark.busse.map((b) => ({ platz: b.platz, ...busMass(modelle.get(b.modellId)!), farbe: b.konfig.lackierung, flottennummer: b.flottennummer })),
+      // Busse in der Farbe ihrer Linie (Konzept: Optik), sonst in ihrer Lackierung; die Liniennummer steht dabei
+      busse: () =>
+        sp.fuhrpark.busse.map((b) => {
+          const l = linieVonBus(sp.netz, b.id);
+          return { platz: b.platz, ...busMass(modelle.get(b.modellId)!), farbe: l?.farbe ?? b.konfig.lackierung, flottennummer: l ? `${b.flottennummer} (${l.nummer})` : b.flottennummer };
+        }),
     });
   };
   zeigeStandorte(map, antwort.render.standorte, (id, p) => standortKlick(standortKontext, id, p));
   map.resize();
   kopf.setzeKontostand(spiel.kontostandEur);
-  kopf.setzeZeit(spiel.startZeit);
+  kopf.setzeZeit(sp.zeit);
+  zeichneKarte();
+  void berechne();
 
-  const startZeit = spiel.startZeit;
-  let letzteStunde = Math.floor(startZeit / 3600000);
-  const sim = startSimulation((s) => {
-    zeilen.sim = t("status.simulation", { ticks: s.ticks, sekunden: s.gameSeconds.toFixed(1), tempo: s.speed });
-    const jetzt = startZeit + Math.floor(s.gameSeconds) * 1000;
-    kopf.setzeZeit(jetzt);
-    // Ereignisse der Spielzeit (Wochenwechsel, Monatsende) genau einmal, auch bei 600-fach
-    const ereignisse = fortschreiben(sp, jetzt, spielKontext);
-    if (ereignisse.length) kopf.setzeKontostand(sp.kontostandEur);
-    // Bewerber erscheinen im Lauf des Tages: offene Fenster zu jeder vollen Spielstunde und nach Ereignissen neu zeichnen
-    const stunde = Math.floor(jetzt / 3600000);
-    if (ereignisse.length || stunde !== letzteStunde) aktualisiereFenster();
-    letzteStunde = stunde;
+  // Automatisch speichern (minimaler Autosave bis Etappe 4b, ohne eigene Oberfläche): in festen Abständen und beim Verlassen
+  let letzterSpeicherstand = "";
+  const speichern = async (): Promise<boolean> => {
+    if (!store) return false;
+    const daten = spielstandDaten(sp);
+    const text = JSON.stringify(daten);
+    if (text === letzterSpeicherstand) return true;
+    try {
+      await store.save(config.storage.autosaveSlot, daten);
+      letzterSpeicherstand = text;
+      const d = new Date();
+      zeilen.speicher = t("status.gespeichert", { art: t(store.kind === "sqlite" ? "status.speicher.desktop" : "status.speicher.browser"), zeit: d.toLocaleTimeString("de-DE") });
+    } catch (e) {
+      zeilen.speicher = t("status.speicherFehler", { grund: String(e) });
+    }
     zeigen();
+    return true;
+  };
+  void speichern();
+  setInterval(() => void speichern(), config.storage.autosaveSekunden * 1000);
+  addEventListener("pagehide", () => void speichern());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") void speichern();
   });
+
   // Nur für Oberflächentests und nur mit "?test" in der Adresse: Spielzeit der Spielregeln vorspulen
-  // (Bewerber erscheinen erst nach Tagen). Im normalen Spiel gibt es diesen Zugang nicht.
+  // (Bewerber erscheinen erst nach Tagen) und sofort speichern. Im normalen Spiel gibt es diesen Zugang nicht.
   if (new URLSearchParams(location.search).has("test")) {
     (window as unknown as { __spieltest: unknown }).__spieltest = {
       vorspulenTage: (tage: number) => {
@@ -230,6 +313,7 @@ async function starteEinrichtung(): Promise<void> {
         kopf.setzeKontostand(sp.kontostandEur);
         aktualisiereFenster();
       },
+      speichern,
     };
   }
   const setzeTempo = (tempo: number) => {
@@ -238,10 +322,13 @@ async function starteEinrichtung(): Promise<void> {
   };
   setzeTempo(zeitsteuerung.tempo);
 
-  // Beim Start: Katalogfehler (nur wenn es welche gibt), dann die Suche nach dem ersten Standort
+  // Beim Start: Katalogfehler (nur wenn es welche gibt), dann die Suche nach dem ersten Standort (nur ohne Betriebshof)
   zeigeKatalogFehler(katalog);
   zeigeOptionenFehler(optionen);
-  oeffneStandortliste(standortKontext);
+  if (sp.betriebshof) {
+    standorteSichtbar(map, false);
+    hofAufKarte();
+  } else oeffneStandortliste(standortKontext);
 
   document.addEventListener("keydown", (e) => {
     const ziel = e.target as HTMLElement;

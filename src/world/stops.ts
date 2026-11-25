@@ -66,8 +66,7 @@ export class EdgeIndex {
  * Ordnet jede Haltestelle dem nächsten Busabschnitt zu. Liegt sie neben der Straße, gilt die Fahrtrichtung,
  * auf deren Seite sie liegt (Rechtsverkehr: rechte Seite). Liegt sie auf der Straße, gelten beide Richtungen.
  */
-export function snapStops(net: RoadNetwork, stops: Stop[], cfg: StopsConfig, proj: LocalProj): void {
-  const index = new EdgeIndex(net, proj, 100);
+export function snapStops(net: RoadNetwork, stops: Stop[], cfg: StopsConfig, proj: LocalProj, index = new EdgeIndex(net, proj, 100)): void {
   for (const s of stops) {
     const cand = index
       .near(s.coord, cfg.fangradiusM)

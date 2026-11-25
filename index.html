@@ -95,6 +95,36 @@
       .optionen label { display: block; font-size: 13px; margin: 2px 0; }
       .gesperrt { color: #666; }
       tr.gewaehlt td { background: #e6eef8; }
+      /* Etappe 3b: Linienbereich, Schriftgrößen relativ (folgen der Zoomstufe von Browser und App) */
+      .linienbereich, .linieneditor, .varianteneditor, .fahrplanansicht { font-size: 0.9rem; }
+      .linienbereich .tabelle, .linieneditor .tabelle, .varianteneditor .tabelle, .fahrplanansicht .tabelle { font-size: 0.85rem; }
+      .linienschild { display: inline-block; min-width: 2.2em; padding: 0.1em 0.45em; border-radius: 0.3em; background: var(--linienfarbe); color: #fff;
+        font-weight: 700; text-align: center; text-shadow: 0 0 2px #000, 0 0 1px #000; border: 2px solid #1b1b1b; }
+      .linienschild.inaktiv { background: repeating-linear-gradient(45deg, var(--linienfarbe) 0 0.4em, #fff 0.4em 0.8em); color: #1b1b1b; text-shadow: 0 0 2px #fff; border-style: dashed; }
+      .fenster.mittel { max-width: min(36rem, calc(50vw - 100px)); max-height: calc(100vh - var(--kopf) - 40px); overflow: auto; }
+      .zweispaltig.breit-links { grid-template-columns: 11em 1fr; }
+      .kurztext { width: 6em; }
+      .kurzzahl { width: 5.5em; }
+      .uhr { width: 5.5em; }
+      .aktionen.links { justify-content: flex-start; flex-wrap: wrap; align-items: center; margin: 0.4em 0; }
+      .perleneditor fieldset { border: 1px solid #d6d6d6; border-radius: 4px; margin: 0.4em 0; padding: 0.2em 0.6em; display: flex; flex-wrap: wrap; gap: 0 1em; }
+      .perleneditor .option { display: flex; gap: 0.3em; align-items: center; }
+      ol.perlen { margin: 0.4em 0; padding-left: 2em; max-height: 34vh; overflow: auto; }
+      ol.perlen li { padding: 0.15em 0; border-bottom: 1px solid #eee; }
+      ol.perlen li.lueckenzeile { list-style: none; font-size: 0.85em; }
+      .perlensymbol { display: inline-block; width: 1.4em; text-align: center; font-weight: 700; color: #fff; background: #0b5394; border-radius: 0.2em; margin-right: 0.4em; }
+      .perlenknoepfe { float: right; display: inline-flex; gap: 0.2em; }
+      .perlenknoepfe button { padding: 0 0.45em; }
+      .standzeit { margin-left: 0.4em; font-size: 0.9em; }
+      ul.treffer { list-style: none; padding: 0; margin: 0.2em 0; max-height: 20vh; overflow: auto; }
+      .fenster details { margin: 0.6em 0; }
+      .fenster summary { cursor: pointer; }
+      .fenster h4 { margin: 0.6em 0 0.2em; font-size: 0.95em; }
+      tr.gestrichen td { text-decoration: line-through; color: #555; }
+      tr.gestrichen td:last-child { text-decoration: none; }
+      .fahrtaktionen { display: inline-flex; gap: 0.25em; flex-wrap: wrap; }
+      .unsichtbar { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .dialog .weiterspielen { border: 1px solid var(--rand); border-radius: 4px; padding: 0.4em 0.8em; margin-bottom: 1em; }
     </style>
   </head>
   <body>

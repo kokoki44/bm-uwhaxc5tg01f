@@ -58,7 +58,7 @@ function haltestellenSymbol(): ImageData {
 
 const ws = (z0: number, w0: number, z1: number, w1: number) => ["interpolate", ["exponential", 1.6], ["zoom"], z0, w0, z1, w1] as unknown as number;
 
-export function zeigeWelt(map: MapLibreMap, r: RenderLayers, bbox: [number, number, number, number], onHaltestelle: (p: { id: number; name: string }) => void): void {
+export function zeigeWelt(map: MapLibreMap, r: RenderLayers, bbox: [number, number, number, number], onHaltestelle: (p: { id: string; name: string }) => void): void {
   const add = (id: string, data: GeoJSON.FeatureCollection) => {
     const src = map.getSource(id) as GeoJSONSource | undefined;
     if (src) src.setData(data);
@@ -90,7 +90,7 @@ export function zeigeWelt(map: MapLibreMap, r: RenderLayers, bbox: [number, numb
     map.addLayer({ id: "haltestellen", type: "symbol", source: "haltestellen", minzoom: m.zoomHaltestellen, layout: { "icon-image": "haltestelle", "icon-size": ws(13, 0.8, 18, 1.5), "icon-allow-overlap": true } });
     map.on("click", "haltestellen", (e) => {
       const f = e.features?.[0];
-      if (f) onHaltestelle({ id: Number(f.properties?.id), name: String(f.properties?.name ?? "") });
+      if (f) onHaltestelle({ id: String(f.properties?.id), name: String(f.properties?.name ?? "") });
     });
     map.on("mouseenter", "haltestellen", () => (map.getCanvas().style.cursor = "pointer"));
     map.on("mouseleave", "haltestellen", () => (map.getCanvas().style.cursor = ""));

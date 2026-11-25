@@ -2,15 +2,32 @@ import { config } from "../config";
 import { pruefeSetup, type SetupGeprueft } from "../game/setup";
 import { t } from "../i18n";
 import { h } from "./dom";
+import { datum } from "./format";
 
-export interface SetupErgebnis {
-  werte: SetupGeprueft;
-  /** Bytes der eigenen Datei; bei Norderstedt null. */
-  datei: ArrayBuffer | null;
+const datumZeit = (ms: number) => {
+  const d = new Date(ms);
+  return `${datum(ms)} ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+};
+
+export type SetupErgebnis =
+  | {
+      werte: SetupGeprueft;
+      /** Bytes der eigenen Datei; bei Norderstedt null. */
+      datei: ArrayBuffer | null;
+    }
+  | { weiter: true; datei: ArrayBuffer | null };
+
+/** Kurzinfo zum automatisch gespeicherten Stand für "Weiterspielen". */
+export interface GespeicherterStand {
+  firma: string;
+  gemeinde: string;
+  zeit: number;
+  /** Dateiname des eigenen Auszugs; dann muss die Datei erneut gewählt werden (Karten werden nicht gespeichert). */
+  datei: string | null;
 }
 
-/** Einrichtungsdialog (Konzept, Spielstart Schritt 1). Liefert die geprüften Eingaben. */
-export function zeigeSetup(): Promise<SetupErgebnis> {
+/** Einrichtungsdialog (Konzept, Spielstart Schritt 1). Liefert die geprüften Eingaben oder "Weiterspielen". */
+export function zeigeSetup(stand: GespeicherterStand | null = null, hinweis = ""): Promise<SetupErgebnis> {
   return new Promise((resolve) => {
     const c = config.setup;
     const radioN = h("input", { type: "radio", name: "gemeinde", value: "norderstedt", id: "g-norderstedt", checked: true });
@@ -23,8 +40,40 @@ export function zeigeSetup(): Promise<SetupErgebnis> {
     const f = { gemeinde: fehlerEl("f-gemeinde"), startkapital: fehlerEl("f-kapital"), firmenname: fehlerEl("f-name"), firmenfarbe: fehlerEl("f-farbe") };
     const starten = h("button", { type: "submit", class: "primaer", "data-testid": "setup-starten", text: t("setup.starten") });
 
+    const weiterBereich = h("div", {});
+    if (stand) {
+      const weiter = h("button", { type: "button", class: "primaer", "data-testid": "setup-weiter", text: t("setup.weiter") });
+      const weiterFehler = fehlerEl("f-weiter");
+      weiter.addEventListener("click", async () => {
+        const gewaehlt = datei.files?.[0] ?? null;
+        if (stand.datei && !gewaehlt) {
+          radioD.checked = true;
+          datei.disabled = false;
+          weiterFehler.hidden = false;
+          weiterFehler.textContent = t("setup.weiterDatei", { datei: stand.datei });
+          return;
+        }
+        const bytes = stand.datei && gewaehlt ? await gewaehlt.arrayBuffer() : null;
+        dlg.close();
+        dlg.remove();
+        resolve({ weiter: true, datei: bytes });
+      });
+      weiterBereich.append(
+        h("fieldset", { class: "weiterspielen", "data-testid": "setup-stand" },
+          h("legend", { text: t("setup.stand") }),
+          h("p", { text: t("setup.standText", { firma: stand.firma, gemeinde: stand.gemeinde, datum: datumZeit(stand.zeit) }) }),
+          stand.datei ? h("p", { class: "hilfe", text: t("setup.standDatei", { datei: stand.datei }) }) : null,
+          h("div", { class: "aktionen" }, weiter),
+          weiterFehler,
+          h("p", { class: "hilfe", text: t("setup.neuErsetzt") }),
+        ),
+      );
+    }
+    if (hinweis) weiterBereich.append(h("p", { class: "fehler", role: "alert", "data-testid": "setup-hinweis", text: hinweis }));
+
     const form = h("form", { method: "dialog", novalidate: true },
       h("h1", { id: "setup-titel", text: t("setup.titel") }),
+      weiterBereich,
       h("fieldset", {},
         h("legend", { text: t("setup.gemeinde") }),
         h("label", { class: "option", for: "g-norderstedt" }, radioN, t("setup.gemeinde.norderstedt")),

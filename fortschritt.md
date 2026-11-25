@@ -149,6 +149,23 @@ Offene Fragen an Koko:
 
 Geändert gegenüber Konzept: nichts.
 
-## Etappe 3b: Linien und Fahrplan (Vorbereitung, wartet auf Kokos Bestätigung)
+## Etappe 3b: Linien und Fahrplan (gebaut, wartet auf Kokos Freigabe)
 
-Noch nicht begonnen. Entwurf der Abnahmekriterien, offene Fragen (F1 bis F16) und vorgeschlagene Annahmen (A3b-1 bis A3b-14) stehen im Bericht vom 25.11.2026. Grundlagen aus Etappe 1: Busnetz Norderstedt mit 5.162 Knoten, 11.242 gerichteten Abschnitten (rund 690 km Straße), 452 Ampelknoten, 202 Abbiegeverboten, 259 Haltestellen; als Daten rund 3,7 MB, Aufbau rund 3 s im Welt-Worker. Haltestellenausstattung und Verkehrsinfrastruktur kommen laut Phasenplan in Etappe 7a und bleiben in 3b weg.
+Kriterien, Antworten F1 bis F16 und Annahmen A3b-1 bis A3b-14 von Koko am 25.11.2026 bestätigt (mit Ergänzungen: Route nach kürzester Fahrzeit, Meldung ohne Route, Zuschläge nicht mit dem Faktor multipliziert, minimaler Autosave, Beispiellinie; Faktoren nie unter 1).
+
+Fertig:
+- Haltestellen: vorhandene aus OSM, neue per Klick oder Kartenmitte (Fangradius 60 m, rechte Fahrbahnseite, nur in freigeschalteten Gebieten, kostenlos), Umbenennen im Haltestellenfenster, Löschen ungenutzter neuer Haltestellen. Suche mit Straße und Fahrtrichtung (`src/linien/linien.ts`, `src/linien/fangen.ts`, `src/ui/linien.ts`, `src/ui/perlen.ts`).
+- Linie als Perlenkette: Nummer (eindeutig, höchstens 6 Zeichen), Name, Farbe, aktiv/inaktiv; Haltestellen und Wegpunkte per Karte, Suche oder Kartenmitte; Route nach kürzester Fahrzeit über Busstraßen mit Einbahnstraßen und Abbiegeverboten; Lücken werden an der Stelle gemeldet, die Linie bleibt gespeichert (`src/linien/strecke.ts`).
+- Varianten: Hin und Rück aus der Grundlinie (Rück mit Gegenhaltestellen), jede einzeln bearbeitbar (eigene Route, ⇄ Haltestelle ersetzen), Kurzläufer als Teilstrecke, eigene Wendezeit, Standzeit je Haltestelle.
+- Fahrzeiten automatisch aus Länge, erlaubter Geschwindigkeit (höchstens 80 km/h), Verkehrsfaktor nach Tagesart und Uhrzeit, Ampeln, Kreuzungen und Halt-Zuschlag, je Abschnitt auf 10 s gerundet (`src/linien/fahrplan.ts`).
+- Takt je Variante und Tagesart (sechs Tagesarten, Ferien nur auf Wunsch eigen), Vorlagen, Fahrten verschieben, streichen, wiederherstellen und zusätzlich einfügen; Änderungen bleiben bei neuer Berechnung, verwaiste werden verworfen und gemeldet.
+- Busbedarf je Linie und Tagesart durch Verkettung zu Umläufen, Warnung bei zu wenigen Bussen je Linie und im Fuhrpark, Ausrückzeit je Umlauf (`src/linien/plan.ts`).
+- Bus zuweisen (Stammlinie) mit Warnung nach Länge und Wendekreis, Meldung bei fehlendem Wendekreis (`src/linien/pruefung.ts`); Busse im Betriebshof-Editor in der Linienfarbe mit Liniennummer; Fahrzeugdetail zeigt die Linie.
+- Tagesart eines Datums mit Betriebstag ab 4 Uhr (`src/linien/tagesart.ts`), in der Linienliste als "Heute gilt".
+- Berechnung im Simulations-Worker: Das Straßennetz geht beim Start einmal hinüber, danach Anfragen ohne Netzzugriff, deterministisch (`src/sim/worker.ts`, `src/sim/client.ts`).
+- Spielstand mit Version 2 und Migration vom Stand 3a (Version 1), geprüft mit SQLite und IndexedDB (`src/game/spielstand.ts`, `src/linien/speichern.ts`). Minimaler Autosave alle 10 s und beim Verlassen, "Weiterspielen" im Einrichtungsdialog.
+- Oberfläche: Menüpunkt "Linien", Linienliste, Linieneditor, Varianteneditor mit Takt und Fahrzeitprobe, Fahrplan mit Umläufen, Linien in ihrer Farbe auf der Karte (inaktive gestrichelt), Hervorhebung der bearbeiteten Variante. Schriftgrößen der neuen Ansichten relativ.
+
+Tests: `tests/linien.test.ts` (Handrechnungen Fahrzeit, Kurzläufer, Busbedarf, Routen, Takt, Tagesart), `tests/linien-norderstedt.test.ts` (Beispiellinie auf dem echten Netz), `tests/spielstand.test.ts` (beide Speicher, Migration), Rauchtest mit "Linie anlegen", "Takt setzen", "Fahrplan erzeugen", "Bus zuweisen" und Laden des ganzen Spielstands, Oberflächentest `e2e/linien.spec.ts` mit Screenshots und Neuladen.
+
+Geändert gegenüber Konzept: nichts. Annahmen A3b-15 bis A3b-28 warten auf Bestätigung.

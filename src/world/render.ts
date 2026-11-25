@@ -66,7 +66,8 @@ export function buildRenderLayers(extract: OsmExtract, world: World): RenderLaye
   }
   const haltestellen: GeoJSON.Feature[] = world.stops.map((s) => ({
     type: "Feature",
-    properties: { id: s.id, name: s.name },
+    // Id wie im Linienbereich ("o" + OSM-Knoten-ID)
+    properties: { id: `o${s.id}`, name: s.name },
     geometry: { type: "Point", coordinates: s.coord },
   }));
   const grenze: GeoJSON.Feature[] = world.gemeinde.rings.map((r) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: r } }));

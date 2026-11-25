@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MELDUNG_CODES } from "../src/catalog/katalog";
 import { OPTIONEN_MELDUNG_CODES } from "../src/catalog/optionen";
-import { config } from "../src/config";
+import { config, PLAN_TAGE } from "../src/config";
 import { BAUTEIL_TYPEN } from "../src/depot/hof";
 import de from "../src/i18n/de.json";
 
@@ -31,6 +31,24 @@ describe("Sprachdatei Etappe 2", () => {
     for (const q of ["fuehrerschein_d", "bkf", ...config.personal.einweisungen.map((e) => `einweisung_${e}`), ...config.personal.fachrichtungen.map((f) => `fachrichtung_${f}`)]) hat(`personal.quali.${q}`);
     for (const g of ["bestuhlung", "spiegel", "heizung", "fahrgastinfo", "rampe"]) hat(`markt.gruppe.${g}`);
     for (const b of ["fahrzeuge", "fahrzeugmarkt", "personal", "betriebshof"]) (hat(`menue.${b}`), hat(`menue.zeichen.${b}`));
+  });
+  it("Etappe 3b: jede Tagesart, jeder Fehler und jedes Werkzeug des Linienbereichs hat einen Text", () => {
+    for (const tag of PLAN_TAGE) hat(`tagesart.${tag}`);
+    for (const c of ["nummerLeer", "nummerZuLang", "nummerDoppelt", "nameLeer", "nameZuLang", "farbe", "unbekannt"]) hat(`linie.fehler.${c}`);
+    for (const c of ["unbekannt", "bereich"]) hat(`linie.kurzFehler.${c}`);
+    for (const c of ["ohneNetz", "gesperrt", "unbekannt", "doppelt"]) hat(`perle.fehler.${c}`);
+    for (const c of ["nameLeer", "nameZuLang", "ohneNetz", "gesperrt", "unbekannt"]) hat(`haltestelle.fehler.${c}`);
+    for (const c of ["unbekannt", "benutzt"]) hat(`haltestelle.loeschFehler.${c}`);
+    for (const w of ["halt", "neu", "weg", "aus"]) (hat(`perle.werkzeug.${w}`), hat(`perle.hinweis.${w}`));
+    for (const c of ["zeit", "bereich", "takt"]) hat(`takt.fehler.${c}`);
+    for (const a of ["hin", "rueck", "kurz"]) hat(`variante.art.${a}`);
+    for (const s of ["takt", "verschoben", "gestrichen", "zusatz"]) hat(`fahrplan.status.${s}`);
+    for (const k of config.linien.engKlassen) hat(`strassenklasse.${k}`);
+    for (const r of ["norden", "nordosten", "osten", "suedosten", "sueden", "suedwesten", "westen", "nordwesten"]) hat(`richtung.${r}`);
+    for (const k of ["takt.vonKopf", "takt.bisKopf", "takt.taktKopf", "linie.art", "linie.halte", "linie.laenge", "linie.fahrzeitWerktag", "linie.route", "linie.fahrten", "linie.busseNoetig",
+      "linien.status", "linien.varianten", "linien.bedarf", "linien.zugewiesen", "linien.hinweis", "fahrplan.abfahrt", "fahrplan.variante", "fahrplan.von", "fahrplan.nach", "fahrplan.ankunft",
+      "fahrplan.status", "fahrplan.umlauf", "fahrplan.fahrtenZahl", "fahrplan.beginn", "fahrplan.ende", "fahrplan.ausruecken", "variante.halt", "variante.an", "variante.ab", "variante.abschnitt"]) hat(k);
+    (hat("menue.linien"), hat("menue.zeichen.linien"));
   });
   it("keine Gedankenstriche in den Texten", () => {
     for (const [k, v] of Object.entries(texte)) expect(/[–—]/.test(v), k).toBe(false);

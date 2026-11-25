@@ -42,7 +42,8 @@ test("Fahrzeugmarkt und Personal: Neukauf, Gebrauchtkauf, Verkauf, Einstellen, L
 
   // Menüleiste am Rand, per Tastatur erreichbar
   const menue = page.locator("#menueleiste");
-  await expect(menue.getByRole("button")).toHaveCount(4);
+  // Etappe 3b: Linien kam als fünfter Bereich dazu
+  await expect(menue.getByRole("button")).toHaveCount(5);
   await page.getByTestId("menu-fahrzeugmarkt").focus();
   await page.keyboard.press("Enter");
   const markt = page.getByTestId("fenster-fahrzeugmarkt");

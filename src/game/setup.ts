@@ -1,5 +1,6 @@
 import { config, type Config } from "../config";
 import { neuerFuhrpark, type Fuhrpark } from "../fleet/fuhrpark";
+import { neuesNetz, type Netz } from "../linien/typen";
 import { neuesPersonal, type Personal } from "../personal/personal";
 import { neuerZufall, type Zufall } from "./zufall";
 import type { CivilMs } from "../calendar/civil";
@@ -40,7 +41,7 @@ export function pruefeSetup(e: SetupEingabe, cfg: Config["setup"]): { ok: true; 
   return { ok: true, werte: { gemeinde: e.gemeinde!, startkapital: Math.round(kapital * 100) / 100, firmenname: name, firmenfarbe: e.firmenfarbe.toLowerCase() } };
 }
 
-/** Spielzustand. Wächst mit jeder Etappe; Speichern und Laden folgen mit Etappe 4b. */
+/** Spielzustand. Wächst mit jeder Etappe. Gespeichert wird er seit Etappe 3b automatisch (src/game/spielstand.ts). */
 export interface SpielZustand {
   firma: { name: string; farbe: string };
   kontostandEur: number;
@@ -56,6 +57,8 @@ export interface SpielZustand {
   zufall: Zufall;
   fuhrpark: Fuhrpark;
   personal: Personal;
+  /** Haltestellen, Linien, Varianten, Takt und Fahrtänderungen (Etappe 3b). */
+  netz: Netz;
 }
 
 /** Startwert für den Zufall eines neuen Spielstands. */
@@ -67,6 +70,7 @@ export function neuesSpiel(s: SetupGeprueft, world: World, startZeit: CivilMs, s
     zufall: neuerZufall(startwert),
     fuhrpark: neuerFuhrpark(config.fahrzeugmarkt),
     personal: neuesPersonal(config.personal),
+    netz: neuesNetz(),
     firma: { name: s.firmenname, farbe: s.firmenfarbe },
     kontostandEur: s.startkapital,
     startZeit,

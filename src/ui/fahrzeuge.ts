@@ -1,5 +1,6 @@
 import { belegung, busMass, busWert, lackiereUm, setzeUm, verkaufe, verkaufserloes } from "../fleet/fuhrpark";
 import { freiePlaetze } from "../fleet/plaetze";
+import { entferneBus, linieVonBus } from "../linien/linien";
 import { kaufKontext } from "../game/spiel";
 import { t, type TextKey } from "../i18n";
 import { h } from "./dom";
@@ -75,9 +76,14 @@ export function oeffneFahrzeuge(ui: SpielUi): void {
     bestaetigen.addEventListener("click", () => {
       const r = verkaufe(kaufKontext(ui.spiel, ui.k), b.id);
       melde(r.ok ? t("fahrzeuge.verkauft", { nr: b.flottennummer, preis: euro(r.erloesEur) }) : t("fahrzeuge.fehler.unbekannt"), r.ok);
-      if (r.ok) ui.kontoGeaendert();
+      if (r.ok) {
+        // Ein verkaufter Bus fährt keine Linie mehr
+        entferneBus(ui.spiel.netz, b.id);
+        ui.kontoGeaendert();
+      }
       zeichne();
     });
+    const linie = linieVonBus(ui.spiel.netz, b.id);
     const opt = b.konfig.optionen.map((id) => k.optionen.find((o) => o.id === id)?.name ?? id).join(", ");
     detail.replaceChildren(
       h("h3", { text: t("fahrzeuge.detailTitel", { nr: b.flottennummer, modell: reihenName(m) }) }),
@@ -90,6 +96,7 @@ export function oeffneFahrzeuge(ui: SpielUi): void {
         h("dt", { text: t("fahrzeuge.plaetze") }), h("dd", { text: t("markt.plaetze", { sitz: b.sitzplaetze ?? t("markt.keineAngabe"), steh: b.stehplaetze ?? t("markt.keineAngabe") }) }),
         h("dt", { text: t("fahrzeuge.hu") }), h("dd", { text: datum(b.huBis) }),
         h("dt", { text: t("fahrzeuge.ausstattung") }), h("dd", { text: opt }),
+        h("dt", { text: t("fahrzeuge.linie") }), h("dd", { "data-testid": "fahrzeug-linie", text: linie ? t("fahrzeuge.linieText", { nummer: linie.nummer, name: linie.name }) : t("fahrzeuge.keineLinie") }),
       ),
       h("div", { class: "zweispaltig" },
         h("label", { for: "fahrzeug-umsetzen", text: t("fahrzeuge.umsetzen") }), umsetzen,

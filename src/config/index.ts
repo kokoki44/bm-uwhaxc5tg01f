@@ -65,7 +65,7 @@ export interface Config {
     firmennameMaxLaenge: number;
     firmenfarbeStandard: string;
   };
-  storage: { saveVersion: number; databaseName: string; indexedDbStore: string };
+  storage: { saveVersion: number; databaseName: string; indexedDbStore: string; autosaveSlot: string; autosaveSekunden: number };
   data: { norderstedtPath: string };
   grundstueck: GrundstueckConfig;
   betriebshof: BetriebshofConfig;
@@ -73,6 +73,42 @@ export interface Config {
   optionen: OptionenConfig;
   fahrzeugmarkt: FahrzeugmarktConfig;
   personal: PersonalConfig;
+  linien: LinienConfig;
+}
+
+/** Tagesart eines Fahrplans: Werktag, Samstag, Sonn- und Feiertag, jeweils ohne und mit Schulferien. */
+export type PlanTag = "werktag" | "werktagFerien" | "samstag" | "samstagFerien" | "sonnFeiertag" | "sonnFeiertagFerien";
+export const PLAN_TAGE: readonly PlanTag[] = ["werktag", "werktagFerien", "samstag", "samstagFerien", "sonnFeiertag", "sonnFeiertagFerien"];
+
+export interface LinienConfig {
+  nummerMaxLaenge: number;
+  nameMaxLaenge: number;
+  /** Alle Zeiten auf diese Schrittweite (Konzept: 10 Sekunden). */
+  rundungS: number;
+  abschnittMinS: number;
+  /** Zuschlag für Bremsen und Anfahren je Haltestellenabschnitt. */
+  haltZuschlagS: number;
+  hoechstgeschwindigkeitKmh: number;
+  standzeitStandardS: number;
+  standzeitMaxS: number;
+  wendezeitStandardS: number;
+  wendezeitMaxS: number;
+  taktMinMin: number;
+  taktMaxMin: number;
+  /** Beginn des Betriebstags (Stunde); Fahrten davor gehören zum Vortag. */
+  betriebstagBeginnH: number;
+  gegenhaltestelleRadiusM: number;
+  /** Busse über dieser Länge bekommen auf engen Straßenklassen eine Warnung. */
+  engLaengeM: number;
+  engKlassen: string[];
+  /** Wendekreisdurchmesser, ab dem das Wenden in einer Sackgasse eine Warnung gibt. */
+  wendekreisMaxM: number;
+  farben: string[];
+  /** Faktor auf die reine Fahrzeit je Tagesart: [von Stunde, bis Stunde, Faktor]. */
+  verkehrsfaktor: Record<PlanTag, [number, number, number][]>;
+  /** Vorlagen für den Takt: [von Stunde, bis Stunde, Takt in Minuten]. */
+  taktVorlage: Record<"werktag" | "samstag" | "sonnFeiertag", [number, number, number][]>;
+  routenCacheGroesse: number;
 }
 
 /** Optionsdatei (Ausstattung beim Neukauf), wie der Katalog nur gelesen. */
@@ -330,6 +366,19 @@ export function validateConfig(c: unknown): Config {
   }
   if (!(p.wochenstundenMin > 0 && p.wochenstundenMax >= p.wochenstundenMin)) bad("personal.wochenstunden");
   if (p.bewerbung.stufenGewichte.length !== p.stufeAbJahren.length) bad("personal.bewerbung.stufenGewichte");
+  if (!cfg.storage.autosaveSlot || !(cfg.storage.autosaveSekunden > 0)) bad("storage.autosave");
+  const l = cfg.linien;
+  if (!l || !(l.nummerMaxLaenge >= 1) || !(l.nameMaxLaenge >= 1) || !(l.rundungS > 0) || !(l.abschnittMinS >= l.rundungS) || !(l.haltZuschlagS >= 0)) bad("linien");
+  if (!(l.hoechstgeschwindigkeitKmh > 0) || !(l.standzeitMaxS >= l.standzeitStandardS && l.standzeitStandardS >= 0)) bad("linien.standzeit");
+  if (!(l.wendezeitMaxS >= l.wendezeitStandardS && l.wendezeitStandardS >= 0)) bad("linien.wendezeit");
+  if (!(l.taktMinMin >= 1 && l.taktMaxMin >= l.taktMinMin) || !(l.betriebstagBeginnH >= 0 && l.betriebstagBeginnH < 24)) bad("linien.takt");
+  if (!l.farben?.length || l.farben.some((f) => !/^#[0-9a-f]{6}$/i.test(f))) bad("linien.farben");
+  for (const tag of PLAN_TAGE) {
+    const b = l.verkehrsfaktor?.[tag];
+    // Lückenlos von 0 bis 24 Uhr, kein Faktor unter 1 (sonst wären Busse schneller als erlaubt)
+    if (!b?.length || b[0][0] !== 0 || b[b.length - 1][1] !== 24 || b.some((x, i) => !(x[2] >= 1) || !(x[1] > x[0]) || (i > 0 && b[i - 1][1] !== x[0]))) bad(`linien.verkehrsfaktor.${tag}`);
+  }
+  for (const [tag, v] of Object.entries(l.taktVorlage ?? {})) if (v.some((x) => !(x[1] > x[0]) || !(x[2] >= l.taktMinMin && x[2] <= l.taktMaxMin))) bad(`linien.taktVorlage.${tag}`);
   return cfg;
 }
 
