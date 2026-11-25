@@ -301,6 +301,9 @@
       "samstag": [[6, 23, 20]],
       "sonnFeiertag": [[8, 23, 30]]
     },
-    "routenCacheGroesse": 20000
+    "routenCacheGroesse": 20000,
+    "fangZelleM": 100,
+    "neueTaktzeile": { "vonH": 6, "dauerMin": 60, "taktMin": 20 },
+    "probeStunde": 7
   }
 }

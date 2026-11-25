@@ -137,7 +137,7 @@ test("Linie anlegen, Takt setzen, Fahrplan erzeugen, Bus zuweisen, Weiterspielen
   await ed.getByTestId("bus-zuweisen").click();
   await expect(ed.getByTestId("bus-meldung")).toContainText("Bus 1 fährt jetzt auf Linie 1");
   await expect(ed.getByTestId("bedarf-werktag-busse")).toHaveText("2", { timeout: 20000 });
-  await expect(ed.getByTestId("bedarf-werktag")).toContainText("Es fehlen 1 Busse");
+  await expect(ed.getByTestId("bedarf-werktag")).toContainText("Es fehlt 1 Bus.");
   await expect(ed.getByTestId("bedarf-samstag-busse")).toHaveText("0");
 
   // Fahrplan: 84 Fahrten Werktag, streichen, verschieben, zusätzliche Fahrt auf dem Kurzläufer

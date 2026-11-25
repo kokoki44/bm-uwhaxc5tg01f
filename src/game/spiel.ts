@@ -1,7 +1,8 @@
 import { civil, parts, type CivilMs } from "../calendar/civil";
 import { analysiereHof } from "../depot/analyse";
 import type { HofKontext } from "../depot/hof";
-import type { KaufKontext, MarktKontext } from "../fleet/fuhrpark";
+import { verkaufe, type KaufKontext, type MarktKontext } from "../fleet/fuhrpark";
+import { entferneBus } from "../linien/linien";
 import { erneuereAngebote, landVon } from "../fleet/markt";
 import { entferneAusgetreteneNachMonat, monatslohn, raeumeAuf } from "../personal/personal";
 import { config } from "../config";
@@ -26,6 +27,13 @@ export function kaufKontext(spiel: SpielZustand, k: SpielKontext): KaufKontext {
     zufall: spiel.zufall,
     jetzt: spiel.zeit,
   };
+}
+
+/** Bus an den Händler verkaufen; ein verkaufter Bus verlässt auch seine Linie (A3b-22). */
+export function verkaufeBus(spiel: SpielZustand, k: SpielKontext, busId: number): ReturnType<typeof verkaufe> {
+  const r = verkaufe(kaufKontext(spiel, k), busId);
+  if (r.ok) entferneBus(spiel.netz, busId);
+  return r;
 }
 
 /** Nächster Montag 0 Uhr nach t (Wochenwechsel, A3-19). */

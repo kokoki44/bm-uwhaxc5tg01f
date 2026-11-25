@@ -1,7 +1,7 @@
-import { belegung, busMass, busWert, lackiereUm, setzeUm, verkaufe, verkaufserloes } from "../fleet/fuhrpark";
+import { belegung, busMass, busWert, lackiereUm, setzeUm, verkaufserloes } from "../fleet/fuhrpark";
 import { freiePlaetze } from "../fleet/plaetze";
-import { entferneBus, linieVonBus } from "../linien/linien";
-import { kaufKontext } from "../game/spiel";
+import { linieVonBus } from "../linien/linien";
+import { kaufKontext, verkaufeBus } from "../game/spiel";
 import { t, type TextKey } from "../i18n";
 import { h } from "./dom";
 import { datum, euro, euroRund, zahl } from "./format";
@@ -74,13 +74,10 @@ export function oeffneFahrzeuge(ui: SpielUi): void {
     const bestaetigen = h("button", { type: "button", class: "primaer", "data-testid": "fahrzeug-verkaufen-ja", "data-halten": true, hidden: true, text: t("fahrzeuge.verkaufenJa", { preis: euro(erloes) }) });
     verkaufen.addEventListener("click", () => ((bestaetigen.hidden = false), bestaetigen.focus()));
     bestaetigen.addEventListener("click", () => {
-      const r = verkaufe(kaufKontext(ui.spiel, ui.k), b.id);
+      // Ein verkaufter Bus fährt keine Linie mehr (in der Spiellogik)
+      const r = verkaufeBus(ui.spiel, ui.k, b.id);
       melde(r.ok ? t("fahrzeuge.verkauft", { nr: b.flottennummer, preis: euro(r.erloesEur) }) : t("fahrzeuge.fehler.unbekannt"), r.ok);
-      if (r.ok) {
-        // Ein verkaufter Bus fährt keine Linie mehr
-        entferneBus(ui.spiel.netz, b.id);
-        ui.kontoGeaendert();
-      }
+      if (r.ok) ui.kontoGeaendert();
       zeichne();
     });
     const linie = linieVonBus(ui.spiel.netz, b.id);

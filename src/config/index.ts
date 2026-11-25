@@ -109,6 +109,12 @@ export interface LinienConfig {
   /** Vorlagen für den Takt: [von Stunde, bis Stunde, Takt in Minuten]. */
   taktVorlage: Record<"werktag" | "samstag" | "sonnFeiertag", [number, number, number][]>;
   routenCacheGroesse: number;
+  /** Zellgröße des räumlichen Index beim Einrasten neuer Haltestellen und Wegpunkte. */
+  fangZelleM: number;
+  /** Vorgabe für eine neue Zeile im Takteditor (Beginn, Dauer, Takt), wenn es noch keine Zeile gibt. */
+  neueTaktzeile: { vonH: number; dauerMin: number; taktMin: number };
+  /** Voreingestellte Abfahrt der Fahrzeitprobe im Varianteneditor (Stunde). */
+  probeStunde: number;
 }
 
 /** Optionsdatei (Ausstattung beim Neukauf), wie der Katalog nur gelesen. */
@@ -378,6 +384,9 @@ export function validateConfig(c: unknown): Config {
     // Lückenlos von 0 bis 24 Uhr, kein Faktor unter 1 (sonst wären Busse schneller als erlaubt)
     if (!b?.length || b[0][0] !== 0 || b[b.length - 1][1] !== 24 || b.some((x, i) => !(x[2] >= 1) || !(x[1] > x[0]) || (i > 0 && b[i - 1][1] !== x[0]))) bad(`linien.verkehrsfaktor.${tag}`);
   }
+  if (!(l.fangZelleM > 0) || !(l.probeStunde >= 0 && l.probeStunde < 24)) bad("linien.fangZelleM/probeStunde");
+  const nz = l.neueTaktzeile;
+  if (!nz || !(nz.dauerMin > 0) || !(nz.taktMin >= l.taktMinMin && nz.taktMin <= l.taktMaxMin) || !(nz.vonH >= l.betriebstagBeginnH && nz.vonH < 24 + l.betriebstagBeginnH)) bad("linien.neueTaktzeile");
   for (const [tag, v] of Object.entries(l.taktVorlage ?? {})) if (v.some((x) => !(x[1] > x[0]) || !(x[2] >= l.taktMinMin && x[2] <= l.taktMaxMin))) bad(`linien.taktVorlage.${tag}`);
   return cfg;
 }

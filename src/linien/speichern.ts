@@ -1,5 +1,6 @@
 import { PLAN_TAGE, type PlanTag } from "../config";
-import type { LonLat } from "../world/geo";
+import { projectOnLine, type LocalProj, type LonLat } from "../world/geo";
+import type { RoadNetwork } from "../world/roads";
 import type { Snap } from "../world/router";
 import type { FahrtAenderung, Linie, Netz, NeueHaltestelle, Perle, TaktZeile, Variante } from "./typen";
 
@@ -66,6 +67,27 @@ function linie(l: Linie): Linie {
 function neueHalt(h: NeueHaltestelle): NeueHaltestelle {
   if (!h || !text(h.id) || !/^n\d+$/.test(h.id) || !text(h.name)) fehler("Haltestelle", h);
   return { id: h.id, name: h.name, coord: punkt(h.coord), snaps: snaps(h.snaps) };
+}
+
+/**
+ * Prüft gespeicherte Netzanschlüsse (Wegpunkte, neue Haltestellen) gegen das geladene Straßennetz. Karten werden nur
+ * referenziert; passt ein Anschluss nicht mehr (Abschnitt fehlt oder liegt weiter als der Fangradius vom gespeicherten
+ * Punkt), fällt er weg. Die Perle gilt dann als "nicht am Busnetz" und der Editor meldet es. Liefert die Zahl der
+ * entfernten Anschlüsse.
+ */
+export function bereinigeAnschluesse(netz: Netz, net: RoadNetwork, proj: LocalProj, fangradiusM: number): number {
+  let weg = 0;
+  const pruefe = (s: Snap[]): Snap[] => {
+    const ok = s.filter((x) => {
+      const e = net.edges[x.edge];
+      return !!e && projectOnLine(x.point, e.coords, proj).dist <= fangradiusM;
+    });
+    weg += s.length - ok.length;
+    return ok;
+  };
+  for (const h of netz.neueHaltestellen) h.snaps = pruefe(h.snaps);
+  for (const l of netz.linien) for (const p of [l.perlen, ...l.varianten.map((v) => v.perlen)]) for (const x of p) if (x.art === "weg") x.snaps = pruefe(x.snaps);
+  return weg;
 }
 
 /**

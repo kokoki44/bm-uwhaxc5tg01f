@@ -1,6 +1,6 @@
 import { config } from "../config";
 import { t, type TextKey } from "../i18n";
-import { entfernePerle, ersetzeHalt, fuegeHaltEin, fuegeWegpunktEin, neueHaltestelle, setzeStandzeit, verschiebePerle } from "../linien/linien";
+import { entfernePerle, ersetzeHalt, fuegeHaltEin, fuegeWegpunktEin, loescheHaltestelle, neueHaltestelle, setzeStandzeit, verschiebePerle } from "../linien/linien";
 import type { VariantenPlan } from "../linien/plan";
 import type { HaltId, Perle } from "../linien/typen";
 import type { LonLat } from "../world/geo";
@@ -9,6 +9,8 @@ import { h } from "./dom";
 import { freigeschaltet, linienUi, setzeWerkzeug, werkzeug, type Werkzeug } from "./linienbereich";
 
 const L = config.linien;
+/** Werte aus der Konfiguration für Platzhalter in Texten. */
+const W = { radius: config.stops.fangradiusM, beginn: L.betriebstagBeginnH };
 
 export interface PerlenOptionen {
   /** Fenster, zu dem der Editor gehört (testid-Präfix und Ende des Werkzeugs). */
@@ -39,7 +41,7 @@ export function perlenEditor(o: PerlenOptionen): { el: HTMLElement; zeichne(): v
   const nachEinfuegen = () => {
     if (einfuegenNach !== "ende") einfuegenNach++;
   };
-  const fehlerText = (f: string) => t(`perle.fehler.${f}` as TextKey);
+  const fehlerText = (f: string) => t(`perle.fehler.${f}` as TextKey, W);
 
   function fuegeHalt(hid: HaltId) {
     if (ersetzen !== null) {
@@ -70,10 +72,14 @@ export function perlenEditor(o: PerlenOptionen): { el: HTMLElement; zeichne(): v
     const strasse = snaps.length ? u.world.network.edges[snaps[0].edge].name : "";
     const name = neuName.value.trim() || strasse || t("haltestelle.neuName", { n: u.spiel.netz.naechsteHaltestelleId });
     const r = neueHaltestelle(u.spiel.netz, name, p, snaps, freigeschaltet(u, p), L);
-    if (!r.ok) return o.melde(t(`haltestelle.fehler.${r.fehler}` as TextKey));
+    if (!r.ok) return o.melde(t(`haltestelle.fehler.${r.fehler}` as TextKey, W));
     neuName.value = "";
     const f = fuegeHaltEin(o.perlen, u.halte, r.halt.id, frei, L, index());
-    if (f) return o.melde(fehlerText(f));
+    if (f) {
+      // Keine verwaiste neue Haltestelle zurücklassen
+      loescheHaltestelle(u.spiel.netz, r.halt.id);
+      return o.melde(fehlerText(f));
+    }
     nachEinfuegen();
     o.melde(t("haltestelle.angelegt", { name: r.halt.name }), true);
     o.geaendert();
@@ -130,7 +136,7 @@ export function perlenEditor(o: PerlenOptionen): { el: HTMLElement; zeichne(): v
       ...o.perlen.map((p, i) => h("option", { value: String(i), selected: einfuegenNach === i, text: t("perle.nach", { nr: i + 1, name: perlenName(p) }) })),
     );
     if (einfuegenNach !== "ende" && einfuegenNach >= o.perlen.length) einfuegenNach = "ende";
-    hinweis.textContent = ersetzen !== null ? t("perle.ersetzenHinweis", { nr: ersetzen + 1 }) : t(`perle.hinweis.${art}` as TextKey);
+    hinweis.textContent = ersetzen !== null ? t("perle.ersetzenHinweis", { nr: ersetzen + 1 }) : t(`perle.hinweis.${art}` as TextKey, W);
     liste.replaceChildren(
       ...o.perlen.map((p, i) => {
         const knopf = (zeichen: string, label: TextKey, f: () => void, an = true) => {
@@ -139,7 +145,7 @@ export function perlenEditor(o: PerlenOptionen): { el: HTMLElement; zeichne(): v
           return k;
         };
         const zeile = h("li", { "data-testid": `${id}-perle-${i}` },
-          h("span", { class: "perlensymbol", "aria-hidden": "true", text: p.art === "halt" ? "H" : "•" }),
+          h("span", { class: "perlensymbol", "aria-hidden": "true", text: t(p.art === "halt" ? "perle.symbolHalt" : "perle.symbolWeg") }),
           h("span", { class: "perlenname", text: p.art === "halt" ? perlenName(p) : t("perle.wegpunkt") }),
         );
         if (plan?.strecke.ohneNetz.includes(i)) zeile.append(h("span", { class: "schlecht", text: ` ⚠ ${t("perle.ohneNetz")}` }));
@@ -151,7 +157,7 @@ export function perlenEditor(o: PerlenOptionen): { el: HTMLElement; zeichne(): v
               if (!setzeStandzeit(o.perlen, i, Number(st.value), L)) return o.melde(t("perle.standzeitFehler", { max: L.standzeitMaxS }));
               o.geaendert();
             });
-            zeile.append(h("label", { class: "standzeit" }, t("perle.standzeitKurz"), st, " s"));
+            zeile.append(h("label", { class: "standzeit" }, t("perle.standzeitKurz"), st, t("perle.sekunden")));
           } else if (halte.length > 1) zeile.append(h("span", { class: "hilfe", text: ` ${t(k === 0 ? "perle.start" : "perle.endpunkt")}` }));
         }
         zeile.append(

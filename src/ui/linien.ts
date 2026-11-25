@@ -12,18 +12,22 @@ import { planTag } from "../linien/tagesart";
 import type { HaltId, Linie, TaktZeile, Variante } from "../linien/typen";
 import { h } from "./dom";
 import { datum, zahl } from "./format";
-import { berechne, fahrzeitSpanne, GRUNDLINIE, linienUi, variantenPlaene, waehleAus, type LinienUi } from "./linienbereich";
+import { berechne, berechnungsFehler, fahrzeitSpanne, freigeschaltet, GRUNDLINIE, linienUi, variantenPlaene, waehleAus, type LinienUi } from "./linienbereich";
 import { perlenEditor } from "./perlen";
 import { beobachte, modellName } from "./spielui";
 import { istOffen, oeffneFenster, schliesseFenster } from "./windows";
 
 const L = config.linien;
+/** Werte aus der Konfiguration für Platzhalter in Texten. */
+const W = { radius: config.stops.fangradiusM, beginn: L.betriebstagBeginnH };
 
 /* ---------- Hilfen ---------- */
 
 export const dauer = (s: number): string => (s >= 60 ? t("zeit.minSek", { m: Math.floor(s / 60), s: String(s % 60).padStart(2, "0") }) : t("zeit.sek", { s }));
 const km = (m: number) => t("linien.km", { km: zahl(Math.round(m / 100) / 10) });
 export const tagName = (tag: PlanTag) => t(`tagesart.${tag}` as TextKey);
+/** Text in Einzahl ("Es fehlt 1 Bus") oder Mehrzahl ("Es fehlen 2 Busse"). */
+const mz = (key: "linien.fuhrparkZuKlein" | "linien.zuWenigBusse" | "linie.fehlenBusse", n: number, werte: Record<string, string | number> = {}) => t((n === 1 ? `${key}Eins` : key) as TextKey, { n, ...werte });
 
 /** Liniennummer als Farbschild mit Text (Information nicht nur über Farbe). */
 export function linienSchild(l: Pick<Linie, "nummer" | "farbe" | "aktiv">): HTMLElement {
@@ -103,7 +107,7 @@ export function oeffneLinien(): void {
       h("p", { "data-testid": "linien-heute", text: t("linien.heute", { datum: datum(Date.parse(heute.betriebstag)), tag: tagName(heute.tag) }) }),
       h("p", { "data-testid": "linien-gesamt", text: t("linien.gesamt", { busse: fuhrpark, bedarf: max.busse, tag: tagName(max.tag) }) }),
     );
-    if (max.busse > fuhrpark) kopf.append(h("p", { class: "schlecht", "data-testid": "linien-fuhrpark-warnung", text: `⚠ ${t("linien.fuhrparkZuKlein", { n: max.busse - fuhrpark, tag: tagName(max.tag) })}` }));
+    if (max.busse > fuhrpark) kopf.append(h("p", { class: "schlecht", "data-testid": "linien-fuhrpark-warnung", text: `⚠ ${mz("linien.fuhrparkZuKlein", max.busse - fuhrpark, { tag: tagName(max.tag) })}` }));
     koerper.replaceChildren(
       ...u.spiel.netz.linien.map((l) => {
         const plan = u.plaene.get(l.id);
@@ -121,7 +125,9 @@ export function oeffneLinien(): void {
         const hinweise: string[] = [];
         if (!l.varianten.length) hinweise.push(t("linien.ohneVarianten"));
         if (luecke) hinweise.push(t("linien.routeFehlt"));
-        if (b.busse > l.busse.length) hinweise.push(t("linien.zuWenigBusse", { n: b.busse - l.busse.length, tag: tagName(b.tag) }));
+        const bf = berechnungsFehler(l.id);
+        if (bf) hinweise.push(t("linien.berechnungFehler", { grund: bf }));
+        if (b.busse > l.busse.length) hinweise.push(mz("linien.zuWenigBusse", b.busse - l.busse.length, { tag: tagName(b.tag) }));
         return h("tr", {},
           h("td", {}, bearbeiten),
           h("td", { text: l.name }),
@@ -190,7 +196,7 @@ export function oeffneLinie(id: number): void {
       return;
     }
     richtungBestaetigen = false;
-    erzeugeRichtungen(u.spiel.netz, l, u.halte, L, t("variante.nach"));
+    erzeugeRichtungen(u.spiel.netz, l, u.halte, L, t("variante.nach"), (hd) => freigeschaltet(u, hd.coord));
     melde(t("linie.richtungenErzeugt"), true);
     geaendert();
   });
@@ -263,7 +269,7 @@ export function oeffneLinie(id: number): void {
         bearbeiten.addEventListener("click", () => oeffneVariante(l!.id, v.id));
         const weg = h("button", { type: "button", "data-testid": `variante-${v.id}-loeschen`, "aria-label": t("linie.varianteLoeschen", { name: v.name }), title: t("linie.varianteLoeschen", { name: v.name }), text: "✕" });
         weg.addEventListener("click", () => (loescheVariante(l!, v.id), geaendert()));
-        const status = !vp ? "…" : vp.vollstaendig ? `✔ ${t("linie.routeOk")}` : `⚠ ${t("linie.routeLuecke")}`;
+        const status = !vp ? t("linie.berechnet") : vp.vollstaendig ? `✔ ${t("linie.routeOk")}` : `⚠ ${t("linie.routeLuecke")}`;
         return h("tr", { "data-testid": `variante-${v.id}` },
           h("td", { text: t(`variante.art.${v.art}` as TextKey) }),
           h("td", { text: v.name }),
@@ -313,7 +319,7 @@ export function oeffneLinie(id: number): void {
           h("th", { scope: "row", text: tagName(tag) }),
           h("td", { class: "zahl", text: String(n) }),
           h("td", { class: "zahl", "data-testid": `bedarf-${tag}-busse`, text: String(bd[tag]) }),
-          h("td", { class: fehlt > 0 ? "schlecht" : "ok", text: fehlt > 0 ? `⚠ ${t("linie.fehlenBusse", { n: fehlt })}` : bd[tag] ? `✔ ${t("linie.genugBusse")}` : "" }),
+          h("td", { class: fehlt > 0 ? "schlecht" : "ok", text: fehlt > 0 ? `⚠ ${mz("linie.fehlenBusse", fehlt)}` : bd[tag] ? `✔ ${t("linie.genugBusse")}` : "" }),
         );
       }),
     );
@@ -391,11 +397,11 @@ function taktTabelle(v: Variante, tag: PlanTag, melde: (s: string, ok?: boolean)
     const neu: TaktZeile[] = [];
     for (let i = 0; i < zeilen.length; i++) {
       const z = leseZeile(zeilen[i].von, zeilen[i].bis, zeilen[i].takt);
-      if (!z) return melde(t("takt.fehler.zeit", { nr: i + 1 }));
+      if (!z) return melde(t("takt.fehler.zeit", { nr: i + 1, ...W }));
       neu.push(z);
     }
     const r = setzeTakt(v, tag, neu, L);
-    if (!r.ok) return melde(t(`takt.fehler.${r.fehler}` as TextKey, { nr: r.zeile + 1, min: L.taktMinMin, max: L.taktMaxMin }));
+    if (!r.ok) return melde(t(`takt.fehler.${r.fehler}` as TextKey, { nr: r.zeile + 1, min: L.taktMinMin, max: L.taktMaxMin, ...W }));
     melde(r.verworfen.length ? t("takt.verworfen", { n: r.verworfen.length, liste: r.verworfen.map((a) => (a.art === "zusatz" ? "" : uhrzeit(a.ursprungS))).join(", ") }) : t("takt.uebernommen", { tag: tagName(tag) }), !r.verworfen.length);
     geaendert();
   };
@@ -403,7 +409,7 @@ function taktTabelle(v: Variante, tag: PlanTag, melde: (s: string, ok?: boolean)
     koerper.replaceChildren(
       ...zeilen.map((z, i) => {
         const feld = (k: "von" | "bis" | "takt", label: TextKey) => {
-          const f = h("input", { type: k === "takt" ? "number" : "text", value: z[k], class: k === "takt" ? "kurzzahl" : "uhr", "aria-label": t(label, { nr: i + 1 }), "data-testid": `takt-${tag}-${i}-${k}`, ...(k === "takt" ? { min: L.taktMinMin, max: L.taktMaxMin, step: 1 } : { inputmode: "numeric", placeholder: "06:00" }) });
+          const f = h("input", { type: k === "takt" ? "number" : "text", value: z[k], class: k === "takt" ? "kurzzahl" : "uhr", "aria-label": t(label, { nr: i + 1 }), "data-testid": `takt-${tag}-${i}-${k}`, ...(k === "takt" ? { min: L.taktMinMin, max: L.taktMaxMin, step: 1 } : { inputmode: "numeric", placeholder: t("takt.platzhalter") }) });
           f.addEventListener("change", () => ((z[k] = f.value), uebernehmen()));
           return h("td", {}, f);
         };
@@ -415,8 +421,9 @@ function taktTabelle(v: Variante, tag: PlanTag, melde: (s: string, ok?: boolean)
   const neu = h("button", { type: "button", "data-testid": `takt-${tag}-zeile`, text: t("takt.zeileNeu") });
   neu.addEventListener("click", () => {
     const letzte = zeilen.length ? leseZeile(zeilen[zeilen.length - 1].von, zeilen[zeilen.length - 1].bis, zeilen[zeilen.length - 1].takt) : null;
-    const von = letzte ? letzte.bisMin : 6 * 60;
-    zeilen.push({ von: uhrzeit(von * 60), bis: uhrzeit(Math.min(von + 60, (24 + L.betriebstagBeginnH) * 60) * 60), takt: "20" });
+    const nz = L.neueTaktzeile;
+    const von = letzte ? letzte.bisMin : nz.vonH * 60;
+    zeilen.push({ von: uhrzeit(von * 60), bis: uhrzeit(Math.min(von + nz.dauerMin, (24 + L.betriebstagBeginnH) * 60) * 60), takt: String(nz.taktMin) });
     zeichne();
     uebernehmen();
   });
@@ -498,7 +505,7 @@ export function oeffneVariante(linieId: number, varianteId: number): void {
 
   // Fahrzeiten einer Fahrt zur gewählten Uhrzeit
   const probeTag = h("select", { id: "probe-tag", "data-testid": "probe-tag" }, ...PLAN_TAGE.map((tag) => h("option", { value: tag, text: tagName(tag) })));
-  const probeZeit = h("input", { type: "text", id: "probe-zeit", "data-testid": "probe-zeit", value: "07:00", class: "uhr", inputmode: "numeric" });
+  const probeZeit = h("input", { type: "text", id: "probe-zeit", "data-testid": "probe-zeit", value: uhrzeit(L.probeStunde * 3600), class: "uhr", inputmode: "numeric" });
   const probe = h("tbody", {});
   probeTag.addEventListener("change", () => zeichneProbe());
   probeZeit.addEventListener("change", () => zeichneProbe());
@@ -535,7 +542,7 @@ export function oeffneVariante(linieId: number, varianteId: number): void {
     h("p", { class: "hilfe", text: t("variante.wendezeitHilfe") }),
     meldung,
     h("details", { open: true }, h("summary", { class: "fett", text: t("variante.perlen") }), h("p", { class: "hilfe", text: t("variante.perlenHilfe") }), perlen.el),
-    h("details", { open: true }, h("summary", { class: "fett", text: t("variante.takt") }), h("p", { class: "hilfe", text: t("takt.hilfe", { min: L.taktMinMin, max: L.taktMaxMin }) }), reiterLeiste, taktBereich),
+    h("details", { open: true }, h("summary", { class: "fett", text: t("variante.takt") }), h("p", { class: "hilfe", text: t("takt.hilfe", { min: L.taktMinMin, max: L.taktMaxMin, ...W }) }), reiterLeiste, taktBereich),
     h("details", { open: true },
       h("summary", { class: "fett", text: t("variante.fahrzeiten") }),
       h("p", { class: "hilfe", text: t("variante.fahrzeitenHilfe") }),
@@ -573,14 +580,14 @@ export function oeffneFahrplan(linieId: number, start: PlanTag = "werktag"): voi
   const detail = h("div", { "data-testid": "fahrt-detail" });
   const bedarfEl = h("div", { "data-testid": "fahrplan-bedarf" });
   const neuVariante = h("select", { id: "neu-fahrt-variante", "data-testid": "neu-fahrt-variante" });
-  const neuZeit = h("input", { type: "text", id: "neu-fahrt-zeit", "data-testid": "neu-fahrt-zeit", class: "uhr", placeholder: "07:35", inputmode: "numeric" });
+  const neuZeit = h("input", { type: "text", id: "neu-fahrt-zeit", "data-testid": "neu-fahrt-zeit", class: "uhr", placeholder: t("fahrplan.platzhalter"), inputmode: "numeric" });
   const neuKnopf = h("button", { type: "button", "data-testid": "neu-fahrt", text: t("fahrplan.hinzufuegen") });
   neuKnopf.addEventListener("click", () => {
     const v = l.varianten.find((x) => String(x.id) === neuVariante.value);
     const s = leseUhrzeit(neuZeit.value, L);
-    if (!v || s === null) return melde(t("fahrplan.zeitUngueltig"));
+    if (!v || s === null) return melde(t("fahrplan.zeitUngueltig", W));
     const r = fuegeFahrtHinzu(u.spiel.netz, v, tag, s, L);
-    if (!r.ok) return melde(t("fahrplan.zeitUngueltig"));
+    if (!r.ok) return melde(t("fahrplan.zeitUngueltig", W));
     melde(t("fahrplan.hinzugefuegt", { zeit: uhrzeit(s), variante: v.name }), true);
     neuZeit.value = "";
     void berechne(l.id);
@@ -595,9 +602,9 @@ export function oeffneFahrplan(linieId: number, start: PlanTag = "werktag"): voi
     const verschieben = h("button", { type: "button", "data-testid": `fahrt-${f.variante}-${f.schluessel}-verschieben`, text: t("fahrplan.verschieben") });
     verschieben.addEventListener("click", () => {
       const s = leseUhrzeit(zeit.value, L);
-      if (s === null) return melde(t("fahrplan.zeitUngueltig"));
+      if (s === null) return melde(t("fahrplan.zeitUngueltig", W));
       const fehler = f.status === "zusatz" ? verschiebeZusatz(v, f.zusatzId!, s, L) : verschiebeFahrt(v, tag, f.ursprungS!, s, L);
-      if (fehler) return melde(t("fahrplan.zeitUngueltig"));
+      if (fehler) return melde(t("fahrplan.zeitUngueltig", W));
       melde(t("fahrplan.verschoben", { von: uhrzeit(f.abfahrtS), nach: uhrzeit(s) }), true);
       void berechne(l!.id);
     });
@@ -659,7 +666,7 @@ export function oeffneFahrplan(linieId: number, start: PlanTag = "werktag"): voi
     const tp = plan?.tage[tag];
     const fehlt = (tp?.busbedarf ?? 0) - l!.busse.length;
     bedarfEl.replaceChildren(
-      h("p", { "data-testid": "fahrplan-busse", class: fehlt > 0 ? "schlecht" : "ok", text: `${fehlt > 0 ? "⚠" : "✔"} ${t("fahrplan.busse", { n: tp?.busbedarf ?? 0, zugewiesen: l!.busse.length })}${fehlt > 0 ? ` ${t("linie.fehlenBusse", { n: fehlt })}` : ""}` }),
+      h("p", { "data-testid": "fahrplan-busse", class: fehlt > 0 ? "schlecht" : "ok", text: `${fehlt > 0 ? "⚠" : "✔"} ${t("fahrplan.busse", { n: tp?.busbedarf ?? 0, zugewiesen: l!.busse.length })}${fehlt > 0 ? ` ${mz("linie.fehlenBusse", fehlt)}` : ""}` }),
       h("table", { class: "tabelle", "data-testid": "umlaeufe" },
         h("thead", {}, h("tr", {}, ...["fahrplan.umlauf", "fahrplan.fahrtenZahl", "fahrplan.beginn", "fahrplan.ende", "fahrplan.ausruecken"].map((k) => h("th", { scope: "col", text: t(k as TextKey) })))),
         h("tbody", {}, ...(tp?.umlaeufe ?? []).map((um, i) =>
@@ -708,7 +715,7 @@ export function oeffneHaltestelle(u: LinienUi, id: HaltId): void {
   const umbenennen = h("button", { type: "button", "data-testid": "haltestelle-umbenennen", text: t("haltestelle.umbenennen") });
   umbenennen.addEventListener("click", () => {
     const f = benenneHaltestelle(u.spiel.netz, u.halte, id, name.value, L);
-    if (f) return melde(t(`haltestelle.fehler.${f}` as TextKey));
+    if (f) return melde(t(`haltestelle.fehler.${f}` as TextKey, W));
     melde(t("haltestelle.umbenannt", { name: name.value.trim() }), true);
     titel.textContent = name.value.trim();
     void berechne();
@@ -719,7 +726,7 @@ export function oeffneHaltestelle(u: LinienUi, id: HaltId): void {
   const inhalt = h("div", {},
     titel,
     h("p", { class: "klein", text: u.halte.istNeu(id) ? t("haltestelle.neuAngelegt") : t("haltestelle.osm", { id: id.slice(1) }) }),
-    hd.snaps.length ? null : h("p", { class: "schlecht", text: `⚠ ${t("perle.fehler.ohneNetz")}` }),
+    hd.snaps.length ? null : h("p", { class: "schlecht", text: `⚠ ${t("perle.fehler.ohneNetz", W)}` }),
     h("p", { "data-testid": "haltestelle-linien" }, linien.length ? t("haltestelle.linien") : t("haltestelle.keineLinien"), " ", ...linien.flatMap((l) => [linienSchild(l), " "])),
     h("label", { for: "haltestelle-name", text: t("haltestelle.name") }),
     h("div", { class: "aktionen links" }, name, umbenennen),

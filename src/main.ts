@@ -21,6 +21,8 @@ import { hofZuGeo, rechteckRing, torAnbindung } from "./world/standorte";
 import { neuesSpiel, type GemeindeQuelle, type SpielZustand } from "./game/setup";
 import { ladeSpielstand, SpielstandFehler, spielstandDaten, spielstandInfo, type SpielstandDaten } from "./game/spielstand";
 import { linieVonBus } from "./linien/linien";
+import { bereinigeAnschluesse } from "./linien/speichern";
+import { LocalProj } from "./world/geo";
 import type { SaveRecord, SaveStore } from "./storage/types";
 import { oeffneHaltestelle, oeffneLinien } from "./ui/linien";
 import { baueLinienUi, berechne, haltKlick, zeichneKarte, type LinienUi } from "./ui/linienbereich";
@@ -148,6 +150,9 @@ async function starteEinrichtung(hinweis = ""): Promise<void> {
     try {
       if (world.gemeinde.name !== (weiter.payload as SpielstandDaten).gemeinde.name) throw new SpielstandFehler(t("setup.andereGemeinde", { gemeinde: world.gemeinde.name }));
       spiel = ladeSpielstand(weiter, new Set(katalog.modelle.map((m) => m.modell_id!)));
+      // Anschlüsse ans Straßennetz gegen die geladene Karte prüfen (Karten sind nur referenziert)
+      const b = world.bbox;
+      bereinigeAnschluesse(spiel.netz, world.network, new LocalProj((b[0] + b[2]) / 2, (b[1] + b[3]) / 2), config.stops.fangradiusM);
     } catch (e) {
       laden.fehler(t("setup.ladenFehler", { grund: String(e instanceof Error ? e.message : e) }), () => void starteEinrichtung());
       return;

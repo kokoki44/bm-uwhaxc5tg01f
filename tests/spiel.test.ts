@@ -8,7 +8,9 @@ import { kaufeNeu, marktOptionen, pruefeKonfig, standardKonfig, type MarktOption
 import { FuhrparkLadeFehler, ladeFuhrpark, serialisiereFuhrpark } from "../src/fleet/speichern";
 import { neuerFuhrpark } from "../src/fleet/fuhrpark";
 import type { SpielZustand } from "../src/game/setup";
-import { fortschreiben, kaufKontext, naechsterMonatsanfang, naechsterMontag, starteMarkt, type SpielKontext } from "../src/game/spiel";
+import { fortschreiben, kaufKontext, naechsterMonatsanfang, naechsterMontag, starteMarkt, verkaufeBus, type SpielKontext } from "../src/game/spiel";
+import { legeLinieAn, weiseBusZu } from "../src/linien/linien";
+import { neuesNetz } from "../src/linien/typen";
 import { neuerZufall } from "../src/game/zufall";
 import { ladePersonal, monatslohn, neuesPersonal, schreibeAus, serialisierePersonal, sichtbareBewerber, stelleEin } from "../src/personal/personal";
 import { beispielHof, hofKontext, katalogModelle, marktKontext } from "./helpers/markt";
@@ -34,6 +36,7 @@ function spiel(seed = 1): { s: SpielZustand; k: SpielKontext } {
     zufall: neuerZufall(seed),
     fuhrpark: neuerFuhrpark(config.fahrzeugmarkt),
     personal: neuesPersonal(config.personal),
+    netz: neuesNetz(),
   } as unknown as SpielZustand;
   const k: SpielKontext = { markt: marktKontext(M, OPT), hof: hofKontext(M), region: "DE-SH" };
   starteMarkt(s, k);
@@ -147,5 +150,22 @@ describe("Speichern und Laden (Kriterium 15)", () => {
     // fremde Felder in Angeboten werden nicht übernommen
     const mitFremd = ladeFuhrpark({ ...s.fuhrpark, angebote: s.fuhrpark.angebote.map((a) => ({ ...a, fremd: 1 })) });
     expect(mitFremd.angebote[0]).not.toHaveProperty("fremd");
+  });
+});
+
+describe("Verkauf und Linie (Regression Prüfung 3b)", () => {
+  it("ein verkaufter Bus verlässt seine Linie, auch ohne Oberfläche", () => {
+    const { s, k } = spiel();
+    const m = M.get("man_lions_city_12_e_2t")!;
+    const kk = kaufKontext(s, k);
+    const r = kaufeNeu(kk, m.modell_id!, standardKonfig(m, "#ffffff", kk));
+    if (!r.ok) throw new Error(r.fehler);
+    const l = legeLinieAn(s.netz, { nummer: "1", name: "x", farbe: "#000000" }, config.linien);
+    if (!l.ok) throw new Error();
+    weiseBusZu(s.netz, l.linie.id, r.bus.id);
+    expect(verkaufeBus(s, k, r.bus.id).ok).toBe(true);
+    expect(l.linie.busse).toEqual([]);
+    expect(s.fuhrpark.busse).toEqual([]);
+    expect(verkaufeBus(s, k, 999).ok).toBe(false);
   });
 });

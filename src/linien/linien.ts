@@ -75,12 +75,13 @@ export function loescheHaltestelle(netz: Netz, id: HaltId): "unbekannt" | "benut
  * Gegenhaltestelle für die Rückrichtung (F2): Haltestelle mit gleichem Namen im Umkreis, die nächste zuerst.
  * Gibt es keine, bleibt es dieselbe Haltestelle.
  */
-export function gegenhaltestelle(id: HaltId, halte: Haltestellen, cfg: LinienConfig): HaltId {
+export function gegenhaltestelle(id: HaltId, halte: Haltestellen, cfg: LinienConfig, freigeschaltet: (h: HaltDaten) => boolean = () => true): HaltId {
   const h = halte.hole(id);
   if (!h || !h.name) return id;
   let best: { id: HaltId; d: number } | null = null;
   for (const x of halte.alle()) {
-    if (x.id === id || x.name !== h.name || !x.snaps.length) continue;
+    // Auch die Gegenhaltestelle muss in einem freigeschalteten Gebiet liegen (Durchfahrt ohne Halt)
+    if (x.id === id || x.name !== h.name || !x.snaps.length || !freigeschaltet(x)) continue;
     const d = haversine(h.coord, x.coord);
     if (d <= cfg.gegenhaltestelleRadiusM && (!best || d < best.d || (d === best.d && x.id < best.id))) best = { id: x.id, d };
   }
@@ -195,6 +196,8 @@ export function ersetzeHalt(perlen: Perle[], i: number, halte: Haltestellen, id:
   if (!p || p.art !== "halt" || !h) return "unbekannt";
   if (!h.snaps.length) return "ohneNetz";
   if (!freigeschaltet(h)) return "gesperrt";
+  const vor = perlen[i - 1], nach = perlen[i + 1];
+  if ((vor?.art === "halt" && vor.halt === id) || (nach?.art === "halt" && nach.halt === id)) return "doppelt";
   p.halt = id;
   return null;
 }
@@ -241,9 +244,9 @@ export function variantenName(perlen: readonly Perle[], halte: Haltestellen, nac
  * in umgekehrter Reihenfolge mit Gegenhaltestellen. Gibt es die Richtung schon, werden nur ihre Perlen ersetzt; Takt,
  * Wendezeit und Fahrtänderungen bleiben.
  */
-export function erzeugeRichtungen(netz: Netz, linie: Linie, halte: Haltestellen, cfg: LinienConfig, nach: string): Variante[] {
+export function erzeugeRichtungen(netz: Netz, linie: Linie, halte: Haltestellen, cfg: LinienConfig, nach: string, freigeschaltet: (h: HaltDaten) => boolean = () => true): Variante[] {
   const hin = linie.perlen.map(kopie);
-  const rueck = [...linie.perlen].reverse().map((p) => (p.art === "halt" ? { ...p, halt: gegenhaltestelle(p.halt, halte, cfg) } : kopie(p)));
+  const rueck = [...linie.perlen].reverse().map((p) => (p.art === "halt" ? { ...p, halt: gegenhaltestelle(p.halt, halte, cfg, freigeschaltet) } : kopie(p)));
   const out: Variante[] = [];
   for (const [art, perlen] of [["hin", hin], ["rueck", rueck]] as const) {
     const da = linie.varianten.find((v) => v.art === art);

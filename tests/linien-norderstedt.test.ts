@@ -80,7 +80,7 @@ describe("Beispiellinie Norderstedt (Handrechnung für den Bericht)", () => {
 
   it("neue Haltestelle rastet auf die nächste Busstraße ein, weit weg von Straßen nicht", () => {
     const b = world.bbox;
-    const f = fangIndex(world.network, [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]);
+    const f = fangIndex(world.network, [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2], L.fangZelleM);
     const kirchenweg = halte.hole(osmHaltId(333727173))!;
     const s = fange(world.network, f, kirchenweg.coord, "halt", config.stops);
     expect(s.length).toBeGreaterThan(0);

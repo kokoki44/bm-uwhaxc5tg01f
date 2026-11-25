@@ -44,7 +44,7 @@ function linieMit(netz: Netz, halte: Haltestellen, ids: number[], nummer = "1"):
 
 describe("Fahrzeiten (Kriterium 5, Handrechnung)", () => {
   it("Abschnitt Anfang bis Ende: 80 s reine Fahrzeit, 15 s Ampel, 10 s Halt, Faktor nur auf die reine Fahrzeit, auf 10 s gerundet", () => {
-    const { net, stops, netz, halte } = handNetz();
+    const { net, netz, halte } = handNetz();
     const l = linieMit(netz, halte, [1, 3]);
     const hin = l.varianten.find((v) => v.art === "hin")!;
     const s = berechneStrecke(net, planAnfrage(l, halte, null).varianten.find((v) => v.id === hin.id)!.perlen, L, R);
@@ -64,7 +64,6 @@ describe("Fahrzeiten (Kriterium 5, Handrechnung)", () => {
     expect(abschnittZeitS(a, "sonnFeiertag", sek(12), L)).toBe(110);
     // Nach Mitternacht gilt wieder die Tabelle ab 0 Uhr: 80 × 1,05 = 84, + 25 = 109 -> 110 s
     expect(abschnittZeitS(a, "werktag", sek(25, 30), L)).toBe(110);
-    expect(stops).toHaveLength(3);
   });
 
   it("Rückrichtung ohne Ampel: 80 × 1,1 + 10 = 98 -> 100 s am Sonntag", () => {
@@ -407,7 +406,7 @@ describe("Linien, Haltestellen und Varianten", () => {
   });
 
   it("Haltestelle einfügen: nicht ohne Netz, nicht in gesperrten Gebieten, nicht zweimal hintereinander", () => {
-    const { net, netz, halte } = handNetz();
+    const { netz, halte } = handNetz();
     const stops = [...halte.alle()];
     const ohne = { id: 50, name: "Fern", coord: [11, 54] as [number, number], snaps: [] };
     const h2 = new Haltestellen([...stops.map((s) => ({ id: Number(s.id.slice(1)), name: s.name, coord: s.coord, snaps: s.snaps })), ohne], netz);
@@ -419,7 +418,6 @@ describe("Linien, Haltestellen und Varianten", () => {
     expect(fuegeHaltEin(p, h2, "o2", frei, L, 0)).toBeNull();
     expect(verschiebePerle(p, 0, 1)).toBe(true);
     expect((p as { halt: string }[]).map((x) => x.halt)).toEqual(["o1", "o2"]);
-    expect(net.edges.length).toBeGreaterThan(0);
   });
 
   it("Gegenhaltestelle: gleicher Name im Umkreis von 100 m, sonst dieselbe; Rückrichtung umgekehrt", () => {

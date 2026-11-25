@@ -10,9 +10,9 @@ export interface FangIndex {
   proj: LocalProj;
 }
 
-export function fangIndex(net: RoadNetwork, mitte: LonLat): FangIndex {
+export function fangIndex(net: RoadNetwork, mitte: LonLat, zelleM: number): FangIndex {
   const proj = new LocalProj(mitte[0], mitte[1]);
-  return { index: new EdgeIndex(net, proj, 100), proj };
+  return { index: new EdgeIndex(net, proj, zelleM), proj };
 }
 
 /**

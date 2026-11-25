@@ -32,6 +32,10 @@ export const GRUNDLINIE = 0;
 
 let lu: LinienUi | null = null;
 const stand = new Map<number, number>();
+const fehler = new Map<number, string>();
+
+/** Fehler der letzten Berechnung je Linie (Worker hat abgelehnt), sonst undefined. */
+export const berechnungsFehler = (linieId: number): string | undefined => fehler.get(linieId);
 
 export function baueLinienUi(basis: Omit<LinienUi, "halte" | "plaene">): LinienUi {
   lu = { ...basis, halte: new Haltestellen(basis.world.stops, basis.spiel.netz), plaene: new Map() };
@@ -90,8 +94,16 @@ export async function berechne(linieId?: number): Promise<void> {
     linien.map(async (l) => {
       const nr = (stand.get(l.id) ?? 0) + 1;
       stand.set(l.id, nr);
-      const p = await u.sim.plane(anfrage(u, l));
-      if (stand.get(l.id) === nr && u.spiel.netz.linien.some((x) => x.id === l.id)) u.plaene.set(l.id, p);
+      try {
+        const p = await u.sim.plane(anfrage(u, l));
+        if (stand.get(l.id) === nr && u.spiel.netz.linien.some((x) => x.id === l.id)) {
+          u.plaene.set(l.id, p);
+          fehler.delete(l.id);
+        }
+      } catch (e) {
+        // Der Worker hat die Anfrage abgelehnt: alter Plan bleibt, die Linienliste meldet es
+        fehler.set(l.id, String(e instanceof Error ? e.message : e));
+      }
     }),
   );
   if (linieId !== undefined && !u.spiel.netz.linien.some((l) => l.id === linieId)) u.plaene.delete(linieId);

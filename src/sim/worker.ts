@@ -32,7 +32,7 @@ scope.onmessage = (e) => {
     } else if (msg.type === "setSpeed") {
       core?.setSpeed(msg.speed);
     } else if (msg.type === "netz") {
-      netz = { net: msg.network, fang: fangIndex(msg.network, msg.mitte), cache: new RoutenCache(config.linien.routenCacheGroesse) };
+      netz = { net: msg.network, fang: fangIndex(msg.network, msg.mitte, config.linien.fangZelleM), cache: new RoutenCache(config.linien.routenCacheGroesse) };
     } else if (msg.type === "plan") {
       if (!netz) throw new Error("Straßennetz fehlt im Worker");
       scope.postMessage({ type: "plan", id: msg.id, plan: berechneLinie(netz.net, msg.anfrage, config.linien, config.roads, netz.cache) });
