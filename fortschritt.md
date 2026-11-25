@@ -45,9 +45,9 @@ Nachträge nach der Freigabe (25.11.2026):
 
 Geändert gegenüber Konzept: nichts. Das Konzept (`docs/konzept.md`) wurde von Koko aktualisiert und ist im Repository.
 
-## Etappe 2: Fahrzeugkatalog und Betriebshof (gebaut, wartet auf Kokos Freigabe)
+## Etappe 2: Fahrzeugkatalog und Betriebshof (freigegeben von Koko am 25.11.2026, Nachträge eingearbeitet)
 
-Stand vor Beginn: Git-Tag `etappe-1-fertig`.
+Stand vor Beginn: Git-Tag `etappe-1-fertig`. Freigegebener Stand: Git-Tag `etappe-2-fertig` (Commit mit Kokos Konzeptfassung vom 25.11.2026).
 
 Bestätigte Abnahmekriterien (Koko, 25.11.2026):
 
@@ -83,17 +83,17 @@ Fertig:
 - Oberfläche: Standortliste und Grundstücksfenster (`src/ui/standortwahl.ts`), Standorte auf der Karte, Editor (`src/ui/editor.ts`), Knopf "Betriebshof" in der Kopfleiste, Hilfe ergänzt.
 - Tests: `tests/katalog.test.ts`, `tests/betriebshof.test.ts`, `tests/standorte.test.ts`, `tests/texte.test.ts`, Rauchtest-Schritt "Betriebshof bauen", Oberflächentest `e2e/betriebshof.spec.ts`.
 
-Offen:
-- `docs/konzept.md` auf der Platte ist unverändert (gespeichert am 24.11.2026 um 23:39, im Kernzyklus steht noch "Ausbaustufen"). Die angekündigte Ergänzung lag nicht vor und ist deshalb nicht committet. Gebaut wurde nach den Festlegungen oben.
-- Fragen an Koko: siehe Bericht und unten.
+Unabhängige Prüfung (Subagent, 25.11.2026): alle 13 Kriterien erfüllt, keine Erfindungen, keine Gedankenstriche. Behoben nach der Prüfung (mit Regressionstests): Wege nutzten Durchgänge schmaler als 3,5 m; Anbindung nur an den Ecken der Fläche gemessen; Zukauf an der Torseite ohne Warnung; feste Farben und Werte im Editor (jetzt in der Konfiguration); Einheiten und Zeichen außerhalb der Sprachdatei; leere Kopfzelle wurde ohne Namen gemeldet; Tastaturauswahl über die Bauteilliste ungetestet.
 
-Offene Fragen zu Funktionen:
-1. Batterien mit Bereich, aber ohne Schritt (zum Beispiel Ebusco 2.2: 350 bis 500 kWh): Nach der Festlegung gibt es nur das Maximum. Ist das so gewollt, oder sollen Minimum und Maximum wählbar sein?
-2. batterie_kwh_schritt ist im Blatt Spalten "nur Elektro" Pflicht. Bei fester Batterie ist er zu Recht leer und erzeugt 76 Hinweise. Hinweis nur bei Bereich ohne Schritt?
-3. verbrauchseinheit hat im Blatt Spalten die erlaubten Werte "Liter, kWh, kg", wird aber bisher als freier Text behandelt. Soll sie geprüft werden?
-4. Zwei getrennte Hofnetze mit je eigenem Tor (zum Beispiel Stellplätze im Norden, Werkstatt im Süden, untereinander nicht verbunden) gelten zurzeit als gültig. Das Konzept sagt "Tor, Fahrwege und alle Bauteile verbunden". Muss alles ein zusammenhängendes Netz sein, oder dürfen Bereiche nur über die Straße verbunden sein?
-5. Sackgasse: Zurzeit warnt das Spiel nur bei einem Stichweg, an dem nichts liegt. Soll es auch bei einem Fahrweg warnen, der ohne Wendemöglichkeit endet, aber Stellplätze hat (Busse müssten dort rückwärts fahren)?
-
-Unabhängige Prüfung (Subagent, 25.11.2026): alle 13 Kriterien erfüllt, keine Erfindungen, keine Gedankenstriche. Behoben nach der Prüfung (mit Regressionstests): Wege nutzten Durchgänge schmaler als 3,5 m; Anbindung nur an den Ecken der Fläche gemessen; Zukauf an der Torseite ohne Warnung; feste Farben und Werte im Editor (jetzt in der Konfiguration); Einheiten und Zeichen außerhalb der Sprachdatei; leere Kopfzelle wurde ohne Namen gemeldet; Tastaturauswahl über die Bauteilliste ungetestet. Offen als Fragen 4 und 5.
+Nachträge nach der Freigabe (25.11.2026), Antworten von Koko auf die offenen Fragen:
+- Konzept: Kokos Fassung vom 25.11.2026 (Festlegungen zum Betriebshof, Kernzyklus ohne Ausbaustufen, Seitenverhältnis) ist committet.
+- Seitenverhältnis des Grundstücks höchstens 1 zu 10 bei Startgrundstück und Zukauf, mit Meldung; die Zukauf-Anzeige nennt den kleineren Höchstwert aus Fläche und Seitenverhältnis (A2-33).
+- Standortliste unverändert: alle Gewerbe- und Industrieflächen, OSM-Gebäude auf dem Grundstück zählen nicht.
+- Batteriebereich ohne Schritt: Standardschritt 50 kWh, das Maximum bleibt wählbar (A2-30). Hinweis zum leeren Batterieschritt nur bei einem Bereich (jetzt 184 statt 235 Elektro-Hinweise).
+- verbrauchseinheit wird gegen "Liter, kWh, kg" geprüft, Abweichung ist ein Hinweis.
+- Ein Layout muss ein zusammenhängendes Netz sein, mehrere Tore im selben Netz sind erlaubt; getrennte Netze sind ein Fehler (A2-32).
+- Warnung bei Fahrwegen mit Stellplätzen ohne Wendemöglichkeit, Layout bleibt gültig (A2-31). Das Beispiel-Layout hat deshalb zwei Tore als Durchfahrt, die Summe bleibt 1.319.620 € bzw. 1.615.620 €.
+- baujahr_von leer: Regel für den Gebrauchtmarkt als A2-34 festgehalten, gebaut wird sie in 3a. Die 16 fehlenden Standardwerte für fiktive Busse bleiben bis Etappe 7a liegen.
+- Altas Novus Cityline und Ecoline bleiben gemeldet und ungenutzt, bis Koko die Länge ergänzt.
 
 Geändert gegenüber Konzept: nichts.

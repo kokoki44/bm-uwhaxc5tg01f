@@ -150,6 +150,14 @@ describe("Betriebshof: Bauen, Kosten, Grundstück", () => {
     expect(zukaufHoechstM(h, "o", g)).toBe(100);
   });
 
+  it("Regression: ein schon zu schmales Grundstück (Stand vor der Regel) darf an der kurzen Seite wachsen", () => {
+    const g = config.grundstueck;
+    const h = hof(400, 20); // 1 zu 20
+    const k = kasse(100_000_000);
+    expect(zukaufen(h, k, "s", 5, g).ok).toBe(true); // 400 × 25: besser, aber noch über der Grenze
+    expect(zukaufen(h, k, "o", 1, g)).toEqual({ ok: false, fehler: "seitenverhaeltnis" }); // verschlechtert
+  });
+
   it("Ladeleistung ist einstellbar im Rahmen der Konfiguration", () => {
     const h = hof();
     const l = baue(h, kasse(), "ladeplatz", { x: 0, y: 0, b: 4, t: 14 });
@@ -260,6 +268,15 @@ describe("Betriebshof: Layout-Gültigkeit", () => {
     expect(a.fehler).toEqual([]);
     expect(a.gueltig).toBe(true);
     expect(a.torSeite.size).toBe(2);
+  });
+
+  it("Regression: getrennte Netze werden am kleineren Netz gemeldet, nicht am zuletzt gebauten Tor", () => {
+    const h = hof();
+    const k = kasse();
+    const einzeln = baue(h, k, "tor", { x: 40, y: 0, b: 7, t: 4 }); // zuerst gebaut, ohne Fahrweg
+    baue(h, k, "tor", { x: 0, y: 20, b: 4, t: 7 });
+    baue(h, k, "fahrweg", { x: 4, y: 20, b: 56, t: 7 });
+    expect(analysiereHof(h, ctx).fehler).toEqual([{ code: "getrennteNetze", bauteil: einzeln.id }]);
   });
 
   describe("Wendemöglichkeit (Annahme A2-31)", () => {

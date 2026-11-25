@@ -22,7 +22,8 @@ beforeAll(async () => {
   entsperren = netzSperren();
   const ex = await ladeNorderstedt();
   world = buildWorld(ex, config, (s, a) => schritte.push([s, a]));
-});
+  // Der Aufbau der Welt dauert allein etwa 7 s; unter Last (alle Testdateien parallel) reichen die üblichen 10 s nicht.
+}, 120000);
 afterAll(() => entsperren());
 
 describe("Norderstedt lädt offline", () => {

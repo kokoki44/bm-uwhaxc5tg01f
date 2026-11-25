@@ -191,7 +191,10 @@ export function zukaufen(hof: Betriebshof, kasse: Kasse, s: Seite, m: number, g:
   if (!Number.isInteger(m) || m < 1) return { ok: false, fehler: "ungueltig" };
   const neu = erweitert(hof.grundstueck.flaeche, s, m);
   if (flaecheM2(neu) > g.hoechstflaecheM2) return { ok: false, fehler: "zuGross" };
-  if (!seitenverhaeltnisOk(neu, g.maxSeitenverhaeltnis)) return { ok: false, fehler: "seitenverhaeltnis" };
+  // Abgelehnt wird nur, was die Grenze überschreitet; ein Zukauf, der ein zu schmales Grundstück verbessert, bleibt erlaubt.
+  const verhaeltnis = (r: Rechteck) => Math.max(r.b, r.t) / Math.min(r.b, r.t);
+  if (!seitenverhaeltnisOk(neu, g.maxSeitenverhaeltnis) && verhaeltnis(neu) >= verhaeltnis(hof.grundstueck.flaeche) - 1e-12)
+    return { ok: false, fehler: "seitenverhaeltnis" };
   const kostenEur = zukaufKostenEur(hof, s, m);
   if (kasse.kontostandEur < kostenEur) return { ok: false, fehler: "geldFehlt" };
   hof.grundstueck.flaeche = neu;

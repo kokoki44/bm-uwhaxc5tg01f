@@ -234,16 +234,21 @@ export function analysiereHof(hof: Betriebshof, ctx: HofKontext): HofAnalyse {
       }
     }
   // Ein Layout ist ein zusammenhängendes Netz: mehrere Tore sind erlaubt, aber nur im selben Netz.
-  let netze = 0;
+  // Gemeldet wird jedes Netz außer dem größten (meiste Fahrflächen), jeweils an seinem ersten Tor.
+  const netze: { tor: number; groesse: number }[] = [];
   for (const t of torSeite.keys()) {
     if (erreichbar.has(t)) continue;
-    netze++;
-    if (netze > 1) fehler.push({ code: "getrennteNetze", bauteil: t });
     erreichbar.add(t);
+    let groesse = 1;
     const schlange = [t];
     while (schlange.length) {
-      for (const n of nachbarn.get(schlange.shift()!)!) if (!erreichbar.has(n)) (erreichbar.add(n), schlange.push(n));
+      for (const n of nachbarn.get(schlange.shift()!)!) if (!erreichbar.has(n)) (erreichbar.add(n), schlange.push(n), groesse++);
     }
+    netze.push({ tor: t, groesse });
+  }
+  if (netze.length > 1) {
+    const haupt = netze.reduce((a, b) => (b.groesse > a.groesse ? b : a));
+    for (const n of netze) if (n !== haupt) fehler.push({ code: "getrennteNetze", bauteil: n.tor });
   }
   const fahrErreichbar = fahr.filter((d) => erreichbar.has(d.id));
 
