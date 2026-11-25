@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MELDUNG_CODES } from "../src/catalog/katalog";
+import { OPTIONEN_MELDUNG_CODES } from "../src/catalog/optionen";
 import { config } from "../src/config";
 import { BAUTEIL_TYPEN } from "../src/depot/hof";
 import de from "../src/i18n/de.json";
@@ -19,6 +20,17 @@ describe("Sprachdatei Etappe 2", () => {
     for (const c of ["ungueltigeMasse", "zuKlein", "zuGross", "seitenverhaeltnis", "nichtInFlaeche", "geldFehlt", "hierNicht"]) hat(`grundstueck.fehler.${c}`);
     for (const l of config.grundstueck.landnutzung) hat(`standort.art.${l}`);
     for (const s of ["n", "o", "s", "w"]) hat(`seite.${s}`);
+  });
+  it("Etappe 3a: jede Meldung der Optionsdatei, jeder Kauf- und Personalfehler, jede Personalart und Gruppe hat einen Text", () => {
+    for (const c of OPTIONEN_MELDUNG_CODES) hat(`optionen.${c}`);
+    for (const c of ["nichtKaufbar", "batterie", "lackierung", "option", "gruppe", "keinHof", "keinPlatz", "geldFehlt", "unbekannt"]) hat(`markt.fehler.${c}`);
+    for (const c of ["unbekannt", "schonInspiziert", "geldFehlt"]) hat(`gebraucht.fehler.${c}`);
+    for (const c of ["unbekannt", "lackierung", "geldFehlt"]) hat(`fahrzeuge.fehler.${c}`);
+    for (const c of ["wochenstunden", "unbekannt", "schonGekuendigt", "ausschreibungUnbekannt", "bewerberUnbekannt", "nichtSichtbar", "lohn"]) hat(`personal.fehler.${c}`);
+    for (const a of config.personal.arten) hat(`personal.art.${a}`);
+    for (const q of ["fuehrerschein_d", "bkf", ...config.personal.einweisungen.map((e) => `einweisung_${e}`), ...config.personal.fachrichtungen.map((f) => `fachrichtung_${f}`)]) hat(`personal.quali.${q}`);
+    for (const g of ["bestuhlung", "spiegel", "heizung", "fahrgastinfo", "rampe"]) hat(`markt.gruppe.${g}`);
+    for (const b of ["fahrzeuge", "fahrzeugmarkt", "personal", "betriebshof"]) (hat(`menue.${b}`), hat(`menue.zeichen.${b}`));
   });
   it("keine Gedankenstriche in den Texten", () => {
     for (const [k, v] of Object.entries(texte)) expect(/[–—]/.test(v), k).toBe(false);

@@ -94,6 +94,7 @@ function zeigeHilfe(): void {
       h("p", { text: t("hilfe.karte.text") }),
       h("p", { text: t("hilfe.haltestelle") }),
       h("p", { text: t("hilfe.betriebshof") }),
+      h("p", { text: t("hilfe.menue") }),
     ),
   );
 }
@@ -220,6 +221,14 @@ async function starteEinrichtung(): Promise<void> {
     letzterTag = tag;
     zeigen();
   });
+  // Nur für Oberflächentests: Spielzeit der Spielregeln vorspulen (Bewerber erscheinen erst nach Tagen)
+  (window as unknown as { __spieltest: unknown }).__spieltest = {
+    vorspulenTage: (tage: number) => {
+      fortschreiben(sp, sp.zeit + tage * 86400000, spielKontext);
+      kopf.setzeKontostand(sp.kontostandEur);
+      aktualisiereFenster();
+    },
+  };
   const setzeTempo = (tempo: number) => {
     sim.setSpeed(tempo);
     kopf.setzeTempo(tempo);

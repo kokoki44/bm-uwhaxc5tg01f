@@ -14,6 +14,11 @@ import { IndexedDbStore } from "../src/storage/indexeddb";
 import { istFreigeschaltet } from "../src/world/unlock";
 import { buildWorld, type World } from "../src/world/world";
 import { ladeNorderstedt, netzSperren } from "./helpers/norderstedt";
+import { ladeOptionen } from "../src/catalog/optionen";
+import { kaufeNeu, kreisVon, marktOptionen, standardKonfig } from "../src/fleet/fuhrpark";
+import { ladeFuhrpark, serialisiereFuhrpark } from "../src/fleet/speichern";
+import { fortschreiben, kaufKontext, starteMarkt, type SpielKontext } from "../src/game/spiel";
+import { ladePersonal, schreibeAus, serialisierePersonal, sichtbareBewerber, stelleEin } from "../src/personal/personal";
 
 /**
  * Rauchtest durch den Kernzyklus. Wird mit jeder Etappe um echte Schritte erweitert.
@@ -24,6 +29,7 @@ interface Ctx {
   sim: SimCore;
   world?: World;
   spiel?: SpielZustand;
+  k?: SpielKontext;
 }
 
 const schritte: { name: string; seit: string; run?: (c: Ctx) => Promise<void> | void }[] = [
@@ -49,7 +55,7 @@ const schritte: { name: string; seit: string; run?: (c: Ctx) => Promise<void> | 
       } finally {
         entsperren();
       }
-      c.spiel = neuesSpiel(setup.werte, c.world, jetztCivil());
+      c.spiel = neuesSpiel(setup.werte, c.world, jetztCivil(), 20261125); // feste Zufallszahl: wiederholbar
       expect(c.world.gemeinde.name).toBe("Norderstedt");
       expect(c.world.stops.length).toBeGreaterThan(0);
       expect(c.world.network.edges.length).toBeGreaterThan(0);
@@ -79,22 +85,81 @@ const schritte: { name: string; seit: string; run?: (c: Ctx) => Promise<void> | 
       expect(ladeHof(serialisiereHof(spiel.betriebshof))).toEqual(spiel.betriebshof);
     },
   },
-  { name: "Bus kaufen", seit: "3a" },
-  { name: "Fahrer einstellen", seit: "3a" },
+  {
+    name: "Bus kaufen (Fahrzeugmarkt mit Optionsdatei, Neukauf auf freien Platz, Gebrauchtmarkt)",
+    seit: "3a",
+    run: async (c) => {
+      const spiel = c.spiel!;
+      const kat = await ladeKatalog(readFileSync(config.catalog.fileName), config.catalog);
+      const opt = await ladeOptionen(readFileSync(config.optionen.fileName), config.optionen);
+      expect(opt.meldungen.filter((m) => m.schwere === "fehler")).toEqual([]);
+      const modelle = new Map(kat.modelle.map((m) => [m.modell_id!, m]));
+      c.k = {
+        markt: {
+          modelle, optionen: marktOptionen(opt.optionen), markt: config.fahrzeugmarkt, katalog: config.catalog, hofCfg: config.betriebshof,
+          freigeschaltet: new Set(), frei: config.optionen.frei, kreis: kreisVon(c.world!.gemeinde.kreisschluessel, config.fahrzeugmarkt),
+        },
+        hof: { cfg: config.betriebshof, busse: busMasseAusKatalog(kat.modelle) },
+        region: c.world!.gemeinde.region,
+      };
+      starteMarkt(spiel, c.k);
+      expect(spiel.fuhrpark.angebote).toHaveLength(config.fahrzeugmarkt.gebraucht.angebote);
+      const kk = kaufKontext(spiel, c.k);
+      const m = modelle.get("man_lions_city_12_e_2t")!;
+      const vorher = spiel.kontostandEur;
+      const e = kaufeNeu(kk, m.modell_id!, standardKonfig(m, spiel.firma.farbe, kk));
+      expect(e.ok).toBe(true);
+      if (!e.ok) return;
+      expect(spiel.kontostandEur).toBe(vorher - m.neupreis_eur!);
+      expect(e.bus.kennzeichen.startsWith("SE-")).toBe(true);
+      expect(spiel.fuhrpark.busse).toHaveLength(1);
+    },
+  },
+  {
+    name: "Fahrer einstellen (Ausschreibung, Bewerber nach einigen Tagen, Lohn am Monatsende)",
+    seit: "3a",
+    run: (c) => {
+      const spiel = c.spiel!;
+      let person = null;
+      for (let i = 0; i < 10 && !person; i++) {
+        const a = schreibeAus(spiel.personal, "fahrer", 38, spiel.zeit, spiel.zufall, config.personal);
+        if (!a.ok) throw new Error("Ausschreibung");
+        fortschreiben(spiel, spiel.zeit + config.personal.bewerbung.wartezeitTageMax * 86400000, c.k!);
+        const b = sichtbareBewerber(a.ausschreibung, spiel.zeit)[0];
+        if (b) {
+          const st = stelleEin(spiel.personal, a.ausschreibung.id, b.id, spiel.zeit);
+          if (st.ok) person = st.person;
+        }
+      }
+      expect(person).not.toBeNull();
+      const vorher = spiel.kontostandEur;
+      const ereignisse = fortschreiben(spiel, spiel.zeit + 35 * 86400000, c.k!);
+      expect(ereignisse.some((x) => x.art === "lohn" && x.summeEur > 0)).toBe(true);
+      expect(spiel.kontostandEur).toBeLessThan(vorher);
+    },
+  },
   { name: "Linie anlegen", seit: "3b" },
   { name: "Einen Spieltag simulieren", seit: "4a" },
   {
     name: "Speichern",
     seit: "0",
     run: async (c) => {
-      await c.store.save("rauch", { ticks: c.sim.status().ticks });
+      const s = c.spiel!;
+      await c.store.save("rauch", {
+        ticks: c.sim.status().ticks, betriebshof: serialisiereHof(s.betriebshof!), fuhrpark: serialisiereFuhrpark(s.fuhrpark), personal: serialisierePersonal(s.personal),
+      });
     },
   },
   {
     name: "Laden",
     seit: "0",
     run: async (c) => {
-      expect((await c.store.load("rauch"))?.payload).toEqual({ ticks: c.sim.status().ticks });
+      const s = c.spiel!;
+      const p = (await c.store.load("rauch"))?.payload as { ticks: number; betriebshof: string; fuhrpark: string; personal: string };
+      expect(p.ticks).toBe(c.sim.status().ticks);
+      expect(ladeHof(p.betriebshof)).toEqual(s.betriebshof);
+      expect(ladeFuhrpark(p.fuhrpark)).toEqual(s.fuhrpark);
+      expect(ladePersonal(p.personal, config.personal)).toEqual(s.personal);
     },
   },
 ];

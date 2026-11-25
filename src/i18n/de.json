@@ -83,8 +83,7 @@
   "haltestelle.osm": "OSM-Knoten {id}",
   "karte.beschriftung": "Karte der Gemeinde",
   "hilfe.betriebshof": "Betriebshof: Gestrichelte Flächen mit dem €-Symbol sind Standorte für den ersten Betriebshof. Ein Klick darauf (oder die Liste unter \"Betriebshof\") zeigt Preis, verfügbare Fläche und Anbindung. Nach dem Kauf öffnet sich der Editor.",
-  "kopf.betriebshof": "Betriebshof",
-  "kopf.menue": "Bereiche",
+  "hilfe.menue": "Menüleiste am linken Rand: Fahrzeuge (eigene Busse, Umsetzen, Umlackieren, Verkauf), Fahrzeugmarkt (Neukauf mit Ausstattung und Gebrauchtmarkt), Personal (Stellen ausschreiben, einstellen, kündigen, Lohntabelle) und Betriebshof. Busse brauchen einen freien Stellplatz oder Hallenplatz, auf den sie passen. Der Lohn wird am Monatsende abgebucht.",
 
   "status.katalog": "Fahrzeugkatalog: {modelle} von {zeilen} Zeilen nutzbar, {fehler} Fehler, {hinweise} Hinweise",
   "status.katalogMehr": "und {n} weitere Fehler",
