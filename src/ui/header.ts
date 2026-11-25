@@ -25,7 +25,7 @@ export function baueKopfleiste(
   firma: { name: string; farbe: string },
   region: string | null,
   suedhalbkugel: boolean,
-  aktionen: { tempo(stufe: 0 | Stufe): void; hilfe(): void },
+  aktionen: { tempo(stufe: 0 | Stufe): void; hilfe(): void; betriebshof(): void },
 ): Kopfleiste {
   const root = document.getElementById("kopfleiste")!;
   root.replaceChildren();
@@ -45,11 +45,14 @@ export function baueKopfleiste(
   });
   const hilfe = h("button", { type: "button", "data-testid": "hilfe", text: `? ${t("kopf.hilfe")}` });
   hilfe.addEventListener("click", aktionen.hilfe);
+  const hof = h("button", { type: "button", "data-testid": "menu-betriebshof", text: `▦ ${t("kopf.betriebshof")}` });
+  hof.addEventListener("click", aktionen.betriebshof);
   root.append(
     h("div", { class: "firma" }, h("span", { class: "farbfeld", style: `background:${firma.farbe}`, "aria-hidden": "true" }), firma.name),
     h("div", { class: "feld" }, h("span", { class: "klein", text: t("kopf.kontostand") }), konto),
     h("div", { class: "feld" }, zeit, tagText),
     h("div", { id: "zeitsteuerung", role: "group", "aria-label": t("kopf.zeitsteuerung") }, ...knoepfe),
+    h("nav", { class: "menue", "aria-label": t("kopf.menue") }, hof),
     h("div", { style: "margin-left:auto" }, hilfe),
   );
   document.body.classList.add("im-spiel");

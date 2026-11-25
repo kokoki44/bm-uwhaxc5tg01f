@@ -1,5 +1,6 @@
 import type { Config } from "../config";
 import type { CivilMs } from "../calendar/civil";
+import type { Betriebshof } from "../depot/hof";
 import type { TextKey } from "../i18n";
 import { startFreischaltung, type Freischaltungen } from "../world/unlock";
 import type { World } from "../world/world";
@@ -44,6 +45,8 @@ export interface SpielZustand {
   startZeit: CivilMs;
   gemeinde: { name: string; region: string | null; quelle: GemeindeQuelle };
   freischaltungen: Freischaltungen;
+  /** Erster Betriebshof, sobald ein Grundstück gekauft ist. */
+  betriebshof: Betriebshof | null;
 }
 
 export function neuesSpiel(s: SetupGeprueft, world: World, startZeit: CivilMs): SpielZustand {
@@ -54,5 +57,6 @@ export function neuesSpiel(s: SetupGeprueft, world: World, startZeit: CivilMs): 
     gemeinde: { name: world.gemeinde.name, region: world.gemeinde.region, quelle: s.gemeinde },
     // Startgemeinde freigeschaltet; bei geteilten Städten alle Subdivisionen der Startgemeinde
     freischaltungen: startFreischaltung(world.gebiete.map((g) => g.id)),
+    betriebshof: null,
   };
 }

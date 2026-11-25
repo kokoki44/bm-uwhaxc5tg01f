@@ -26,7 +26,8 @@
       "hauptstrasse": "#f3cf7e",
       "nebenstrasse": "#ffffff",
       "grenze": "#6b5b95",
-      "haltestelle": "#0b5394"
+      "haltestelle": "#0b5394",
+      "standort": "#7b3f98"
     }
   },
   "roads": {

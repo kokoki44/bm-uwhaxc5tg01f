@@ -28,7 +28,7 @@ export function extractStops(extract: OsmExtract, cfg: StopsConfig): Stop[] {
 }
 
 /** Räumlicher Index der Abschnitte in einem Gitter, damit die Zuordnung nicht alle Abschnitte durchsucht. */
-class EdgeIndex {
+export class EdgeIndex {
   private readonly cells = new Map<string, number[]>();
   constructor(
     net: RoadNetwork,

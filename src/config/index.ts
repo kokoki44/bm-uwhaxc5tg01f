@@ -3,7 +3,7 @@ import ferienRaw from "./schulferien.json";
 
 type Farben = Record<
   | "hintergrund" | "wasser" | "gruen" | "gebaeude" | "gebaeudeRand" | "strasseRand"
-  | "autobahn" | "hauptstrasse" | "nebenstrasse" | "grenze" | "haltestelle",
+  | "autobahn" | "hauptstrasse" | "nebenstrasse" | "grenze" | "haltestelle" | "standort",
   string
 >;
 

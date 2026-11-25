@@ -14,6 +14,18 @@ async function neuesSpielMitTastatur(page: Page) {
   await page.keyboard.type("Nordbus Test");
   await page.keyboard.press("Enter");
   await expect(page.locator("#kopfleiste")).toBeVisible({ timeout: 30000 });
+  // Beim Start: Fenster mit den Katalogfehlern (der Katalog enthält zwei Zeilen ohne Länge) und die Standortliste
+  await expect(page.getByTestId("fenster-katalog")).toBeVisible({ timeout: 30000 });
+  await expect(page.getByTestId("fenster-standorte")).toBeVisible();
+}
+
+/** Schließt die beiden Startfenster mit Esc (zuletzt geöffnetes zuerst). */
+async function startfensterSchliessen(page: Page) {
+  await page.getByTestId("fenster-standorte").focus();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("fenster-standorte")).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("fenster-katalog")).toHaveCount(0);
 }
 
 test("Einrichtung prüft Eingaben und zeigt Fehler als Text", async ({ page }) => {
@@ -32,6 +44,7 @@ test("Web-Version startet: Norderstedt laden, Karte, Zeit, Tasten, Fenster", asy
   const fehler: string[] = [];
   page.on("pageerror", (e) => fehler.push(String(e)));
   await neuesSpielMitTastatur(page);
+  await startfensterSchliessen(page);
 
   // Testansicht (Statuszeile): standardmäßig aus, F3 schaltet sie ein
   const status = page.getByTestId("status");
@@ -106,6 +119,7 @@ test("Web-Version startet: Norderstedt laden, Karte, Zeit, Tasten, Fenster", asy
 
 test("Simulations-Worker schafft 600-fach ohne Stocken", async ({ page }, info) => {
   await neuesSpielMitTastatur(page);
+  await startfensterSchliessen(page);
   await page.locator("#map canvas").click({ position: { x: 5, y: 5 } });
   await page.keyboard.press("5");
   await expect(page.getByTestId("tempo-600")).toHaveAttribute("aria-pressed", "true");
@@ -176,6 +190,7 @@ test("Eigene Datei im selben Format laden, falsche Datei mit Meldung ablehnen", 
 
 test("Haltestelle anklicken zeigt ihren Namen", async ({ page }) => {
   await neuesSpielMitTastatur(page);
+  await startfensterSchliessen(page);
   const karte = page.locator("#map");
   // Feste Haltestelle aus dem Datensatz im Projekt (deterministisch, unabhängig von Fenstergröße und Zoom)
   const daten = JSON.parse(gunzipSync(readFileSync("public/data/norderstedt/norderstedt.osm.json.gz")).toString("utf8")) as {

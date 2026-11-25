@@ -98,3 +98,67 @@ export function zeigeWelt(map: MapLibreMap, r: RenderLayers, bbox: [number, numb
   const bounds: LngLatBoundsLike = [[bbox[0], bbox[1]], [bbox[2], bbox[3]]];
   map.fitBounds(bounds, { padding: 40, duration: 0 });
 }
+
+/** Symbol für Standorte: weißes Schild mit Euro-Zeichen, damit Standorte nicht nur über die Farbe erkennbar sind. */
+function standortSymbol(): ImageData {
+  const s = 32;
+  const c = document.createElement("canvas");
+  c.width = c.height = s;
+  const g = c.getContext("2d")!;
+  g.fillStyle = F.standort;
+  g.fillRect(0, 0, s, s);
+  g.fillStyle = "#ffffff";
+  g.fillRect(3, 3, s - 6, s - 6);
+  g.fillStyle = F.standort;
+  g.font = "bold 22px sans-serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText("€", s / 2, s / 2 + 1);
+  return g.getImageData(0, 0, s, s);
+}
+
+/** Standorte für Betriebshöfe als gestrichelte Flächen mit Euro-Symbol. Klick meldet die OSM-ID. */
+export function zeigeStandorte(map: MapLibreMap, daten: GeoJSON.FeatureCollection, onStandort: (id: number, lngLat: [number, number]) => void): void {
+  if (map.getSource("standorte")) {
+    (map.getSource("standorte") as GeoJSONSource).setData(daten);
+    return;
+  }
+  map.addSource("standorte", { type: "geojson", data: daten });
+  if (!map.hasImage("standort")) map.addImage("standort", standortSymbol(), { pixelRatio: 2 });
+  const vor = map.getLayer("haltestellen") ? "haltestellen" : undefined;
+  map.addLayer({ id: "standorte-flaeche", type: "fill", source: "standorte", paint: { "fill-color": F.standort, "fill-opacity": 0.18 } }, vor);
+  map.addLayer({ id: "standorte-rand", type: "line", source: "standorte", paint: { "line-color": F.standort, "line-width": 2, "line-dasharray": [2, 1] } }, vor);
+  map.addLayer({ id: "standorte-symbol", type: "symbol", source: "standorte", layout: { "icon-image": "standort", "icon-size": ws(12, 0.6, 18, 1.2), "icon-allow-overlap": false } }, vor);
+  map.on("click", "standorte-flaeche", (e) => {
+    const f = e.features?.[0];
+    // Ein Klick auf eine Haltestelle in der Fläche gilt der Haltestelle
+    if (map.getLayer("haltestellen") && map.queryRenderedFeatures(e.point, { layers: ["haltestellen"] }).length) return;
+    if (f) onStandort(Number(f.properties?.id), [e.lngLat.lng, e.lngLat.lat]);
+  });
+  map.on("mouseenter", "standorte-flaeche", () => (map.getCanvas().style.cursor = "pointer"));
+  map.on("mouseleave", "standorte-flaeche", () => (map.getCanvas().style.cursor = ""));
+}
+
+export function standorteSichtbar(map: MapLibreMap, sichtbar: boolean): void {
+  for (const id of ["standorte-flaeche", "standorte-rand", "standorte-symbol"]) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", sichtbar ? "visible" : "none");
+}
+
+/** Hebt ein Rechteck hervor: Vorschau des Startgrundstücks oder gekaufter Betriebshof (mit Anbindungslinie). */
+export function zeigeGrundstueck(map: MapLibreMap, ring: [number, number][] | null, farbe: string, anbindung: [number, number][] | null = null): void {
+  const daten: GeoJSON.FeatureCollection = {
+    type: "FeatureCollection",
+    features: [
+      ...(ring ? [{ type: "Feature" as const, properties: {}, geometry: { type: "Polygon" as const, coordinates: [ring] } }] : []),
+      ...(anbindung ? [{ type: "Feature" as const, properties: { anbindung: true }, geometry: { type: "LineString" as const, coordinates: anbindung } }] : []),
+    ],
+  };
+  const src = map.getSource("grundstueck") as GeoJSONSource | undefined;
+  if (src) src.setData(daten);
+  else {
+    map.addSource("grundstueck", { type: "geojson", data: daten });
+    map.addLayer({ id: "grundstueck-flaeche", type: "fill", source: "grundstueck", filter: ["==", ["geometry-type"], "Polygon"] as never, paint: { "fill-color": farbe, "fill-opacity": 0.35 } });
+    map.addLayer({ id: "grundstueck-rand", type: "line", source: "grundstueck", paint: { "line-color": farbe, "line-width": 3 } });
+  }
+  map.setPaintProperty("grundstueck-flaeche", "fill-color", farbe);
+  map.setPaintProperty("grundstueck-rand", "line-color", farbe);
+}

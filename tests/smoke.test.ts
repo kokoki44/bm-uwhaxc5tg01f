@@ -1,5 +1,11 @@
 import "fake-indexeddb/auto";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { ladeKatalog } from "../src/catalog/katalog";
+import { analysiereHof } from "../src/depot/analyse";
+import { busMasseAusKatalog, ladeHof, neuerHof, serialisiereHof, type HofKontext } from "../src/depot/hof";
+import { kaufeStartgrundstueck } from "../src/world/standorte";
+import { BEISPIEL_B, BEISPIEL_T, baueBeispiel } from "./helpers/beispiel-hof";
 import { jetztCivil } from "../src/calendar/civil";
 import { config } from "../src/config";
 import { neuesSpiel, pruefeSetup, type SpielZustand } from "../src/game/setup";
@@ -52,7 +58,27 @@ const schritte: { name: string; seit: string; run?: (c: Ctx) => Promise<void> | 
       expect(c.spiel.kontostandEur).toBe(2000000);
     },
   },
-  { name: "Betriebshof bauen", seit: "2" },
+  {
+    name: "Betriebshof bauen (Katalog lesen, Standort wählen, Grundstück kaufen, gültiges Layout)",
+    seit: "2",
+    run: async (c) => {
+      const kat = await ladeKatalog(readFileSync(config.catalog.fileName), config.catalog);
+      expect(kat.modelle.length).toBeGreaterThan(0);
+      const ctx: HofKontext = { cfg: config.betriebshof, busse: busMasseAusKatalog(kat.modelle) };
+      const spiel = c.spiel!;
+      const s = c.world!.standorte[0];
+      const kauf = kaufeStartgrundstueck(spiel, s, s.startLage, BEISPIEL_B, BEISPIEL_T, config.grundstueck);
+      expect(kauf.ok).toBe(true);
+      if (!kauf.ok) return;
+      spiel.betriebshof = neuerHof(kauf.grundstueck);
+      baueBeispiel(spiel.betriebshof, spiel, ctx);
+      const a = analysiereHof(spiel.betriebshof, ctx);
+      expect(a.gueltig).toBe(true);
+      expect(a.betriebsbereit).toBe(true);
+      expect(spiel.kontostandEur).toBeGreaterThan(0);
+      expect(ladeHof(serialisiereHof(spiel.betriebshof))).toEqual(spiel.betriebshof);
+    },
+  },
   { name: "Bus kaufen", seit: "3a" },
   { name: "Fahrer einstellen", seit: "3a" },
   { name: "Linie anlegen", seit: "3b" },

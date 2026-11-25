@@ -1,5 +1,14 @@
+import katalogUrl from "../fahrzeugkatalog.xlsx?url";
 import { jetztCivil } from "./calendar/civil";
+import type { KatalogErgebnis } from "./catalog/katalog";
 import { config } from "./config";
+import { analysiereHof } from "./depot/analyse";
+import { busMasseAusKatalog, type HofKontext } from "./depot/hof";
+import { standorteSichtbar, zeigeGrundstueck, zeigeStandorte } from "./map/map";
+import { oeffneEditor } from "./ui/editor";
+import { katalogFehlerZeilen, katalogStatus, zeigeKatalogFehler } from "./ui/katalogfenster";
+import { oeffneStandortliste, standortKlick, type StandortKontext } from "./ui/standortwahl";
+import { hofZuGeo, rechteckRing, torAnbindung } from "./world/standorte";
 import { neuesSpiel, type SpielZustand } from "./game/setup";
 import { t, type TextKey } from "./i18n";
 import { createMap, zeigeWelt } from "./map/map";
@@ -15,7 +24,14 @@ import type { World } from "./world/world";
 
 document.title = t("app.titel");
 const status = document.getElementById("status")!;
-const zeilen: Record<string, string> = { welt: "", daten: "", sim: "", speicher: "" };
+const zeilen: Record<string, string> = { welt: "", daten: "", katalog: "", sim: "", speicher: "" };
+
+// Fahrzeugkatalog direkt aus der xlsx-Datei lesen (in App und Web gleich), parallel zur Einrichtung
+const katalogLaden: Promise<KatalogErgebnis> = fetch(katalogUrl)
+  .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(`HTTP ${r.status}`))))
+  // ExcelJS ist groß, deshalb als eigenes Teilpaket nachgeladen
+  .then(async (b) => (await import("./catalog/katalog")).ladeKatalog(b, config.catalog))
+  .catch((e: unknown) => ({ modelle: [], meldungen: [{ schwere: "fehler" as const, code: "dateiUnlesbar" as const, wert: String(e) }], zeilenGesamt: 0 }));
 const zeigen = () => (status.innerText = Object.values(zeilen).filter(Boolean).join("\n"));
 
 const map = createMap("map");
@@ -63,6 +79,7 @@ function zeigeHilfe(): void {
       h("h3", { text: t("hilfe.karte") }),
       h("p", { text: t("hilfe.karte.text") }),
       h("p", { text: t("hilfe.haltestelle") }),
+      h("p", { text: t("hilfe.betriebshof") }),
     ),
   );
 }
@@ -96,11 +113,44 @@ async function starteEinrichtung(): Promise<void> {
   });
   zeigen();
 
+  const katalog = await katalogLaden;
+  zeilen.katalog = [katalogStatus(katalog), ...katalogFehlerZeilen(katalog)].join("\n");
+  zeigen();
+  const hofKontext: HofKontext = { cfg: config.betriebshof, busse: busMasseAusKatalog(katalog.modelle) };
+  const sp = spiel;
+
   const zeitsteuerung = new Zeitsteuerung(config.sim.speeds, config.sim.startSpeed);
   const kopf = baueKopfleiste(spiel.firma, world.gemeinde.region, world.bbox[1] < 0, {
     tempo: (stufe) => setzeTempo(stufe === 0 ? zeitsteuerung.pause() : zeitsteuerung.setzeStufe(stufe)),
     hilfe: zeigeHilfe,
+    betriebshof: () => (sp.betriebshof ? hofEditor() : oeffneStandortliste(standortKontext)),
   });
+
+  // Standortwahl und Betriebshof
+  const standortKontext: StandortKontext = {
+    map,
+    world,
+    spiel: sp,
+    kontoGeaendert: () => kopf.setzeKontostand(sp.kontostandEur),
+    gekauft: () => hofEditor(),
+  };
+  const hofAufKarte = () => {
+    const hof = sp.betriebshof;
+    if (!hof) return;
+    const f = hof.grundstueck.flaeche;
+    const a = analysiereHof(hof, hofKontext);
+    const linie = [...a.torSeite].map(([id, s]) => torAnbindung(hof, id, s, world.network, config.grundstueck.anbindungSuchradiusM)).find(Boolean);
+    zeigeGrundstueck(map, rechteckRing(hofZuGeo(hof.grundstueck.ursprung, f.x, f.y), f.b, f.t), sp.firma.farbe, linie ? [linie.tor, linie.punkt] : null);
+  };
+  const hofEditor = () => {
+    if (!hofKontext.busse.length) {
+      oeffneFenster("hinweis", t("editor.titel"), h("p", { text: t("editor.ohneKatalog") }));
+      return;
+    }
+    standorteSichtbar(map, false);
+    oeffneEditor({ spiel: sp, ctx: hofKontext, world, kontoGeaendert: () => kopf.setzeKontostand(sp.kontostandEur), geschlossen: () => (hofAufKarte(), map.resize()) });
+  };
+  zeigeStandorte(map, antwort.render.standorte, (id, p) => standortKlick(standortKontext, id, p));
   map.resize();
   kopf.setzeKontostand(spiel.kontostandEur);
   kopf.setzeZeit(spiel.startZeit);
@@ -116,6 +166,10 @@ async function starteEinrichtung(): Promise<void> {
     kopf.setzeTempo(tempo);
   };
   setzeTempo(zeitsteuerung.tempo);
+
+  // Beim Start: Katalogfehler (nur wenn es welche gibt), dann die Suche nach dem ersten Standort
+  zeigeKatalogFehler(katalog);
+  oeffneStandortliste(standortKontext);
 
   document.addEventListener("keydown", (e) => {
     const ziel = e.target as HTMLElement;

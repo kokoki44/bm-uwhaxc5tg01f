@@ -11,6 +11,8 @@ export interface RenderLayers {
   gewaesser: GeoJSON.FeatureCollection;
   haltestellen: GeoJSON.FeatureCollection;
   grenze: GeoJSON.FeatureCollection;
+  /** Standorte für Betriebshöfe (Gewerbe- und Industrieflächen) mit Preis. */
+  standorte: GeoJSON.FeatureCollection;
 }
 
 /** Straßenklasse für die Darstellung, nach Bedeutung gestaffelt. */
@@ -68,5 +70,10 @@ export function buildRenderLayers(extract: OsmExtract, world: World): RenderLaye
     geometry: { type: "Point", coordinates: s.coord },
   }));
   const grenze: GeoJSON.Feature[] = world.gemeinde.rings.map((r) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: r } }));
-  return { strassen: fc(strassen), gebaeude: fc(gebaeude), gruen: fc(gruen), wasser: fc(wasser), gewaesser: fc(gewaesser), haltestellen: fc(haltestellen), grenze: fc(grenze) };
+  const standorte: GeoJSON.Feature[] = world.standorte.map((s) => ({
+    type: "Feature",
+    properties: { id: s.id, preis: s.preisEurM2, text: `${s.preisEurM2} €/m²` },
+    geometry: { type: "Polygon", coordinates: [s.ring] },
+  }));
+  return { strassen: fc(strassen), gebaeude: fc(gebaeude), gruen: fc(gruen), wasser: fc(wasser), gewaesser: fc(gewaesser), haltestellen: fc(haltestellen), grenze: fc(grenze), standorte: fc(standorte) };
 }

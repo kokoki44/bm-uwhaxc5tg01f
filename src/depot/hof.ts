@@ -1,3 +1,4 @@
+import type { Bus } from "../catalog/katalog";
 import type { BetriebshofConfig, GrundstueckConfig } from "../config";
 import type { LonLat } from "../world/geo";
 import { enthaelt, flaecheM2, kurzLang, ueberlappt, type Rechteck, type Seite } from "./rechteck";
@@ -65,6 +66,13 @@ export interface Kasse {
 }
 
 const cent = (x: number) => Math.round(x * 100) / 100;
+
+/** Maße der nutzbaren Katalogmodelle in Metern (Straßenbahnen ausgenommen, sie stehen nicht im Betriebshof). */
+export function busMasseAusKatalog(modelle: Pick<Bus, "laenge_mm" | "breite_mm" | "bauart" | "fahrzeugart">[]): BusMass[] {
+  return modelle
+    .filter((m) => m.fahrzeugart !== "Tram" && m.laenge_mm && m.breite_mm)
+    .map((m) => ({ laengeM: m.laenge_mm! / 1000, breiteM: m.breite_mm! / 1000, bauart: m.bauart ?? "" }));
+}
 
 /** Kleinster Bus: kürzeste Länge und schmalste Breite im Katalog. */
 export function kleinsterBus(busse: BusMass[]): BusMass {

@@ -5,6 +5,7 @@ import { extractBoundaries, inArea, regionOf, type AdminArea } from "./boundarie
 import { buildDemandGrid, type DemandGrid } from "./demand";
 import { bboxOf, LocalProj, type LonLat } from "./geo";
 import { buildRoadNetwork, type RoadNetwork } from "./roads";
+import { buildStandorte, type Standort } from "./standorte";
 import { extractStops, snapStops, type Stop } from "./stops";
 
 /** Spielbares Gebiet: ganze Gemeinde oder, bei großen Städten, eine Subdivision. */
@@ -24,6 +25,8 @@ export interface World {
   network: RoadNetwork;
   stops: Stop[];
   demand: DemandGrid;
+  /** Gewerbe- und Industrieflächen als Standorte für Betriebshöfe. */
+  standorte: Standort[];
   osmStand: string | null;
   bbox: [number, number, number, number];
 }
@@ -69,6 +72,9 @@ export function buildWorld(extract: OsmExtract, cfg: Config, fortschritt: Fortsc
     gebiete[n].arbeitsplaetze += c.arbeitsplaetze;
   }
 
+  fortschritt("laden.standorte", 0.92);
+  const standorte = buildStandorte(extract, gemeinde, network, demand.cells, cfg.grundstueck);
+
   fortschritt("laden.fertig", 1);
   return {
     gemeinde: {
@@ -84,6 +90,7 @@ export function buildWorld(extract: OsmExtract, cfg: Config, fortschritt: Fortsc
     network,
     stops,
     demand,
+    standorte,
     osmStand: extract.osm3s?.timestamp_osm_base ?? null,
     bbox: [bb.minLon, bb.minLat, bb.maxLon, bb.maxLat],
   };
