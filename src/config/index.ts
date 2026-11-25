@@ -67,7 +67,79 @@ export interface Config {
   };
   storage: { saveVersion: number; databaseName: string; indexedDbStore: string };
   data: { norderstedtPath: string };
-  catalog: { fileName: string; sheetName: string; columnCount: number };
+  grundstueck: GrundstueckConfig;
+  betriebshof: BetriebshofConfig;
+  catalog: CatalogConfig;
+}
+
+export interface GrundstueckConfig {
+  /** OSM-Landnutzung, aus der Standorte für Betriebshöfe entstehen. */
+  landnutzung: string[];
+  bodenpreisMinEurM2: number;
+  bodenpreisMaxEurM2: number;
+  /** Umkreis, in dem Einwohner und Arbeitsplätze die Lage (und damit den Preis) bestimmen. */
+  dichteRadiusM: number;
+  mindestflaecheM2: number;
+  mindestSeiteM: number;
+  hoechstflaecheM2: number;
+  anbindungSuchradiusM: number;
+  lageSuchschrittM: number;
+  startBreiteM: number;
+  startTiefeM: number;
+}
+
+export interface BauteilConfig {
+  /** Mindestmaß der kurzen und der langen Seite in m (Rechteck darf gedreht sein). */
+  minA: number;
+  minB: number;
+  /** Mindestmaß folgt aus dem kleinsten Bus im Katalog plus Rangierraum und Seitenabstand. */
+  nachBus?: boolean;
+  /** Feldgröße für Arbeitsplätze oder Zapfsäulen. */
+  feldA?: number;
+  feldB?: number;
+  kostenEurM2: number;
+  farbe: string;
+}
+
+export interface BetriebshofConfig {
+  raster: number[];
+  rasterStandard: number;
+  seitenabstandM: number;
+  rangierraumM: number;
+  zufahrtMinM: number;
+  gegenverkehrAbM: number;
+  gebaeudeKontaktMinM: number;
+  hofGeschwindigkeitKmh: number;
+  waschDurchsatzProStunde: number;
+  betankungMin: number;
+  abrissErstattung: number;
+  ladeleistungKw: { min: number; max: number; standard: number };
+  lagereinheitenProM2: number;
+  pausenraumGrundM2: number;
+  pausenraumM2ProPerson: number;
+  kuecheM2ProPlatz: number;
+  toiletteM2ProKabine: number;
+  /** ASR A4.1: [bis Beschäftigte, nötige Toiletten], aufsteigend. */
+  toilettenNachBeschaeftigten: [number, number][];
+  /** ASR A4.1: über der Tabelle eine Toilette mehr je so viele weitere Beschäftigte. */
+  toilettenBeschaeftigteJeWeitere: number;
+  bauteile: Record<string, BauteilConfig>;
+}
+
+export interface CatalogConfig {
+  fileName: string;
+  sheetName: string;
+  columnCount: number;
+  /** Blatt mit den Regeln je Spalte (Pflicht, erlaubte Werte, Verhalten wenn leer). */
+  spaltenBlatt: string;
+  /** Blatt mit den Ersatzwerten je Klasse (Bauart und Antrieb). */
+  standardwerteBlatt: string;
+  /** Zeile mit den Spaltennamen im Blatt Standardwerte. */
+  standardwerteKopfZeile: number;
+  /** Ohne diese Felder ist eine Zeile nicht nutzbar (Identität, Länge und Breite). */
+  pflichtFuerNutzung: string[];
+  /** Erlaubte relative Abweichung zwischen gerechneter Formel und Wert in der Datei. */
+  formelToleranz: number;
 }
 
 export interface FerienEintrag {
@@ -101,6 +173,17 @@ export function validateConfig(c: unknown): Config {
   if (!cfg.storage.databaseName || !cfg.storage.indexedDbStore) bad("storage.*");
   if (!cfg.data?.norderstedtPath) bad("data.norderstedtPath");
   if (!cfg.catalog?.fileName || cfg.catalog.columnCount !== 63) bad("catalog");
+  const g = cfg.grundstueck;
+  if (!g || !(g.bodenpreisMinEurM2 > 0) || !(g.bodenpreisMaxEurM2 >= g.bodenpreisMinEurM2)) bad("grundstueck.bodenpreis");
+  if (!(g.mindestflaecheM2 > 0) || !(g.hoechstflaecheM2 >= g.mindestflaecheM2) || !(g.mindestSeiteM > 0)) bad("grundstueck.flaechen");
+  const b = cfg.betriebshof;
+  if (!b || !b.raster?.length || b.raster.some((r) => !(r >= 1) || !Number.isInteger(r)) || !b.raster.includes(b.rasterStandard)) bad("betriebshof.raster (ganze Meter, kleinste Stufe 1 m)");
+  if (Math.min(...b.raster) !== 1) bad("betriebshof.raster: kleinste Rastergröße 1 m");
+  if (!(b.hofGeschwindigkeitKmh > 0) || !(b.abrissErstattung >= 0 && b.abrissErstattung <= 1)) bad("betriebshof");
+  for (const typ of ["tor", "fahrweg", "stellplatz", "halle", "werkstatt", "waschanlage", "lager", "buero", "tankstelle", "ladeplatz", "toilette", "kueche", "pausenraum"]) {
+    const bt = b.bauteile?.[typ];
+    if (!bt || !(bt.kostenEurM2 >= 0) || !/^#[0-9a-f]{6}$/i.test(bt.farbe) || (!bt.nachBus && !(bt.minA > 0 && bt.minB >= bt.minA))) bad(`betriebshof.bauteile.${typ}`);
+  }
   return cfg;
 }
 

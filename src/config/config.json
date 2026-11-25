@@ -76,6 +76,55 @@
   "world": {
     "teilungAbEinwohnern": 250000
   },
+  "grundstueck": {
+    "landnutzung": ["commercial", "industrial"],
+    "bodenpreisMinEurM2": 150,
+    "bodenpreisMaxEurM2": 300,
+    "dichteRadiusM": 1000,
+    "mindestflaecheM2": 2000,
+    "mindestSeiteM": 20,
+    "hoechstflaecheM2": 100000,
+    "anbindungSuchradiusM": 1500,
+    "lageSuchschrittM": 5,
+    "startBreiteM": 50,
+    "startTiefeM": 40
+  },
+  "betriebshof": {
+    "raster": [1, 2, 5, 10],
+    "rasterStandard": 1,
+    "seitenabstandM": 0.9,
+    "rangierraumM": 1.5,
+    "zufahrtMinM": 3.5,
+    "gegenverkehrAbM": 7,
+    "gebaeudeKontaktMinM": 1,
+    "hofGeschwindigkeitKmh": 10,
+    "waschDurchsatzProStunde": 10,
+    "betankungMin": 8,
+    "abrissErstattung": 0.5,
+    "ladeleistungKw": { "min": 22, "max": 450, "standard": 150 },
+    "lagereinheitenProM2": 1,
+    "pausenraumGrundM2": 6,
+    "pausenraumM2ProPerson": 1,
+    "kuecheM2ProPlatz": 1.5,
+    "toiletteM2ProKabine": 4,
+    "toilettenNachBeschaeftigten": [[5, 1], [10, 1], [25, 2], [50, 3], [75, 5], [100, 6], [130, 7], [160, 8], [190, 9], [220, 10], [250, 11]],
+    "toilettenBeschaeftigteJeWeitere": 30,
+    "bauteile": {
+      "tor": { "minA": 4, "minB": 4, "kostenEurM2": 120, "farbe": "#5f6b73" },
+      "fahrweg": { "minA": 3.5, "minB": 3.5, "kostenEurM2": 120, "farbe": "#b9bfc4" },
+      "stellplatz": { "minA": 0, "minB": 0, "nachBus": true, "kostenEurM2": 120, "farbe": "#8fb8de" },
+      "halle": { "minA": 4, "minB": 15, "kostenEurM2": 1400, "farbe": "#6d8fb3" },
+      "werkstatt": { "minA": 5, "minB": 15, "feldA": 5, "feldB": 15, "kostenEurM2": 2300, "farbe": "#e0a458" },
+      "waschanlage": { "minA": 5, "minB": 18, "kostenEurM2": 4400, "farbe": "#7cc6c2" },
+      "lager": { "minA": 4, "minB": 4, "kostenEurM2": 600, "farbe": "#c9a27e" },
+      "buero": { "minA": 4, "minB": 4, "kostenEurM2": 2200, "farbe": "#d98c8c" },
+      "tankstelle": { "minA": 4, "minB": 8, "feldA": 4, "feldB": 8, "kostenEurM2": 3100, "farbe": "#c7b44a" },
+      "ladeplatz": { "minA": 0, "minB": 0, "nachBus": true, "kostenEurM2": 1200, "farbe": "#8cc084" },
+      "toilette": { "minA": 2, "minB": 2, "kostenEurM2": 2400, "farbe": "#b39ddb" },
+      "kueche": { "minA": 3, "minB": 3, "kostenEurM2": 2400, "farbe": "#c5a3d9" },
+      "pausenraum": { "minA": 4, "minB": 4, "kostenEurM2": 2400, "farbe": "#a58bc9" }
+    }
+  },
   "setup": {
     "startkapitalStandard": 2000000,
     "startkapitalMin": 1,
@@ -94,6 +143,11 @@
   "catalog": {
     "fileName": "fahrzeugkatalog.xlsx",
     "sheetName": "Busse",
-    "columnCount": 63
+    "columnCount": 63,
+    "spaltenBlatt": "Spalten",
+    "standardwerteBlatt": "Standardwerte",
+    "standardwerteKopfZeile": 4,
+    "pflichtFuerNutzung": ["modell_id", "hersteller", "modellfamilie", "modell", "fahrzeugart", "bauart", "antrieb", "laenge_mm", "breite_mm"],
+    "formelToleranz": 0.000001
   }
 }
