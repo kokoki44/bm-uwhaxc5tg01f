@@ -42,6 +42,17 @@ export function addDays(ms: CivilMs, tage: number): CivilMs {
   return ms + tage * 86400000;
 }
 
+/** Kalendermonate addieren; fehlt der Tag im Zielmonat (31. oder 29.2.), gilt der letzte Tag des Monats. Uhrzeit bleibt. */
+export function addMonate(ms: CivilMs, n: number): CivilMs {
+  const p = parts(ms);
+  const versatz = ms - civil(p.jahr, p.monat, p.tag);
+  const gesamt = p.monat - 1 + n;
+  const jahr = p.jahr + Math.floor(gesamt / 12);
+  const monat = (((gesamt % 12) + 12) % 12) + 1;
+  const tage = Math.round((civil(jahr, monat + 1, 1) - civil(jahr, monat, 1)) / 86400000);
+  return civil(jahr, monat, Math.min(p.tag, tage)) + versatz;
+}
+
 /** Spielstart in der Gegenwart: Ortszeit des Rechners, auf die Minute. */
 export function jetztCivil(now: Date = new Date()): CivilMs {
   return civil(now.getFullYear(), now.getMonth() + 1, now.getDate(), now.getHours(), now.getMinutes());

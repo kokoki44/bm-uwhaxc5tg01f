@@ -1,6 +1,6 @@
 import type { BetriebshofConfig } from "../config";
-import { hallenPlaetze, type HofAnalyse } from "../depot/analyse";
-import { passtBus, platzbedarf, type Betriebshof, type BusMass } from "../depot/hof";
+import { analysiereHof, hallenPlaetze, type HofAnalyse } from "../depot/analyse";
+import { passtBus, platzbedarf, type Betriebshof, type BusMass, type HofKontext } from "../depot/hof";
 import { SEITEN, seitenTiefe } from "../depot/rechteck";
 
 /** Platz eines Busses im Betriebshof: ein Stellplatz (ein Bus) oder ein Platz in einer Halle. */
@@ -72,4 +72,11 @@ export function platzFrei(hof: Betriebshof, a: HofAnalyse, belegung: Belegung[],
  */
 export function alleBusseHabenPlatz(hof: Betriebshof, a: HofAnalyse, belegung: Belegung[], cfg: BetriebshofConfig): boolean {
   return belegung.every((b) => platzFrei(hof, a, belegung, b.mass, b.platz, cfg, b.busId));
+}
+
+/** Darf das Bauteil abgerissen werden? Nein, wenn danach ein Bus keinen gültigen Platz mehr hätte (Annahme A3-22). */
+export function abrissErlaubt(hof: Betriebshof, bauteilId: number, belegung: Belegung[], ctx: HofKontext): boolean {
+  if (!belegung.length) return true;
+  const probe: Betriebshof = { ...hof, bauteile: hof.bauteile.filter((x) => x.id !== bauteilId) };
+  return alleBusseHabenPlatz(probe, analysiereHof(probe, ctx), belegung, ctx.cfg);
 }

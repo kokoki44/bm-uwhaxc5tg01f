@@ -6,7 +6,7 @@ import {
 } from "../depot/hof";
 import type { Seite } from "../depot/rechteck";
 import { berechneWege, type HofWege } from "../depot/wege";
-import { alleBusseHabenPlatz, type Belegung, type PlatzRef } from "../fleet/plaetze";
+import { abrissErlaubt, type Belegung, type PlatzRef } from "../fleet/plaetze";
 import type { SpielZustand } from "../game/setup";
 import { t, type TextKey } from "../i18n";
 import { torAnbindung } from "../world/standorte";
@@ -291,13 +291,9 @@ export function oeffneEditor(k: EditorKontext): void {
     const abriss = h("button", { type: "button", "data-testid": "auswahl-abreissen", text: t("editor.abreissen", { erstattung: euro(erstattung) }) });
     abriss.addEventListener("click", () => {
       // Ein Bauteil, ohne das ein Bus keinen gültigen Platz mehr hätte, bleibt stehen (Annahme A3-22)
-      const bel = k.belegung?.() ?? [];
-      if (bel.length) {
-        const probe: Betriebshof = { ...hof, bauteile: hof.bauteile.filter((x) => x.id !== b.id) };
-        if (!alleBusseHabenPlatz(probe, analysiereHof(probe, k.ctx), bel, cfg)) {
-          melde(t("editor.abrissBelegt", { name: bezeichnung(b) }));
-          return;
-        }
+      if (!abrissErlaubt(hof, b.id, k.belegung?.() ?? [], k.ctx)) {
+        melde(t("editor.abrissBelegt", { name: bezeichnung(b) }));
+        return;
       }
       const e = abreissen(hof, k.spiel, b.id, cfg);
       melde(t("editor.abgerissen", { name: bezeichnung(b), erstattung: euro(e ?? 0) }), true);

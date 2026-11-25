@@ -220,7 +220,7 @@ function gebrauchtmarkt(ui: SpielUi): { el: HTMLElement; zeichne(): void } {
         const m = k.modelle.get(a.modellId)!;
         const insp = h("button", { type: "button", "data-testid": `angebot-inspektion-${a.id}`, disabled: a.inspiziert, text: t("gebraucht.inspektion", { gebuehr: euroRund(k.markt.inspektionEur) }) });
         insp.addEventListener("click", () => {
-          const e = inspiziere(ui.spiel.fuhrpark, a.id, ui.spiel, k);
+          const e = inspiziere(ui.spiel.fuhrpark, a.id, ui.spiel, k, ui.spiel.zeit);
           meldung.className = e.ok ? "erfolg" : "meldung";
           meldung.textContent = e.ok ? t("gebraucht.inspiziert", { zustand: a.zustand }) : t(`gebraucht.fehler.${e.fehler}` as TextKey);
           ui.kontoGeaendert();

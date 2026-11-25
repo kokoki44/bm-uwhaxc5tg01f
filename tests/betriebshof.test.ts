@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { config } from "../src/config";
-import { analysiereHof, beschaeftigteFuerToiletten, fuhrparkGrenze, hallenPlaetze } from "../src/depot/analyse";
+import { analysiereHof, beschaeftigteFuerToiletten, fuhrparkGrenze, hallenPlaetze, umschliessendeFahrflaechen } from "../src/depot/analyse";
 import {
   abreissen, bauen, baukostenEur, ladeHof, mindestmass, neuerHof, passtBus, serialisiereHof, setzeLadeleistung, zukaufen, zukaufHoechstM,
   type BauteilTyp, type Betriebshof, type BusMass, type HofKontext, type Kasse,
@@ -365,6 +365,25 @@ describe("Betriebshof: Layout-Gültigkeit", () => {
       const a = analysiereHof(h, ctx);
       expect(a.gueltig).toBe(true);
       expect(warnt(h, x.id)).toBe(true);
+    });
+
+    it("Regression: Fahrwege, die sich nur an einer Ecke berühren, schließen keinen Rundweg", () => {
+      const h = hof(60, 50);
+      const k = kasse();
+      baue(h, k, "tor", { x: 0, y: 30, b: 4, t: 7 });
+      const d = baue(h, k, "fahrweg", { x: 4, y: 10, b: 7, t: 30 }); // D, vom Tor nach Norden
+      baue(h, k, "fahrweg", { x: 11, y: 33, b: 30, t: 7 }); // C, breit an D
+      baue(h, k, "fahrweg", { x: 41, y: 3, b: 7, t: 37 }); // B, breit an C
+      baue(h, k, "fahrweg", { x: 11, y: 3, b: 30, t: 7 }); // A, breit an B, berührt D nur an der Ecke (11, 10)
+      baue(h, k, "stellplatz", { x: 11, y: 12, b: 8, t: 4 }); // Stirnseite an D
+      const a = analysiereHof(h, ctx);
+      expect(a.gueltig).toBe(true);
+      // Die Wege umschließen auf dem Raster eine Fläche, bilden aber im Netz keinen Kreis: Hufeisen ohne Wendemöglichkeit
+      expect(umschliessendeFahrflaechen(h.bauteile.filter((b) => b.typ === "fahrweg" || b.typ === "tor"), h.grundstueck.flaeche).has(d.id)).toBe(true);
+      expect(warnt(h, d.id)).toBe(true);
+      // mit breitem Schluss zwischen A und D ist es ein Rundweg
+      baue(h, k, "fahrweg", { x: 4, y: 3, b: 7, t: 7 });
+      expect(warnt(h, d.id)).toBe(false);
     });
 
     it("Rundweg ist eine Wendemöglichkeit, ein Stich davor nicht", () => {

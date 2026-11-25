@@ -222,7 +222,21 @@ export function ohneWendemoeglichkeit(
     }
     return { dist, vorg };
   };
-  const rundweg = umschliessendeFahrflaechen(fahr, flaeche);
+  // Rundweg: grenzt an eine umschlossene Fläche UND liegt im Netz auf einem Kreis (breite Verbindungen, keine Ecken)
+  const imKreis = new Set<number>();
+  for (const [x, ys] of adj)
+    for (const y of ys) {
+      if (x >= y) continue;
+      // Kante x-y liegt auf einem Kreis, wenn y ohne diese Kante von x aus erreichbar ist
+      const ges = new Set([x]);
+      const q = [x];
+      while (q.length) {
+        const u = q.shift()!;
+        for (const v of adj.get(u) ?? []) if (!(u === x && v === y) && !ges.has(v)) (ges.add(v), q.push(v));
+      }
+      if (ges.has(y)) (imKreis.add(x), imKreis.add(y));
+    }
+  const rundweg = new Set([...umschliessendeFahrflaechen(fahr, flaeche)].filter((id) => imKreis.has(id)));
   // Durchfahrt: kürzester Weg zwischen zwei Toren, die weit genug auseinander liegen
   const tore = fahr.filter((d) => torSeite.has(d.id));
   for (let i = 0; i < tore.length; i++)

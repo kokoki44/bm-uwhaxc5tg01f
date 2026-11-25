@@ -104,6 +104,8 @@ export interface FahrzeugmarktConfig {
   haendlerAbschlag: number;
   umlackierenEur: number;
   inspektionEur: number;
+  /** HU-Intervall, wenn der Katalog keines nennt. */
+  huMonateStandard: number;
   /** Restwert am Ende der Lebensdauer (Anteil am Neupreis). */
   restwertMin: number;
   /** Preisanteil, der nicht vom Zustand abhängt: Faktor = Basis + (1 − Basis) × Zustand. */
@@ -169,6 +171,10 @@ export interface PersonalConfig {
   };
   zufriedenheitStart: [number, number];
   gesundheitStart: [number, number];
+  /** Spanne der Erfahrungsjahre von Bewerbern in der letzten Stufe (ab deren Schwelle). */
+  erfahrungSpanneLetzteStufe: number;
+  /** Qualifikationen, die jeder Fahrer hat (Führerschein Klasse D, Berufskraftfahrer-Qualifikation). */
+  fahrerQualifikationen: string[];
   einweisungen: string[];
   einweisungAnteilBasis: number;
   einweisungAnteilJeStufe: number;

@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { addDays, civil, parts } from "../src/calendar/civil";
+import { addDays, addMonate, civil, parts } from "../src/calendar/civil";
 import type { Bus } from "../src/catalog/katalog";
 import { config } from "../src/config";
 import { analysiereHof } from "../src/depot/analyse";
@@ -7,8 +7,8 @@ import {
   alterJahre, batterien, belegung, busWert, kaufeGebraucht, kaufeNeu, lackiereUm, neupreis, neuKaufbar, plaetzeMitBatterie, platzFuer,
   pruefeKonfig, restwert, setzeUm, standardKonfig, verkaufe, verkaufserloes, wert, type Konfiguration,
 } from "../src/fleet/fuhrpark";
-import { baujahrSpanne, erneuereAngebote, erzeugeAngebot, gebrauchtModelle, inspiziere } from "../src/fleet/markt";
-import { alleBusseHabenPlatz, freiePlaetze } from "../src/fleet/plaetze";
+import { baujahrSpanne, erneuereAngebote, erzeugeAngebot, gebrauchtModelle, inspiziere, montagAb } from "../src/fleet/markt";
+import { abrissErlaubt, alleBusseHabenPlatz, freiePlaetze } from "../src/fleet/plaetze";
 import { neuerZufall } from "../src/game/zufall";
 import { hofKontext, JETZT, katalogModelle, kaufKontext, marktKontext } from "./helpers/markt";
 
@@ -38,6 +38,13 @@ describe("Neukauf: Konfiguration, Preis und Plätze", () => {
     const voll = { ...c, batterieKwh: 445, optionen: ["stoff", "waermepumpe", "abbiegeassistent", "video"] };
     expect(pruefeKonfig(m, voll, k)).toBeNull();
     expect(neupreis(m, voll, k)).toBe(m.neupreis_eur! + 89 * 700 + 6000 + 20000 + 6000);
+  });
+
+  it("Regression: Batterieeinheiten zählen nach der Position in der Liste, auch wenn das Maximum kein Vielfaches ist", () => {
+    const m = { ...M.get(MAN)!, batterie_kwh_min: 200, batterie_kwh_max: 280, batterie_kwh_schritt: null, plaetze_je_batterieeinheit_weniger: 5 } as Bus;
+    expect(batterien(m, config.catalog)).toEqual([200, 250, 280]);
+    expect(plaetzeMitBatterie(m, 250, config.catalog).weniger).toBe(5);
+    expect(plaetzeMitBatterie(m, 280, config.catalog).weniger).toBe(10);
   });
 
   it("zuerst Stehplätze, dann Sitzplätze; Modelle ohne Eintrag verlieren keine Plätze", () => {
@@ -248,8 +255,8 @@ describe("Gebrauchtmarkt", () => {
     const z = neuerZufall(5);
     erneuereAngebote(k.fuhrpark, JETZT, land, z, k);
     const alt = k.fuhrpark.angebote.map((a) => a.id);
-    // nach der längsten Laufzeit sind alle alten weg
-    const spaeter = addDays(JETZT, 7 * mk.gebraucht.laufzeitWochenMax);
+    // nach der längsten Laufzeit (bis zum folgenden Montag) sind alle alten weg
+    const spaeter = montagAb(addDays(JETZT, 7 * mk.gebraucht.laufzeitWochenMax));
     const e = erneuereAngebote(k.fuhrpark, spaeter, land, z, k);
     expect(e.weg).toBe(alt.length);
     expect(k.fuhrpark.angebote.every((a) => !alt.includes(a.id))).toBe(true);
@@ -263,9 +270,9 @@ describe("Gebrauchtmarkt", () => {
     // ein Angebot, das auf einen Stellplatz passt
     const a = k.fuhrpark.angebote.find((x) => platzFuer(M.get(x.modellId)!, k) !== null)!;
     const vorher = k.kasse.kontostandEur;
-    expect(inspiziere(k.fuhrpark, a.id, k.kasse, k)).toEqual({ ok: true });
+    expect(inspiziere(k.fuhrpark, a.id, k.kasse, k, k.jetzt)).toEqual({ ok: true });
     expect(k.kasse.kontostandEur).toBe(vorher - mk.inspektionEur);
-    expect(inspiziere(k.fuhrpark, a.id, k.kasse, k)).toEqual({ ok: false, fehler: "schonInspiziert" });
+    expect(inspiziere(k.fuhrpark, a.id, k.kasse, k, k.jetzt)).toEqual({ ok: false, fehler: "schonInspiziert" });
     const e = kaufeGebraucht(k, a.id);
     expect(e.ok).toBe(true);
     if (!e.ok) return;
@@ -297,7 +304,46 @@ describe("Plätze im Hof", () => {
     expect(freiePlaetze(hof, a, zwei, solo, config.betriebshof)).toHaveLength(0);
   });
 
-  it("Jahreswechsel im Datum der HU", () => {
-    expect(parts(civil(2026, 11, 25)).jahr).toBe(2026);
+  it("Regression: HU-Datum über den Jahreswechsel und am Monatsende", () => {
+    expect(addMonate(civil(2026, 11, 30, 9, 15), 3)).toBe(civil(2027, 2, 28, 9, 15));
+    expect(addMonate(civil(2026, 11, 25), 12)).toBe(civil(2027, 11, 25));
+    expect(addMonate(civil(2027, 1, 31), 1)).toBe(civil(2027, 2, 28));
+    const k = kaufKontext(M);
+    const e = kaufeNeu(k, MAN, standardKonfig(M.get(MAN)!, "#123456", k));
+    if (!e.ok) throw new Error("Kauf");
+    expect(e.bus.huBis).toBe(addMonate(JETZT, M.get(MAN)!.intervall_hu_monate ?? mk.huMonateStandard));
+    expect(parts(e.bus.huBis).jahr).toBe(2027);
+  });
+
+  it("Regression: Abriss eines belegten Stellplatzes oder des Fahrwegs davor wird abgelehnt (A3-22)", () => {
+    const k = kaufKontext(M);
+    const e = kaufeNeu(k, MAN, standardKonfig(M.get(MAN)!, "#123456", k));
+    const f = kaufeNeu(k, MAN, standardKonfig(M.get(MAN)!, "#123456", k));
+    if (!e.ok || !f.ok) throw new Error("Kauf");
+    const bel = belegung(k.fuhrpark, M);
+    const ctx = hofKontext(M);
+    const stellplatz = f.bus.platz.art === "stellplatz" ? f.bus.platz.id : e.bus.platz.id;
+    const fahrweg = k.hof!.bauteile.find((b) => b.typ === "fahrweg")!.id;
+    expect(abrissErlaubt(k.hof!, stellplatz, bel, ctx)).toBe(false);
+    expect(abrissErlaubt(k.hof!, fahrweg, bel, ctx)).toBe(false);
+    // freier Stellplatz und die Waschanlage dürfen weg
+    const frei = k.hof!.bauteile.find((b) => b.typ === "stellplatz" && !bel.some((x) => x.platz.id === b.id))!.id;
+    expect(abrissErlaubt(k.hof!, frei, bel, ctx)).toBe(true);
+    expect(abrissErlaubt(k.hof!, k.hof!.bauteile.find((b) => b.typ === "waschanlage")!.id, bel, ctx)).toBe(true);
+    // ohne Busse ist alles erlaubt
+    expect(abrissErlaubt(k.hof!, stellplatz, [], ctx)).toBe(true);
+  });
+
+  it("Regression: Angebote laufen am Montag ab, abgelaufene sind nicht mehr kaufbar", () => {
+    expect(montagAb(civil(2026, 11, 25, 10))).toBe(civil(2026, 11, 30));
+    expect(montagAb(civil(2026, 11, 30))).toBe(civil(2026, 11, 30));
+    expect(montagAb(civil(2026, 11, 30, 0, 1))).toBe(civil(2026, 12, 7));
+    const k = kaufKontext(M);
+    erneuereAngebote(k.fuhrpark, JETZT, "DE", neuerZufall(2), k);
+    for (const a of k.fuhrpark.angebote) expect(parts(a.ablauf).wochentag).toBe(1);
+    const a = k.fuhrpark.angebote[0];
+    k.jetzt = a.ablauf;
+    expect(kaufeGebraucht(k, a.id)).toEqual({ ok: false, fehler: "unbekannt" });
+    expect(inspiziere(k.fuhrpark, a.id, k.kasse, k, k.jetzt)).toEqual({ ok: false, fehler: "unbekannt" });
   });
 });

@@ -4,7 +4,7 @@
  * Zeitpunkte sind CivilMs (siehe src/calendar/civil.ts).
  */
 import { config, type PersonalArt, type PersonalConfig } from "../config/index";
-import { civil, parts, type CivilMs } from "../calendar/civil";
+import { addMonate, civil, parts, type CivilMs } from "../calendar/civil";
 import { ganzzahl, gewichtet, ja, poisson, waehle, zufall, type Zufall } from "../game/zufall";
 import namen from "./namen.json";
 
@@ -71,19 +71,8 @@ function tagesbeginn(ms: CivilMs): CivilMs {
   return civil(p.jahr, p.monat, p.tag);
 }
 
-function tageImMonat(jahr: number, monat: number): number {
-  return Math.round((civil(jahr, monat + 1, 1) - civil(jahr, monat, 1)) / TAG_MS);
-}
 
-/** Kalendermonate addieren; fehlt der Tag im Zielmonat (31. oder 29.2.), gilt der letzte Tag des Monats. */
-export function addMonate(ms: CivilMs, n: number): CivilMs {
-  const p = parts(ms);
-  const versatz = ms - civil(p.jahr, p.monat, p.tag);
-  const gesamt = p.monat - 1 + n;
-  const jahr = p.jahr + Math.floor(gesamt / 12);
-  const monat = (((gesamt % 12) + 12) % 12) + 1;
-  return civil(jahr, monat, Math.min(p.tag, tageImMonat(jahr, monat))) + versatz;
-}
+export { addMonate };
 
 /** Dienstjahre als Kommazahl: volle Jahre bis zum letzten Jahrestag plus Anteil des laufenden Jahres. */
 export function dienstjahre(eintritt: CivilMs, jetzt: CivilMs): number {
@@ -156,14 +145,14 @@ function erzeugeBewerber(personal: Personal, art: PersonalArt, erstellt: CivilMs
   const verschiebung = Math.floor((v - 1) * b.stufenJeLohnanteil + zufall(z));
   const stufe = Math.max(1, Math.min(stufen, grund + verschiebung));
   const schwelle = cfg.stufeAbJahren[stufe - 1];
-  const bis = stufe < cfg.stufeAbJahren.length ? cfg.stufeAbJahren[stufe] - 1 : schwelle + 5;
+  const bis = stufe < cfg.stufeAbJahren.length ? cfg.stufeAbJahren[stufe] - 1 : schwelle + cfg.erfahrungSpanneLetzteStufe;
   const jahre = ganzzahl(z, schwelle, bis);
   const name = `${waehle(z, namen.vornamen)} ${waehle(z, namen.nachnamen)}`;
   const zufriedenheit = ganzzahl(z, cfg.zufriedenheitStart[0], cfg.zufriedenheitStart[1]);
   const gesundheit = ganzzahl(z, cfg.gesundheitStart[0], cfg.gesundheitStart[1]);
   const qualifikationen: string[] = [];
   if (art === "fahrer") {
-    qualifikationen.push("fuehrerschein_d", "bkf");
+    qualifikationen.push(...cfg.fahrerQualifikationen);
     const p = cfg.einweisungAnteilBasis + cfg.einweisungAnteilJeStufe * (stufe - 1);
     for (const e of cfg.einweisungen) if (ja(z, p)) qualifikationen.push(`einweisung_${e}`);
   } else if (art === "mechaniker") {

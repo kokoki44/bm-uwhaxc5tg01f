@@ -125,14 +125,27 @@ describe("Speichern und Laden (Kriterium 15)", () => {
     const m = M.get("man_lions_city_12_e_2t")!;
     expect(kaufeNeu(kk, m.modell_id!, standardKonfig(m, "#123456", kk)).ok).toBe(true);
     schreibeAus(s.personal, "mechaniker", 30, s.zeit, s.zufall, config.personal);
-    fortschreiben(s, addDays(START, 40), k);
-    const f = ladeFuhrpark(serialisiereFuhrpark(s.fuhrpark));
+    // 10 Tage: die Ausschreibung (28 Tage) läuft noch und wird mit gespeichert
+    fortschreiben(s, addDays(START, 10), k);
+    expect(s.personal.ausschreibungen).toHaveLength(1);
+    const f = ladeFuhrpark(serialisiereFuhrpark(s.fuhrpark), new Set(M.keys()));
     expect(f).toEqual(s.fuhrpark);
-    expect(ladePersonal(serialisierePersonal(s.personal), config.personal)).toEqual(s.personal);
+    const p = ladePersonal(serialisierePersonal(s.personal), config.personal);
+    expect(p).toEqual(s.personal);
     // die geladenen Daten rechnen weiter wie die alten
-    expect(sichtbareBewerber(s.personal.ausschreibungen[0] ?? { bewerber: [] } as never, s.zeit).length).toBeGreaterThanOrEqual(0);
+    expect(sichtbareBewerber(p.ausschreibungen[0], s.zeit)).toEqual(sichtbareBewerber(s.personal.ausschreibungen[0], s.zeit));
     expect(() => ladeFuhrpark({ ...s.fuhrpark, version: 2 })).toThrow(FuhrparkLadeFehler);
     expect(() => ladeFuhrpark({ ...s.fuhrpark, busse: [{ ...s.fuhrpark.busse[0], zustand: "gut" }] })).toThrow(FuhrparkLadeFehler);
     expect(() => ladeFuhrpark({ ...s.fuhrpark, naechsteBusId: 1 })).toThrow(FuhrparkLadeFehler);
+    // Regression: kaputtes JSON, leere Einträge, doppelte Kennzeichen, unbekanntes Modell ergeben FuhrparkLadeFehler
+    expect(() => ladeFuhrpark("{kaputt")).toThrow(FuhrparkLadeFehler);
+    expect(() => ladeFuhrpark({ ...s.fuhrpark, busse: [null] })).toThrow(FuhrparkLadeFehler);
+    expect(() => ladeFuhrpark({ ...s.fuhrpark, angebote: [null] })).toThrow(FuhrparkLadeFehler);
+    const b = s.fuhrpark.busse[0];
+    expect(() => ladeFuhrpark({ ...s.fuhrpark, busse: [b, { ...b, id: b.id + 1, flottennummer: "99" }], naechsteBusId: b.id + 2 })).toThrow(FuhrparkLadeFehler);
+    expect(() => ladeFuhrpark({ ...s.fuhrpark, busse: [{ ...b, modellId: "gibt_es_nicht" }] }, new Set(M.keys()))).toThrow(FuhrparkLadeFehler);
+    // fremde Felder in Angeboten werden nicht übernommen
+    const mitFremd = ladeFuhrpark({ ...s.fuhrpark, angebote: s.fuhrpark.angebote.map((a) => ({ ...a, fremd: 1 })) });
+    expect(mitFremd.angebote[0]).not.toHaveProperty("fremd");
   });
 });

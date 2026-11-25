@@ -29,19 +29,42 @@ function bus(b: EigenerBus): EigenerBus {
 }
 
 function angebot(a: Angebot): Angebot {
+  if (!a || typeof a !== "object") throw new FuhrparkLadeFehler(`Angebot ungültig: ${JSON.stringify(a)}`);
   const zahlen = [a.id, a.baujahr, a.alterJahre, a.laufleistungKm, a.zustand, a.zustandVon, a.zustandBis, a.huRestMonate, a.neupreisKonfigEur, a.preisEur, a.erstellt, a.ablauf];
   if (!zahlen.every(zahl) || !text(a.modellId) || typeof a.inspiziert !== "boolean" || ![a.batterieZustand, a.batterieVon, a.batterieBis].every(zahlOderNull))
     throw new FuhrparkLadeFehler(`Angebot ungültig: ${JSON.stringify(a)}`);
-  return { ...a, konfig: konfig(a.konfig, `Angebot ${a.id}`) };
+  return {
+    id: a.id, modellId: a.modellId, baujahr: a.baujahr, alterJahre: a.alterJahre, laufleistungKm: a.laufleistungKm, zustand: a.zustand,
+    zustandVon: a.zustandVon, zustandBis: a.zustandBis, batterieZustand: a.batterieZustand, batterieVon: a.batterieVon, batterieBis: a.batterieBis,
+    huRestMonate: a.huRestMonate, konfig: konfig(a.konfig, `Angebot ${a.id}`), neupreisKonfigEur: a.neupreisKonfigEur, preisEur: a.preisEur,
+    erstellt: a.erstellt, ablauf: a.ablauf, inspiziert: a.inspiziert,
+  };
 }
 
-export function ladeFuhrpark(json: string | unknown): Fuhrpark {
-  const o = (typeof json === "string" ? JSON.parse(json) : json) as Fuhrpark;
+/**
+ * Lädt einen Fuhrpark und prüft ihn. Mit `modellIds` wird außerdem geprüft, dass jedes Modell im Katalog vorkommt.
+ * Wirft bei jedem Fehler FuhrparkLadeFehler (auch bei kaputtem JSON).
+ */
+export function ladeFuhrpark(json: string | unknown, modellIds?: ReadonlySet<string>): Fuhrpark {
+  let o: Fuhrpark;
+  try {
+    o = (typeof json === "string" ? JSON.parse(json) : json) as Fuhrpark;
+  } catch (e) {
+    throw new FuhrparkLadeFehler(`Fuhrpark nicht lesbar: ${String(e)}`);
+  }
   if (o?.version !== 1) throw new FuhrparkLadeFehler(`Unbekannte Version des Fuhrparks: ${String(o?.version)}`);
   if (!Array.isArray(o.busse) || !Array.isArray(o.angebote) || ![o.naechsteBusId, o.naechsteFlottennummer, o.naechsteAngebotId].every(zahl)) throw new FuhrparkLadeFehler("Fuhrpark unvollständig");
-  const busse = o.busse.map(bus);
+  const busse = o.busse.map((b) => {
+    if (!b || typeof b !== "object") throw new FuhrparkLadeFehler(`Bus ungültig: ${JSON.stringify(b)}`);
+    return bus(b);
+  });
   const angebote = o.angebote.map(angebot);
   if (new Set(busse.map((b) => b.id)).size !== busse.length || busse.some((b) => b.id >= o.naechsteBusId)) throw new FuhrparkLadeFehler("Bus-Ids doppelt oder zu groß");
   if (new Set(angebote.map((a) => a.id)).size !== angebote.length || angebote.some((a) => a.id >= o.naechsteAngebotId)) throw new FuhrparkLadeFehler("Angebots-Ids doppelt oder zu groß");
+  if (new Set(busse.map((b) => b.kennzeichen)).size !== busse.length) throw new FuhrparkLadeFehler("Kennzeichen doppelt");
+  if (new Set(busse.map((b) => b.flottennummer)).size !== busse.length) throw new FuhrparkLadeFehler("Flottennummer doppelt");
+  const stellplaetze = busse.filter((b) => b.platz.art === "stellplatz").map((b) => b.platz.id);
+  if (new Set(stellplaetze).size !== stellplaetze.length) throw new FuhrparkLadeFehler("Zwei Busse auf demselben Stellplatz");
+  if (modellIds) for (const x of [...busse, ...angebote]) if (!modellIds.has(x.modellId)) throw new FuhrparkLadeFehler(`Modell nicht im Katalog: ${x.modellId}`);
   return { version: 1, busse, angebote, naechsteBusId: o.naechsteBusId, naechsteFlottennummer: o.naechsteFlottennummer, naechsteAngebotId: o.naechsteAngebotId };
 }

@@ -1,4 +1,4 @@
-import { civil, parts, type CivilMs } from "../calendar/civil";
+import { addMonate, parts, type CivilMs } from "../calendar/civil";
 import { batterieOptionen } from "../catalog/batterie";
 import type { Bus } from "../catalog/katalog";
 import type { Option } from "../catalog/optionen";
@@ -142,18 +142,15 @@ const kleinsteBatterie = (m: Bus, katalog: CatalogConfig): number | null => batt
  * Batterieeinheit nimmt plaetze_je_batterieeinheit_weniger Plätze weg, zuerst Stehplätze (Koko, 25.11.2026).
  */
 export function plaetzeMitBatterie(m: Bus, kwh: number | null, katalog: CatalogConfig): { sitzplaetze: number | null; stehplaetze: number | null; weniger: number } {
-  const min = kleinsteBatterie(m, katalog);
   const je = m.plaetze_je_batterieeinheit_weniger ?? 0;
-  const schritt = m.batterie_kwh_schritt && m.batterie_kwh_schritt > 0 ? m.batterie_kwh_schritt : katalog.batterieStandardSchrittKwh;
-  const einheiten = kwh === null || min === null ? 0 : Math.max(0, Math.round((kwh - min) / schritt));
-  let weniger = einheiten * je;
+  // Jede wählbare Größe über der kleinsten ist eine Batterieeinheit mehr (auch wenn das Maximum kein volles Vielfaches ist)
+  const einheiten = kwh === null ? 0 : Math.max(0, batterien(m, katalog).findIndex((x) => Math.abs(x - kwh) < 1e-9));
+  const weniger = einheiten * je;
   let steh = m.stehplaetze;
   let sitz = m.sitzplaetze;
   const ausSteh = Math.min(weniger, steh ?? 0);
   if (steh !== null) steh -= ausSteh;
-  const rest = weniger - ausSteh;
-  if (sitz !== null) sitz = Math.max(0, sitz - rest);
-  weniger = einheiten * je;
+  if (sitz !== null) sitz = Math.max(0, sitz - (weniger - ausSteh));
   return { sitzplaetze: sitz, stehplaetze: steh, weniger };
 }
 
@@ -293,7 +290,7 @@ export function kaufeNeu(k: KaufKontext, modellId: string, c: Konfiguration): { 
   const bus = stelleEin(k, m, {
     modellId, herkunft: "neu", baujahr: jahr, alterBeiKaufJahre: 0, kaufzeit: k.jetzt, kaufpreisEur: preis, neupreisKonfigEur: preis,
     laufleistungKm: 0, zustand: 100, batterieZustand: c.batterieKwh !== null ? 100 : null,
-    huBis: hinzuMonate(k.jetzt, m.intervall_hu_monate ?? 12), konfig: { ...c, optionen: [...c.optionen] },
+    huBis: addMonate(k.jetzt, m.intervall_hu_monate ?? k.markt.huMonateStandard), konfig: { ...c, optionen: [...c.optionen] },
   }, platz);
   return { ok: true, bus };
 }
@@ -302,7 +299,7 @@ export function kaufeNeu(k: KaufKontext, modellId: string, c: Konfiguration): { 
 export function kaufeGebraucht(k: KaufKontext, angebotId: number): { ok: true; bus: EigenerBus } | { ok: false; fehler: KaufFehler } {
   const a = k.fuhrpark.angebote.find((x) => x.id === angebotId);
   const m = a && k.modelle.get(a.modellId);
-  if (!a || !m) return { ok: false, fehler: "unbekannt" };
+  if (!a || !m || a.ablauf <= k.jetzt) return { ok: false, fehler: "unbekannt" };
   if (!k.hof) return { ok: false, fehler: "keinHof" };
   const platz = platzFuer(m, k);
   if (!platz) return { ok: false, fehler: "keinPlatz" };
@@ -311,7 +308,7 @@ export function kaufeGebraucht(k: KaufKontext, angebotId: number): { ok: true; b
   const bus = stelleEin(k, m, {
     modellId: a.modellId, herkunft: "gebraucht", baujahr: a.baujahr, alterBeiKaufJahre: a.alterJahre, kaufzeit: k.jetzt, kaufpreisEur: a.preisEur,
     neupreisKonfigEur: a.neupreisKonfigEur, laufleistungKm: a.laufleistungKm, zustand: a.zustand, batterieZustand: a.batterieZustand,
-    huBis: hinzuMonate(k.jetzt, a.huRestMonate), konfig: { ...a.konfig, optionen: [...a.konfig.optionen] },
+    huBis: addMonate(k.jetzt, a.huRestMonate), konfig: { ...a.konfig, optionen: [...a.konfig.optionen] },
   }, platz);
   return { ok: true, bus };
 }
@@ -345,12 +342,4 @@ export function lackiereUm(k: KaufKontext, busId: number, farbe: string): { ok: 
   b.konfig.lackierung = farbe.toLowerCase();
   k.kasse.kontostandEur = cent(k.kasse.kontostandEur - k.markt.umlackierenEur);
   return { ok: true };
-}
-
-/** Datum plus ganze Monate (Tag wird auf das Monatsende begrenzt). */
-export function hinzuMonate(ms: CivilMs, monate: number): CivilMs {
-  const p = parts(ms);
-  const ziel = civil(p.jahr, p.monat + monate, 1);
-  const tageImMonat = parts(civil(parts(ziel).jahr, parts(ziel).monat + 1, 0)).tag;
-  return civil(parts(ziel).jahr, parts(ziel).monat, Math.min(p.tag, tageImMonat), p.stunde, p.minute);
 }

@@ -1,10 +1,18 @@
-import { addDays, parts, type CivilMs } from "../calendar/civil";
+import { addDays, civil, parts, type CivilMs } from "../calendar/civil";
 import type { Bus } from "../catalog/katalog";
 import type { Kasse } from "../depot/hof";
 import { ganzzahl, gewichtet, ja, waehle, zwischen, type Zufall } from "../game/zufall";
 import { batterien, fahrzeugartKaufbar, neupreis, wert, type Angebot, type Fuhrpark, type Konfiguration, type MarktKontext } from "./fuhrpark";
 
 const cent = (x: number) => Math.round(x * 100) / 100;
+
+/** Montag 0 Uhr am Tag t oder danach: Angebote laufen genau beim Wochenwechsel ab, an dem sie verschwinden. */
+export function montagAb(t: CivilMs): CivilMs {
+  const p = parts(t);
+  const tag = civil(p.jahr, p.monat, p.tag);
+  const tage = p.wochentag === 1 && tag === t ? 0 : (8 - p.wochentag) % 7 || 7;
+  return civil(p.jahr, p.monat, p.tag + tage);
+}
 const begrenze = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
 
 /** Land aus dem ISO-Code der Region (DE-SH ergibt DE). */
@@ -98,12 +106,12 @@ export function erzeugeAngebot(f: Fuhrpark, jetzt: CivilMs, land: string | null,
     batterieZustand,
     batterieVon,
     batterieBis,
-    huRestMonate: ganzzahl(z, 1, m.intervall_hu_monate ?? 12),
+    huRestMonate: ganzzahl(z, 1, m.intervall_hu_monate ?? k.markt.huMonateStandard),
     konfig,
     neupreisKonfigEur,
     preisEur,
     erstellt: jetzt,
-    ablauf: addDays(jetzt, 7 * ganzzahl(z, g.laufzeitWochenMin, g.laufzeitWochenMax)),
+    ablauf: montagAb(addDays(jetzt, 7 * ganzzahl(z, g.laufzeitWochenMin, g.laufzeitWochenMax))),
     inspiziert: false,
   };
 }
@@ -124,9 +132,9 @@ export function erneuereAngebote(f: Fuhrpark, jetzt: CivilMs, land: string | nul
 }
 
 /** Inspektion gegen Gebühr: zeigt den genauen Zustand und den Batteriezustand (Mängel erst mit Etappe 5). */
-export function inspiziere(f: Fuhrpark, angebotId: number, kasse: Kasse, k: MarktKontext): { ok: true } | { ok: false; fehler: "unbekannt" | "schonInspiziert" | "geldFehlt" } {
+export function inspiziere(f: Fuhrpark, angebotId: number, kasse: Kasse, k: MarktKontext, jetzt: CivilMs): { ok: true } | { ok: false; fehler: "unbekannt" | "schonInspiziert" | "geldFehlt" } {
   const a = f.angebote.find((x) => x.id === angebotId);
-  if (!a) return { ok: false, fehler: "unbekannt" };
+  if (!a || a.ablauf <= jetzt) return { ok: false, fehler: "unbekannt" };
   if (a.inspiziert) return { ok: false, fehler: "schonInspiziert" };
   if (kasse.kontostandEur < k.markt.inspektionEur) return { ok: false, fehler: "geldFehlt" };
   kasse.kontostandEur = cent(kasse.kontostandEur - k.markt.inspektionEur);
