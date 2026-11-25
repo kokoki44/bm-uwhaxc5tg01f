@@ -147,57 +147,101 @@ const laengsteZufahrt = (zug: Kontakt[], s?: Seite) =>
 /** Ist die Fahrfläche groß genug, dass ein Bus darauf vorwärts wenden kann? */
 export const istWendeflaeche = (r: Rechteck, cfg: BetriebshofConfig) => Math.min(r.b, r.t) >= cfg.wendeflaecheMinM - EPS;
 
+/** Mitte der Torseite am Grundstücksrand (dort beginnt die Straße). */
+export function torPunkt(t: Rechteck, s: Seite): [number, number] {
+  return s === "n" ? [t.x + t.b / 2, t.y] : s === "s" ? [t.x + t.b / 2, t.y + t.t] : s === "w" ? [t.x, t.y + t.t / 2] : [t.x + t.b, t.y + t.t / 2];
+}
+
 /**
- * Fahrwege ohne Wendemöglichkeit (Annahme A2-31). Netz: Tore und Fahrwege, verbunden bei breitem Kontakt; jedes Tor am
- * Rand hängt zusätzlich an der Straße. Ein Fahrweg hat eine Wendemöglichkeit, wenn er auf einem Rundweg liegt (auch
- * Durchfahrt über zwei Tore und die Straße) oder wenn hinter ihm, von der Straße aus gesehen, eine Wendefläche
- * (beide Seiten mindestens wendeflaecheMinM) oder ein Rundweg liegt. Er selbst zählt dabei mit.
+ * Fahrflächen, die eine Fläche umschließen (Rundweg, Koko 25.11.2026): Auf dem 1-m-Raster sind die Löcher der befahrbaren
+ * Fläche die nicht befahrbaren Zellen, die nicht mit dem Bereich außerhalb verbunden sind. Ein Fahrweg liegt auf einem
+ * Rundweg, wenn er an ein solches Loch grenzt. Drei Fahrwege, die sich an einer Einmündung nur gegenseitig berühren,
+ * umschließen nichts und bilden keinen Rundweg.
+ */
+export function umschliessendeFahrflaechen(fahr: Bauteil[], flaeche: Rechteck): Set<number> {
+  const x0 = Math.floor(flaeche.x) - 1, y0 = Math.floor(flaeche.y) - 1;
+  const B = Math.ceil(flaeche.b) + 2, T = Math.ceil(flaeche.t) + 2;
+  const eigner = new Int32Array(B * T).fill(-1);
+  for (const d of fahr)
+    for (let y = Math.max(0, Math.floor(d.y) - y0); y < Math.min(T, Math.ceil(d.y + d.t) - y0); y++)
+      for (let x = Math.max(0, Math.floor(d.x) - x0); x < Math.min(B, Math.ceil(d.x + d.b) - x0); x++) eigner[y * B + x] = d.id;
+  // Außenbereich: von der Randzeile aus alle nicht befahrbaren Zellen (4 Richtungen)
+  const aussen = new Uint8Array(B * T);
+  const q: number[] = [0];
+  aussen[0] = 1;
+  while (q.length) {
+    const i = q.pop()!;
+    const x = i % B, y = (i - x) / B;
+    for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+      if (nx < 0 || ny < 0 || nx >= B || ny >= T) continue;
+      const j = ny * B + nx;
+      if (aussen[j] || eigner[j] >= 0) continue;
+      aussen[j] = 1;
+      q.push(j);
+    }
+  }
+  const out = new Set<number>();
+  for (let i = 0; i < B * T; i++) {
+    if (eigner[i] >= 0 || aussen[i]) continue;
+    // Lochzelle: angrenzende Fahrflächen (8 Richtungen) liegen auf dem Rundweg
+    const x = i % B, y = (i - x) / B;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && ny >= 0 && nx < B && ny < T && eigner[ny * B + nx] >= 0) out.add(eigner[ny * B + nx]);
+      }
+  }
+  return out;
+}
+
+/**
+ * Fahrwege ohne Wendemöglichkeit (Annahme A2-31, geschärft am 25.11.2026). Netz: Tore und Fahrwege, verbunden bei breitem
+ * Kontakt. Ein Fahrweg hat eine Wendemöglichkeit, wenn er auf einem Rundweg liegt, der eine Fläche umschließt, oder auf
+ * einer Durchfahrt zwischen zwei Toren, deren Torseiten mindestens wendeflaecheMinM auseinander liegen, oder wenn hinter
+ * ihm, vom nächsten Tor aus gesehen, eine Wendefläche (beide Seiten mindestens wendeflaecheMinM), ein solcher Rundweg oder
+ * eine solche Durchfahrt liegt. Er selbst zählt dabei mit.
  */
 export function ohneWendemoeglichkeit(
-  fahr: Bauteil[], nachbarn: Map<number, number[]>, torSeite: Map<number, Seite>, cfg: BetriebshofConfig,
+  fahr: Bauteil[], nachbarn: Map<number, number[]>, torSeite: Map<number, Seite>, flaeche: Rechteck, cfg: BetriebshofConfig,
 ): number[] {
-  const STRASSE = -1;
   const ids = new Set(fahr.map((d) => d.id));
-  const adj = new Map<number, number[]>([[STRASSE, []]]);
+  const adj = new Map<number, number[]>();
   for (const d of fahr) adj.set(d.id, (nachbarn.get(d.id) ?? []).filter((n) => ids.has(n)));
-  for (const t of torSeite.keys()) {
-    if (!ids.has(t)) continue;
-    adj.get(t)!.push(STRASSE);
-    adj.get(STRASSE)!.push(t);
-  }
-  const erreichtOhne = (start: number, a: number, b: number, sperre?: number) => {
-    // Breitensuche ab start, ohne die Kante a-b und ohne den Knoten sperre
-    const ges = new Set([start]);
-    const q = [start];
+  const bfs = (starts: number[], sperre?: number) => {
+    const dist = new Map<number, number>(starts.map((s) => [s, 0]));
+    const vorg = new Map<number, number>();
+    const q = [...starts];
     while (q.length) {
       const x = q.shift()!;
-      for (const y of adj.get(x)!) {
-        if ((x === a && y === b) || (x === b && y === a) || y === sperre || ges.has(y)) continue;
-        ges.add(y);
+      for (const y of adj.get(x) ?? []) {
+        if (y === sperre || dist.has(y)) continue;
+        dist.set(y, dist.get(x)! + 1);
+        vorg.set(y, x);
         q.push(y);
       }
     }
-    return ges;
+    return { dist, vorg };
   };
-  // Knoten auf einem Rundweg: mindestens eine Kante, die keine Brücke ist
-  const aufRundweg = new Set<number>();
-  for (const [x, ys] of adj)
-    for (const y of ys) if (x < y && erreichtOhne(x, x, y).has(y)) (aufRundweg.add(x), aufRundweg.add(y));
-  // Abstand zur Straße
-  const dist = new Map<number, number>([[STRASSE, 0]]);
-  const q = [STRASSE];
-  while (q.length) {
-    const x = q.shift()!;
-    for (const y of adj.get(x)!) if (!dist.has(y)) (dist.set(y, dist.get(x)! + 1), q.push(y));
-  }
+  const rundweg = umschliessendeFahrflaechen(fahr, flaeche);
+  // Durchfahrt: kürzester Weg zwischen zwei Toren, die weit genug auseinander liegen
+  const tore = fahr.filter((d) => torSeite.has(d.id));
+  for (let i = 0; i < tore.length; i++)
+    for (let j = i + 1; j < tore.length; j++) {
+      const [ax, ay] = torPunkt(tore[i], torSeite.get(tore[i].id)!), [bx, by] = torPunkt(tore[j], torSeite.get(tore[j].id)!);
+      if (Math.hypot(ax - bx, ay - by) < cfg.wendeflaecheMinM - EPS) continue;
+      const { dist, vorg } = bfs([tore[i].id]);
+      if (!dist.has(tore[j].id)) continue;
+      for (let x: number | undefined = tore[j].id; x !== undefined; x = vorg.get(x)) rundweg.add(x);
+    }
+  const { dist } = bfs(tore.map((t) => t.id));
   const wende = new Set(fahr.filter((d) => istWendeflaeche(d, cfg)).map((d) => d.id));
   const out: number[] = [];
   for (const d of fahr) {
-    if (d.typ !== "fahrweg" || aufRundweg.has(d.id) || !dist.has(d.id)) continue;
-    // Vorgänger in Richtung Straße; dahinter liegt alles, was ohne diesen Vorgänger erreichbar ist
+    if (d.typ !== "fahrweg" || rundweg.has(d.id) || !dist.has(d.id)) continue;
+    // Vorgänger in Richtung des nächsten Tors; dahinter liegt alles, was ohne ihn erreichbar ist
     const vor = adj.get(d.id)!.find((y) => dist.get(y) === dist.get(d.id)! - 1);
-    const hinter = erreichtOhne(d.id, d.id, vor ?? STRASSE, vor);
-    if (![...hinter].some((x) => wende.has(x) || aufRundweg.has(x))) out.push(d.id);
+    const hinter = bfs([d.id], vor).dist;
+    if (![...hinter.keys()].some((x) => wende.has(x) || rundweg.has(x))) out.push(d.id);
   }
   return out;
 }
@@ -299,7 +343,7 @@ export function analysiereHof(hof: Betriebshof, ctx: HofKontext): HofAnalyse {
     const genutzt = alle.some((b) => !BEFAHRBAR.includes(b.typ) && kontakt(b, d));
     if (!genutzt) warnungen.push({ code: "sackgasse", bauteil: d.id });
   }
-  for (const id of ohneWendemoeglichkeit(fahrErreichbar, nachbarn, torSeite, cfg)) {
+  for (const id of ohneWendemoeglichkeit(fahrErreichbar, nachbarn, torSeite, f, cfg)) {
     const d = fahrErreichbar.find((x) => x.id === id)!;
     // Nur Fahrwege, an denen Bus-Plätze liegen (Stellplätze, Ladeplätze, Hallen mit Zufahrt über diesen Weg)
     const mitPlaetzen = alle.some((b) => {

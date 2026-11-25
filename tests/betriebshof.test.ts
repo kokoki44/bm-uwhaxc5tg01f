@@ -336,6 +336,37 @@ describe("Betriebshof: Layout-Gültigkeit", () => {
       expect(warnt(h, weg.id)).toBe(false);
     });
 
+    it("Regression: zwei Tore direkt nebeneinander sind keine Durchfahrt (Abstand unter 27 m)", () => {
+      const h = hof(50, 40);
+      const k = kasse();
+      baue(h, k, "tor", { x: 0, y: 16, b: 4, t: 4 });
+      baue(h, k, "tor", { x: 0, y: 20, b: 4, t: 4 });
+      const weg = baue(h, k, "fahrweg", { x: 4, y: 16, b: 40, t: 8 });
+      baue(h, k, "stellplatz", { x: 4, y: 2, b: 4, t: 14 });
+      expect(analysiereHof(h, ctx).gueltig).toBe(true);
+      expect(warnt(h, weg.id)).toBe(true);
+      // ein zweites Tor am anderen Ende (mehr als 27 m entfernt) ist eine Durchfahrt
+      const h2 = hof(50, 40);
+      baue(h2, k, "tor", { x: 0, y: 16, b: 4, t: 8 });
+      const weg2 = baue(h2, k, "fahrweg", { x: 4, y: 16, b: 42, t: 8 });
+      baue(h2, k, "tor", { x: 46, y: 16, b: 4, t: 8 });
+      baue(h2, k, "stellplatz", { x: 4, y: 2, b: 4, t: 14 });
+      expect(warnt(h2, weg2.id)).toBe(false);
+    });
+
+    it("Regression: drei Fahrwege an einer Einmündung umschließen keine Fläche und sind kein Rundweg", () => {
+      const h = hof(50, 40);
+      const k = kasse();
+      baue(h, k, "tor", { x: 0, y: 16, b: 4, t: 7 });
+      baue(h, k, "fahrweg", { x: 4, y: 16, b: 40, t: 7 }); // M
+      const x = baue(h, k, "fahrweg", { x: 20, y: 23, b: 7, t: 15 }); // Stich nach Süden
+      baue(h, k, "fahrweg", { x: 27, y: 23, b: 7, t: 7 }); // Y berührt M und X
+      baue(h, k, "stellplatz", { x: 12, y: 24, b: 8, t: 4 }); // Stirnseite an X
+      const a = analysiereHof(h, ctx);
+      expect(a.gueltig).toBe(true);
+      expect(warnt(h, x.id)).toBe(true);
+    });
+
     it("Rundweg ist eine Wendemöglichkeit, ein Stich davor nicht", () => {
       const h = hof(100, 60);
       const k = kasse();
