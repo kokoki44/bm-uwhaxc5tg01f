@@ -181,3 +181,9 @@ Nachträge zur Freigabe (26.11.2026):
 - Fahrtrichtung in der Suche: Die Richtung des Straßenstücks an der Haltestelle ist geographisch richtig, die Segeberger Chaussee knickt am Kirchenweg von etwa 15° auf etwa 55° ab. Ein längeres Straßenstück ändert daran nichts. Nicht geändert, Vorschlag im Bericht.
 
 Anleitung Beispiellinie (berichtigt): Linien, Nummer 1, "Linie anlegen". In der Suche nacheinander "Harksheide, Wilhelm-Busch-Platz" und "Harksheide, Kielort" mit "Segeberger Chaussee, Fahrtrichtung Osten" und "Glashütte, Glashütter Kirchenweg" mit "Segeberger Chaussee, Fahrtrichtung Nordosten" einfügen. "Hin- und Rückrichtung aus der Grundlinie erzeugen", in beiden Richtungen Takt 06:00 bis 20:00 alle 20 min. Erwartung Werktag 7 Uhr: Hin 6:30 min, Rück 6:40 min, 84 Fahrten, 2 Busse.
+
+Tag `etappe-3b-fertig` auf dem grünen Stand 3b481b2 gesetzt (26.11.2026).
+
+## Etappe 3c: Dienstplan (Vorbereitung, wartet auf Kokos Bestätigung)
+
+Abnahmekriterien, offene Fragen, vorgeschlagene Annahmen A3c-1 bis A3c-14 und die Recherche zum Regelwerk (VO (EG) Nr. 561/2006, FPersV § 1, ArbZG, TV-N SH Anlage 3, mit Quellen) stehen im Bericht vom 26.11.2026. Vorschlag: 3c in 3c-1 (Dienste und Regeln innerhalb eines Dienstes) und 3c-2 (Wochenplan je Fahrer und Regeln über mehrere Tage) teilen. Noch nichts gebaut.
