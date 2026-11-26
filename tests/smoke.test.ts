@@ -23,6 +23,10 @@ import { ladeSpielstand, spielstandDaten } from "../src/game/spielstand";
 import { erzeugeRichtungen, fuegeFahrtHinzu, fuegeHaltEin, Haltestellen, legeKurzlaeuferAn, legeLinieAn, osmHaltId, planAnfrage, setzeTakt, weiseBusZu } from "../src/linien/linien";
 import { berechneLinie, type LinienPlan } from "../src/linien/plan";
 import { passtZurLinie } from "../src/linien/pruefung";
+import { fuegeStueckHinzu, neuerEntwurf, speichereDienst } from "../src/dienste/dienste";
+import { aktuellesRegelwerk } from "../src/dienste/laden";
+import { linienDaten, pruefeTag, wirksameDienste } from "../src/dienste/pruefung";
+import type { Dienst } from "../src/dienste/typen";
 
 /**
  * Rauchtest durch den Kernzyklus. Wird mit jeder Etappe um echte Schritte erweitert.
@@ -202,6 +206,35 @@ const schritte: { name: string; seit: string; run?: (c: Ctx) => Promise<void> | 
       const m = kat.modelle.find((x) => x.modell_id === bus.modellId)!;
       expect(passtZurLinie(m, c.plan!.varianten, config.linien)).toEqual([]);
       expect(s.netz.linien[0].busse).toEqual([bus.id]);
+    },
+  },
+  {
+    name: "Dienst anlegen (Umlauf bis zur Ablösung, Prüfung nach dem Regelwerk im Worker-Kern, freie Fahrten, regelwidriger Dienst nicht speicherbar)",
+    seit: "3c-1",
+    run: (c) => {
+      const s = c.spiel!;
+      const rw = aktuellesRegelwerk();
+      expect(rw.meldungen).toEqual([]);
+      const l = s.netz.linien[0];
+      const daten = linienDaten(c.plan!, l.nummer, l.busse.length, "werktag");
+      const um = daten.umlaeufe[0];
+      const pruefe = (e: Dienst) => pruefeTag({ tag: "werktag", linien: [daten], dienste: wirksameDienste(s.dienste, "werktag"), entwurf: e }, rw.regelwerk!, config.dienste);
+      const vorher = pruefe(neuerEntwurf(s.dienste, "werktag"));
+      // Ganzer Umlauf in einem Dienst: über 10 h Arbeitszeit, nicht speicherbar
+      const ganz = neuerEntwurf(s.dienste, "werktag");
+      fuegeStueckHinzu(ganz, daten, 0, 0, um.fahrten.length - 1);
+      const g = pruefe(ganz).entwurf!;
+      expect(g.verstoesse.map((v) => `${v.regel}.${v.code}`)).toContain("arbeitszeit.max");
+      expect(speichereDienst(s.dienste, ganz, g, JSON.stringify(ganz.stuecke), config.dienste)).toBe("regelverstoss");
+      // Erste Hälfte des Umlaufs bis zu einer Ablösung am Wendepunkt: regelgerecht, gespeichert
+      const d = neuerEntwurf(s.dienste, "werktag");
+      fuegeStueckHinzu(d, daten, 0, 0, Math.floor(um.fahrten.length / 2) - 1);
+      const a = pruefe(d).entwurf!;
+      expect(a.verstoesse).toEqual([]);
+      expect(speichereDienst(s.dienste, d, a, JSON.stringify(d.stuecke), config.dienste)).toBeNull();
+      const nachher = pruefe(neuerEntwurf(s.dienste, "werktag"));
+      expect(nachher.frei[l.id].length).toBe(vorher.frei[l.id].length - Math.floor(um.fahrten.length / 2));
+      expect(nachher.dienste.map((x) => x.gueltig)).toEqual([true]);
     },
   },
   { name: "Einen Spieltag simulieren", seit: "4a" },

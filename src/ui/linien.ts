@@ -12,8 +12,10 @@ import { planTag } from "../linien/tagesart";
 import type { HaltId, Linie, TaktZeile, Variante } from "../linien/typen";
 import { h } from "./dom";
 import { datum, zahl } from "./format";
-import { berechne, berechnungsFehler, fahrzeitSpanne, freigeschaltet, GRUNDLINIE, linienUi, variantenPlaene, waehleAus, zoomeAufLinie, type LinienUi } from "./linienbereich";
+import { berechne, berechnungsFehler, fahrzeitSpanne, freigeschaltet, GRUNDLINIE, lageText, linienUi, variantenPlaene, waehleAus, zoomeAufLinie, type LinienUi } from "./linienbereich";
 import { perlenEditor } from "./perlen";
+import { tagesAuswertung } from "./dienstbereich";
+import { fahrtKey } from "../dienste/pruefung";
 import { beobachte, modellName } from "./spielui";
 import { istOffen, oeffneFenster, schliesseFenster } from "./windows";
 
@@ -108,6 +110,8 @@ export function oeffneLinien(): void {
     const summe = Object.fromEntries(PLAN_TAGE.map((tag) => [tag, u.spiel.netz.linien.reduce((s, l) => s + bedarf(u.plaene.get(l.id))[tag], 0)])) as Record<PlanTag, number>;
     const max = hoechsterBedarf(summe);
     const heute = planTag(u.spiel.zeit, u.world.gemeinde.region, schulferien, L);
+    // Freie Fahrten (ohne gültigen Dienst) an der Tagesart von heute, geprüft im Worker (Kriterium 8)
+    const dienstStand = tagesAuswertung(heute.tag);
     kopf.replaceChildren();
     kopf.append(
       h("p", { "data-testid": "linien-heute", text: t("linien.heute", { datum: datum(Date.parse(heute.betriebstag)), tag: tagName(heute.tag) }) }),
@@ -141,18 +145,19 @@ export function oeffneLinien(): void {
           h("td", { class: "zahl", text: String(l.varianten.length) }),
           h("td", { class: "zahl", "data-testid": `linie-${l.id}-bedarf`, text: String(b.busse) }),
           h("td", { class: "zahl", "data-testid": `linie-${l.id}-zugewiesen`, text: String(l.busse.length) }),
+          h("td", { class: "zahl", "data-testid": `linie-${l.id}-frei`, text: !l.aktiv ? "" : dienstStand ? String(dienstStand.frei[l.id]?.length ?? 0) : t("linien.freiPruefung") }),
           h("td", { class: hinweise.length ? "warnung" : "ok", "data-testid": `linie-${l.id}-hinweis`, text: hinweise.length ? `⚠ ${hinweise.join(" ")}` : `✔ ${t("linien.inOrdnung")}` }),
           h("td", {}, fahrplan),
         );
       }),
     );
-    if (!u.spiel.netz.linien.length) koerper.append(h("tr", {}, h("td", { colspan: 8, text: t("linien.keine") })));
+    if (!u.spiel.netz.linien.length) koerper.append(h("tr", {}, h("td", { colspan: 9, text: t("linien.keine") })));
   }
   const fenster = oeffneFenster("linien", t("linien.titel"), h("div", { class: "linienbereich" },
     kopf,
     h("div", { class: "rollen" },
       h("table", { class: "tabelle", "data-testid": "linien-tabelle" },
-        h("thead", {}, h("tr", {}, ...["linie.nummer", "linie.name", "linien.status", "linien.varianten", "linien.bedarf", "linien.zugewiesen", "linien.hinweis", ""].map((k) => h("th", { scope: "col", text: k ? t(k as TextKey) : "" })))),
+        h("thead", {}, h("tr", {}, ...["linie.nummer", "linie.name", "linien.status", "linien.varianten", "linien.bedarf", "linien.zugewiesen", "linien.frei", "linien.hinweis", ""].map((k) => h("th", { scope: "col", text: k ? t(k as TextKey) : "" })))),
         koerper,
       ),
     ),
@@ -648,6 +653,8 @@ export function oeffneFahrplan(linieId: number, start: PlanTag = "werktag"): voi
     const ohneEigen = istFerientag(tag) && l!.varianten.some((v) => taktQuelle(v, tag) !== tag);
     hinweis.textContent = [!l!.aktiv ? t("fahrplan.inaktiv") : "", ohneEigen ? t("fahrplan.ferienWie", { tag: tagName(grundtagVon(tag)) }) : ""].filter(Boolean).join(" ");
     const fahrten = (plan?.tage[tag].fahrten ?? []).filter((f) => filter === "alle" || String(f.variante) === filter);
+    const ds = tagesAuswertung(tag);
+    const dienstVon = (f: Fahrt) => (f.status === "gestrichen" ? "" : !ds ? t("linien.freiPruefung") : (ds.besetzt.get(fahrtKey(l!.id, f)) ?? t("dienste.frei")));
     koerper.replaceChildren(
       ...fahrten.map((f) => {
         const v = l!.varianten.find((x) => x.id === f.variante)!;
@@ -661,11 +668,12 @@ export function oeffneFahrplan(linieId: number, start: PlanTag = "werktag"): voi
           h("td", { text: halte[halte.length - 1]?.art === "halt" ? haltName((halte[halte.length - 1] as { halt: HaltId }).halt) : "" }),
           h("td", { class: "zahl", text: f.status === "gestrichen" ? "" : uhrzeit(f.ankunftS) }),
           h("td", { "data-testid": `fahrt-${f.variante}-${f.schluessel}-status`, text: t(`fahrplan.status.${f.status}` as TextKey, { zeit: f.ursprungS !== null ? uhrzeit(f.ursprungS) : "" }) }),
+          h("td", { "data-testid": `fahrt-${f.variante}-${f.schluessel}-dienst`, text: dienstVon(f) }),
           h("td", {}, aktionen(f)),
         );
       }),
     );
-    if (!fahrten.length) koerper.append(h("tr", {}, h("td", { colspan: 7, text: t("fahrplan.keine") })));
+    if (!fahrten.length) koerper.append(h("tr", {}, h("td", { colspan: 8, text: t("fahrplan.keine") })));
     const of = offen ? (plan?.tage[tag].fahrten ?? []).find((f) => `${f.variante}-${f.schluessel}` === offen) : undefined;
     if (of) {
       const halte = l!.varianten.find((x) => x.id === of.variante)!.perlen.filter((p) => p.art === "halt");
@@ -682,7 +690,7 @@ export function oeffneFahrplan(linieId: number, start: PlanTag = "werktag"): voi
     bedarfEl.replaceChildren(
       h("p", { "data-testid": "fahrplan-busse", class: fehlt > 0 ? "schlecht" : "ok", text: `${fehlt > 0 ? "⚠" : "✔"} ${t("fahrplan.busse", { n: tp?.busbedarf ?? 0, zugewiesen: l!.busse.length })}${fehlt > 0 ? ` ${mz("linie.fehlenBusse", fehlt)}` : ""}` }),
       h("table", { class: "tabelle", "data-testid": "umlaeufe" },
-        h("thead", {}, h("tr", {}, ...["fahrplan.umlauf", "fahrplan.fahrtenZahl", "fahrplan.beginn", "fahrplan.ende", "fahrplan.ausruecken"].map((k) => h("th", { scope: "col", text: t(k as TextKey) })))),
+        h("thead", {}, h("tr", {}, ...["fahrplan.umlauf", "fahrplan.fahrtenZahl", "fahrplan.beginn", "fahrplan.ende", "fahrplan.ausruecken", "fahrplan.einruecken"].map((k) => h("th", { scope: "col", text: t(k as TextKey) })))),
         h("tbody", {}, ...(tp?.umlaeufe ?? []).map((um, i) =>
           h("tr", { "data-testid": `umlauf-${i}` },
             h("td", { text: t("fahrplan.umlaufNr", { n: i + 1 }) }),
@@ -690,6 +698,7 @@ export function oeffneFahrplan(linieId: number, start: PlanTag = "werktag"): voi
             h("td", { class: "zahl", text: uhrzeit(um.beginnS) }),
             h("td", { class: "zahl", text: uhrzeit(um.endeS) }),
             h("td", { "data-testid": `umlauf-${i}-ausruecken`, text: um.ausrueck ? t("fahrplan.ausrueckenText", { zeit: uhrzeit(um.ausrueck.abHofS, true), dauer: dauer(um.ausrueck.fahrzeitS) }) : t(u.spiel.betriebshof ? "fahrplan.ohneAusrueck" : "fahrplan.ohneHof") }),
+            h("td", { "data-testid": `umlauf-${i}-einruecken`, text: um.einrueck ? t("fahrplan.einrueckenText", { zeit: uhrzeit(um.einrueck.anHofS, true), dauer: dauer(um.einrueck.fahrzeitS) }) : t(u.spiel.betriebshof ? "fahrplan.ohneEinrueck" : "fahrplan.ohneHof") }),
           ),
         )),
       ),
@@ -701,7 +710,7 @@ export function oeffneFahrplan(linieId: number, start: PlanTag = "werktag"): voi
     hinweis,
     h("div", { class: "rollen" },
       h("table", { class: "tabelle", "data-testid": "fahrplan-tabelle" },
-        h("thead", {}, h("tr", {}, ...["fahrplan.abfahrt", "fahrplan.variante", "fahrplan.von", "fahrplan.nach", "fahrplan.ankunft", "fahrplan.status", ""].map((k) => h("th", { scope: "col", text: k ? t(k as TextKey) : "" })))),
+        h("thead", {}, h("tr", {}, ...["fahrplan.abfahrt", "fahrplan.variante", "fahrplan.von", "fahrplan.nach", "fahrplan.ankunft", "fahrplan.status", "fahrplan.dienst", ""].map((k) => h("th", { scope: "col", text: k ? t(k as TextKey) : "" })))),
         koerper,
       ),
     ),
@@ -739,6 +748,7 @@ export function oeffneHaltestelle(u: LinienUi, id: HaltId): void {
   const titel = h("p", { class: "fett", "data-testid": "haltestelle-titel", text: hd.name || t("haltestelle.ohneName") });
   const inhalt = h("div", {},
     titel,
+    hd.snaps.length ? h("p", { "data-testid": "haltestelle-lage", text: lageText(u, hd) }) : null,
     h("p", { class: "klein", text: u.halte.istNeu(id) ? t("haltestelle.neuAngelegt") : t("haltestelle.osm", { id: id.slice(1) }) }),
     hd.snaps.length ? null : h("p", { class: "schlecht", text: `⚠ ${t("perle.fehler.ohneNetz", W)}` }),
     h("p", { "data-testid": "haltestelle-linien" }, linien.length ? t("haltestelle.linien") : t("haltestelle.keineLinien"), " ", ...linien.flatMap((l) => [linienSchild(l), " "])),

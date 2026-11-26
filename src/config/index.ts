@@ -74,6 +74,24 @@ export interface Config {
   fahrzeugmarkt: FahrzeugmarktConfig;
   personal: PersonalConfig;
   linien: LinienConfig;
+  dienste: DiensteConfig;
+}
+
+/** Dienstplan (Etappe 3c-1). Die Regeln selbst stehen im Regelwerk (`regelwerk/<land>.json`), hier nur Spielwerte. */
+export interface DiensteConfig {
+  /** Kennung der Regelwerk-Datei (Land). */
+  regelwerk: string;
+  /** Vorbereitung vor jedem Ausrücken (Abfahrtkontrolle), Arbeitszeit (A3c-3). */
+  vorbereitungS: number;
+  /** Abschluss am Dienstende (Abrechnung), Arbeitszeit (A3c-3). */
+  abschlussS: number;
+  /** Weg zwischen Betriebshof und Ablösestelle je Richtung, Arbeitszeit (A3c-4). */
+  wegS: number;
+  /** Ab dieser Unterbrechung zwischen zwei Dienststücken ist der Dienst ein geteilter Dienst (A3c-6). */
+  geteiltAbS: number;
+  /** Beginnt ein Dienst vor dieser Stunde, ist er ein Frühdienst, sonst ein Spätdienst (A3c-7). */
+  fruehdienstBisH: number;
+  nummerMaxLaenge: number;
 }
 
 /** Tagesart eines Fahrplans: Werktag, Samstag, Sonn- und Feiertag, jeweils ohne und mit Schulferien. */
@@ -117,6 +135,8 @@ export interface LinienConfig {
   probeStunde: number;
   /** Zoom auf eine Linie beim Öffnen des Editors: Rand neben den Fenstern, kleinste freie Breite, größter Zoom. */
   zoom: { randPx: number; mindestBreitePx: number; maxZoom: number };
+  /** Suchweite für "weiter Richtung <nächste Haltestelle>" in Suche und Listen (Meter auf dem Netz). */
+  richtungSucheM: number;
 }
 
 /** Optionsdatei (Ausstattung beim Neukauf), wie der Katalog nur gelesen. */
@@ -388,9 +408,14 @@ export function validateConfig(c: unknown): Config {
   }
   if (!(l.fangZelleM > 0) || !(l.probeStunde >= 0 && l.probeStunde < 24)) bad("linien.fangZelleM/probeStunde");
   if (!l.zoom || !(l.zoom.randPx >= 0) || !(l.zoom.mindestBreitePx > 0) || !(l.zoom.maxZoom > 0)) bad("linien.zoom");
+  if (!(l.richtungSucheM > 0)) bad("linien.richtungSucheM");
   const nz = l.neueTaktzeile;
   if (!nz || !(nz.dauerMin > 0) || !(nz.taktMin >= l.taktMinMin && nz.taktMin <= l.taktMaxMin) || !(nz.vonH >= l.betriebstagBeginnH && nz.vonH < 24 + l.betriebstagBeginnH)) bad("linien.neueTaktzeile");
   for (const [tag, v] of Object.entries(l.taktVorlage ?? {})) if (v.some((x) => !(x[1] > x[0]) || !(x[2] >= l.taktMinMin && x[2] <= l.taktMaxMin))) bad(`linien.taktVorlage.${tag}`);
+  const d = cfg.dienste;
+  if (!d) bad("dienste");
+  for (const k of ["vorbereitungS", "abschlussS", "wegS", "geteiltAbS"] as const) if (!(Number.isInteger(d[k]) && d[k] >= 0 && d[k] % l.rundungS === 0)) bad(`dienste.${k}`);
+  if (!(d.fruehdienstBisH > 0 && d.fruehdienstBisH < 24 + l.betriebstagBeginnH) || !(d.nummerMaxLaenge > 0) || !/^[a-z]{2}$/.test(d.regelwerk)) bad("dienste.fruehdienstBisH/nummerMaxLaenge/regelwerk");
   return cfg;
 }
 

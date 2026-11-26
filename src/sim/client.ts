@@ -1,4 +1,5 @@
 import { config } from "../config";
+import type { DienstAnfrage, TagesAuswertung } from "../dienste/pruefung";
 import type { LinienPlan, PlanAnfrage } from "../linien/plan";
 import type { LonLat } from "../world/geo";
 import type { RoadNetwork } from "../world/roads";
@@ -15,6 +16,8 @@ export interface Simulation {
   plane(anfrage: PlanAnfrage): Promise<LinienPlan>;
   /** Rastet einen Punkt auf das Busnetz ein. */
   fange(punkt: LonLat, art: "halt" | "weg"): Promise<Snap[]>;
+  /** Prüft die Dienste einer Tagesart im Worker und ermittelt die freien Fahrten. */
+  pruefeDienste(anfrage: DienstAnfrage): Promise<TagesAuswertung>;
 }
 
 /** Startet den Simulations-Worker und meldet jeden Statuswert an die Oberfläche. */
@@ -32,10 +35,10 @@ export function startSimulation(onStatus: (s: SimStatus) => void): Simulation {
   worker.onmessage = (e: MessageEvent<FromWorker>) => {
     const d = e.data;
     if (d.type === "status") onStatus(d.status);
-    else if (d.type === "plan" || d.type === "fangen") {
+    else if (d.type === "plan" || d.type === "fangen" || d.type === "dienste") {
       const o = offen.get(d.id);
       offen.delete(d.id);
-      o?.ok((d.type === "plan" ? d.plan : d.snaps) as never);
+      o?.ok((d.type === "plan" ? d.plan : d.type === "fangen" ? d.snaps : d.auswertung) as never);
     } else {
       console.error(d.message);
       if (d.id !== undefined) {
@@ -51,5 +54,6 @@ export function startSimulation(onStatus: (s: SimStatus) => void): Simulation {
     setzeNetz: (network, mitte) => send({ type: "netz", network, mitte }),
     plane: (anfrage) => frage<LinienPlan>((id) => ({ type: "plan", id, anfrage })),
     fange: (punkt, art) => frage<Snap[]>((id) => ({ type: "fangen", id, punkt, art })),
+    pruefeDienste: (anfrage) => frage<TagesAuswertung>((id) => ({ type: "dienste", id, anfrage })),
   };
 }

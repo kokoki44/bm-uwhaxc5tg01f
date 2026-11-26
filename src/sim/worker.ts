@@ -1,5 +1,7 @@
 /// Web Worker der Simulation. Dünne Hülle um SimCore und die Linienberechnung.
 import { config } from "../config";
+import { aktuellesRegelwerk } from "../dienste/laden";
+import { pruefeTag } from "../dienste/pruefung";
 import { fange, fangIndex, type FangIndex } from "../linien/fangen";
 import { berechneLinie } from "../linien/plan";
 import { RoutenCache } from "../linien/strecke";
@@ -16,6 +18,7 @@ const scope = self as unknown as WorkerScope;
 let core: SimCore | null = null;
 let last = 0;
 let netz: { net: RoadNetwork; fang: FangIndex; cache: RoutenCache } | null = null;
+const regelwerk = aktuellesRegelwerk();
 
 scope.onmessage = (e) => {
   const msg = e.data;
@@ -36,6 +39,10 @@ scope.onmessage = (e) => {
     } else if (msg.type === "plan") {
       if (!netz) throw new Error("Straßennetz fehlt im Worker");
       scope.postMessage({ type: "plan", id: msg.id, plan: berechneLinie(netz.net, msg.anfrage, config.linien, config.roads, netz.cache) });
+    } else if (msg.type === "dienste") {
+      // Regeln und Prüfung laufen hier, die Oberfläche zeigt nur das Ergebnis (Kriterium 13)
+      if (!regelwerk.regelwerk) throw new Error(`Regelwerk ${regelwerk.datei} ungültig`);
+      scope.postMessage({ type: "dienste", id: msg.id, auswertung: pruefeTag(msg.anfrage, regelwerk.regelwerk, config.dienste) });
     } else if (msg.type === "fangen") {
       if (!netz) throw new Error("Straßennetz fehlt im Worker");
       scope.postMessage({ type: "fangen", id: msg.id, snaps: fange(netz.net, netz.fang, msg.punkt, msg.art, config.stops) });

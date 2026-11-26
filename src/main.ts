@@ -25,6 +25,8 @@ import { bereinigeAnschluesse } from "./linien/speichern";
 import { LocalProj } from "./world/geo";
 import type { SaveRecord, SaveStore } from "./storage/types";
 import { oeffneHaltestelle, oeffneLinien } from "./ui/linien";
+import { oeffneDienste } from "./ui/dienste";
+import { regelwerk, regelwerkFehlerTexte } from "./ui/dienstbereich";
 import { baueLinienUi, berechne, haltKlick, sichtbarerLinienanteil, zeichneKarte, type LinienUi } from "./ui/linienbereich";
 import type { GespeicherterStand } from "./ui/setup";
 import { t, type TextKey } from "./i18n";
@@ -235,6 +237,7 @@ async function starteEinrichtung(hinweis = ""): Promise<void> {
   baueMenueleiste((b) => {
     if (b === "betriebshof") ui.betriebshof();
     else if (b === "linien") oeffneLinien();
+    else if (b === "dienste") oeffneDienste();
     else if (b === "fahrzeuge") oeffneFahrzeuge(ui);
     else if (b === "fahrzeugmarkt") oeffneFahrzeugmarkt(ui);
     else oeffnePersonal(ui);
@@ -332,6 +335,13 @@ async function starteEinrichtung(hinweis = ""): Promise<void> {
   // Beim Start: Katalogfehler (nur wenn es welche gibt), dann die Suche nach dem ersten Standort (nur ohne Betriebshof)
   zeigeKatalogFehler(katalog);
   zeigeOptionenFehler(optionen);
+  // Regelwerk der Lenk- und Ruhezeiten: Fehler wie bei der Optionsdatei melden
+  const rwFehler = regelwerkFehlerTexte();
+  if (rwFehler.length)
+    oeffneFenster("regelwerk", t("regelwerk.fenster.titel"), h("div", {},
+      h("p", { text: t("regelwerk.fenster.text", { datei: regelwerk.datei }) }),
+      h("ul", { class: "rollen kurz", "data-testid": "regelwerk-fehler" }, ...rwFehler.map((x) => h("li", { text: x }))),
+    ));
   if (sp.betriebshof) {
     standorteSichtbar(map, false);
     hofAufKarte();

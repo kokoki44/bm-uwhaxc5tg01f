@@ -10,6 +10,7 @@ import { bereinigeAnschluesse } from "../src/linien/speichern";
 import { berechneStrecke } from "../src/linien/strecke";
 import { neuesNetz } from "../src/linien/typen";
 import { freierRand, sichtbarerAnteil } from "../src/map/linienkarte";
+import { HaltIndex, haltLage } from "../src/linien/richtung";
 import { LocalProj } from "../src/world/geo";
 import { geradenNetz, halt } from "./helpers/linien-netz";
 
@@ -127,6 +128,26 @@ describe("Regressionen Prüfung Etappe 3b", () => {
     expect(freierRand({ ...karte, right: 1000 }, [{ ...editor, right: 800 }, { left: 300, top: 72, right: 990, bottom: 600 }], 40, 240)).toEqual({ top: 40, bottom: 40, left: 40, right: 40 });
     expect(sichtbarerAnteil([[800, 400], [400, 400], [1700, 400], [1000, 500]], karte, [editor])).toBe(0.5);
     expect(sichtbarerAnteil([], karte, [])).toBe(0);
+  });
+
+  it("Lage einer Haltestelle: nächste Haltestelle auf derselben Straße, sonst auf dem Netz, sonst nur die Straße", () => {
+    const net = geradenNetz(4); // Abschnitte "Weg 0" bis "Weg 2", je 400 m
+    const ein = (id: string, name: string, edge: number, t: number) => ({ id, name, snaps: [{ edge, t, dist: 0, point: [0, 0] as [number, number] }] });
+    const a = ein("a", "A", 0, 0.5);
+    // gleicher Abschnitt dahinter, gleichnamige Haltestelle zählt nicht
+    let idx = new HaltIndex([a, ein("a2", "A", 0, 0.6), ein("b", "B", 0, 0.8), ein("c", "C", 2, 0.1)]);
+    expect(haltLage(net, idx, a, 2000)).toEqual({ art: "richtung", strasse: "Weg 0", naechste: "B" });
+    // nichts auf derselben Straße: nächste auf dem Netz (Weg 1)
+    idx = new HaltIndex([a, ein("c", "C", 2, 0.1), ein("d", "D", 4, 0.1)]);
+    expect(haltLage(net, idx, a, 2000)).toEqual({ art: "richtung", strasse: "Weg 0", naechste: "C" });
+    // gleiche Straße hat Vorrang vor einer näheren Haltestelle auf einer anderen Straße
+    net.edges[4].name = net.edges[5].name = "Weg 0";
+    net.edges[2].name = net.edges[3].name = "Weg 0";
+    expect(haltLage(net, new HaltIndex([a, ein("d", "D", 4, 0.1)]), a, 2000)).toEqual({ art: "richtung", strasse: "Weg 0", naechste: "D" });
+    // Haltestelle hinter dem Start in Gegenrichtung zählt nicht; nichts in Reichweite: nur die Straße
+    expect(haltLage(net, new HaltIndex([a, ein("z", "Z", 1, 0.9), ein("d", "D", 4, 0.9)]), a, 500)).toEqual({ art: "strasse", strasse: "Weg 0" });
+    // Haltestelle direkt auf der Straße (beide Richtungen)
+    expect(haltLage(net, new HaltIndex([]), { ...halt(net, 9, "M", 1, 0.5), id: "o9" }, 2000)).toEqual({ art: "beide", strasse: "Weg 0" });
   });
 
   it("die Konfiguration lehnt Verkehrsfaktoren unter 1 und Lücken in der Tabelle ab", () => {

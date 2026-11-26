@@ -1,6 +1,7 @@
 import { config, type Config } from "../config";
 import { neuerFuhrpark, type Fuhrpark } from "../fleet/fuhrpark";
 import { neuesNetz, type Netz } from "../linien/typen";
+import { neuerDienstplan, type Dienstplan } from "../dienste/typen";
 import { neuesPersonal, type Personal } from "../personal/personal";
 import { neuerZufall, type Zufall } from "./zufall";
 import type { CivilMs } from "../calendar/civil";
@@ -59,6 +60,8 @@ export interface SpielZustand {
   personal: Personal;
   /** Haltestellen, Linien, Varianten, Takt und Fahrtänderungen (Etappe 3b). */
   netz: Netz;
+  /** Dienste je Tagesart (Etappe 3c-1). */
+  dienste: Dienstplan;
 }
 
 /** Startwert für den Zufall eines neuen Spielstands. */
@@ -71,6 +74,7 @@ export function neuesSpiel(s: SetupGeprueft, world: World, startZeit: CivilMs, s
     fuhrpark: neuerFuhrpark(config.fahrzeugmarkt),
     personal: neuesPersonal(config.personal),
     netz: neuesNetz(),
+    dienste: neuerDienstplan(),
     firma: { name: s.firmenname, farbe: s.firmenfarbe },
     kontostandEur: s.startkapital,
     startZeit,

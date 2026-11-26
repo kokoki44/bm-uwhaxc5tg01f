@@ -1,0 +1,119 @@
+{
+  "land": "de",
+  "name": "Deutschland, Linienverkehr mit Kraftomnibussen",
+  "stand": "26.11.2026",
+  "hinweis": "Gesetze sind harte Regeln, Grenzen aus dem Tarifvertrag (TV-N SH) warnen nur. Geprüft gegen die Originaltexte: VO (EG) Nr. 561/2006 konsolidierte Fassung vom 22.05.2024, FPersV § 1, ArbZG (zuletzt geändert am 23.10.2024), TV-N SH Lesefassung 14. ÄTV vom 01.03.2026.",
+  "anwendung": {
+    "linieMaxM": 50000,
+    "haltestellenabstandMaxM": 3000,
+    "quelle": "VO (EG) Nr. 561/2006 Art. 3 Buchst. a; FPersV § 1 Abs. 1 Nr. 2 und Abs. 3",
+    "url": "https://www.gesetze-im-internet.de/fpersv/__1.html",
+    "sinn": "Bis 50 km Linienlänge gilt statt Art. 7 der VO die FPersV; der durchschnittliche Haltestellenabstand (bis 3 km oder mehr) entscheidet über die Art der Fahrtunterbrechung."
+  },
+  "regeln": {
+    "lenkSechstel": {
+      "hart": true,
+      "nenner": 6,
+      "minUnterbrechungS": 600,
+      "maxAmStueckS": 16200,
+      "pauseDanachS": 2700,
+      "quelle": "FPersV § 1 Abs. 3 Nr. 2",
+      "url": "https://www.gesetze-im-internet.de/fpersv/__1.html",
+      "sinn": "Haltestellenabstand bis 3 km: Arbeitsunterbrechungen laut Dienstplan (z. B. Wendezeiten) ab 10 min genügen, wenn sie zusammen mindestens ein Sechstel der Lenkzeit der Schicht sind; nach 4,5 h ununterbrochener Lenkzeit mindestens 45 min Fahrtunterbrechung."
+    },
+    "lenkBlockFPersV": {
+      "hart": true,
+      "maxLenkS": 16200,
+      "vollS": 1800,
+      "teilungen": [
+        { "minS": [1200, 1200], "geordnet": false },
+        { "minS": [900, 900, 900], "geordnet": false }
+      ],
+      "quelle": "FPersV § 1 Abs. 3 Nr. 1",
+      "url": "https://www.gesetze-im-internet.de/fpersv/__1.html",
+      "sinn": "Haltestellenabstand über 3 km: nach 4,5 h Lenkzeit mindestens 30 zusammenhängende Minuten Fahrtunterbrechung, ersatzweise 2 × 20 oder 3 × 15 min innerhalb der 4,5 h oder teils unmittelbar danach."
+    },
+    "lenkBlockVO": {
+      "hart": true,
+      "maxLenkS": 16200,
+      "vollS": 2700,
+      "teilungen": [{ "minS": [900, 1800], "geordnet": true }],
+      "quelle": "VO (EG) Nr. 561/2006 Art. 7",
+      "url": "https://eur-lex.europa.eu/eli/reg/2006/561",
+      "sinn": "Linien über 50 km: nach einer Lenkdauer von 4,5 h mindestens 45 min Fahrtunterbrechung, ersatzweise 15 min gefolgt von 30 min."
+    },
+    "tageslenkzeit": {
+      "hart": true,
+      "maxS": 32400,
+      "quelle": "VO (EG) Nr. 561/2006 Art. 6 Abs. 1 (über FPersV § 1 Abs. 1)",
+      "url": "https://eur-lex.europa.eu/eli/reg/2006/561",
+      "sinn": "Die tägliche Lenkzeit darf 9 Stunden nicht überschreiten (zweimal je Woche 10 Stunden: erst mit dem Wochenplan in 3c-2)."
+    },
+    "arbeitszeit": {
+      "hart": true,
+      "maxS": 36000,
+      "quelle": "ArbZG § 3",
+      "url": "https://www.gesetze-im-internet.de/arbzg/__3.html",
+      "sinn": "Die werktägliche Arbeitszeit darf 8 Stunden nicht überschreiten, verlängert höchstens 10 Stunden mit Ausgleich."
+    },
+    "ruhepause": {
+      "hart": true,
+      "stufen": [
+        { "abS": 21600, "pauseS": 1800 },
+        { "abS": 32400, "pauseS": 2700 }
+      ],
+      "minTeilS": 900,
+      "maxOhnePauseS": 21600,
+      "quelle": "ArbZG § 4",
+      "url": "https://www.gesetze-im-internet.de/arbzg/__4.html",
+      "sinn": "Im Voraus feststehende Ruhepausen: 30 min bei mehr als 6 bis 9 h Arbeitszeit, 45 min bei mehr als 9 h, in Teilen von mindestens 15 min; höchstens 6 h hintereinander ohne Ruhepause."
+    },
+    "pausenAbgeltung": {
+      "hart": true,
+      "nenner": 6,
+      "minUnterbrechungS": 600,
+      "quelle": "TV-N SH Anlage 3 § 4 Abs. 3 (ArbZG § 7 Abs. 1 Nr. 2)",
+      "url": "https://www.kavsh.de/download/tv-n-sh-lesefassung-idf-des-14.-aetv-01032026",
+      "sinn": "Die Pause nach ArbZG gilt als abgegolten, wenn Arbeitsunterbrechungen (z. B. Wendezeiten) von jeweils mindestens 10 min zusammen mindestens ein Sechstel der reinen Fahrzeit sind."
+    },
+    "nachtarbeit": {
+      "hart": false,
+      "vonH": 23,
+      "bisH": 6,
+      "mehrAlsS": 7200,
+      "quelle": "ArbZG § 2 Abs. 3 und 4",
+      "url": "https://www.gesetze-im-internet.de/arbzg/__2.html",
+      "sinn": "Nachtzeit ist 23 bis 6 Uhr; Nachtarbeit ist jede Arbeit, die mehr als zwei Stunden der Nachtzeit umfasst (bestimmt die Dienstart Nachtdienst)."
+    },
+    "tarifArbeitszeit": {
+      "hart": false,
+      "maxS": 30600,
+      "quelle": "TV-N SH Anlage 3 § 1",
+      "url": "https://www.kavsh.de/download/tv-n-sh-lesefassung-idf-des-14.-aetv-01032026",
+      "sinn": "Die dienstplanmäßige tägliche Arbeitszeit darf 8,5 Stunden, in Ausnahmefällen 9,5 Stunden nicht übersteigen."
+    },
+    "tarifLenkzeit": {
+      "hart": false,
+      "maxS": 28800,
+      "quelle": "TV-N SH Anlage 3 § 4 Abs. 5",
+      "url": "https://www.kavsh.de/download/tv-n-sh-lesefassung-idf-des-14.-aetv-01032026",
+      "sinn": "Der reine Dienst am Steuer darf 8 Stunden in der Dienstschicht nicht überschreiten (Betriebsvereinbarung kann abweichen)."
+    },
+    "tarifDienstschicht": {
+      "hart": false,
+      "maxS": 36000,
+      "dringendMaxS": 46800,
+      "quelle": "TV-N SH Anlage 3 § 2 Abs. 1 mit Fußnoten (ab 01.01.2025)",
+      "url": "https://www.kavsh.de/download/tv-n-sh-lesefassung-idf-des-14.-aetv-01032026",
+      "sinn": "Die Dienstschicht (Arbeitszeit, Pausen, Wendezeiten) soll in 10 Stunden liegen, in dringenden betrieblichen Fällen bis 13 Stunden."
+    },
+    "tarifTeilung": {
+      "hart": false,
+      "maxTeilungen": 1,
+      "minTeilS": 7200,
+      "quelle": "TV-N SH Anlage 3 § 3",
+      "url": "https://www.kavsh.de/download/tv-n-sh-lesefassung-idf-des-14.-aetv-01032026",
+      "sinn": "Die Dienstschicht soll nur einmal geteilt werden, jeder Teil soll mindestens zwei Stunden betragen."
+    }
+  }
+}

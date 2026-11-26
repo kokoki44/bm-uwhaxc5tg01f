@@ -3,13 +3,15 @@ import { ladeHof, serialisiereHof } from "../depot/hof";
 import { ladeFuhrpark, serialisiereFuhrpark } from "../fleet/speichern";
 import { ladeNetz } from "../linien/speichern";
 import { neuesNetz, type Netz } from "../linien/typen";
+import { ladeDienstplan } from "../dienste/dienste";
+import { neuerDienstplan, type Dienstplan } from "../dienste/typen";
 import { ladePersonal, serialisierePersonal } from "../personal/personal";
 import type { SaveRecord } from "../storage/types";
 import type { SpielZustand } from "./setup";
 
 /**
  * Spielstand als Datenstruktur mit Version (Konzept: Speicherstände tragen eine Version).
- * Version 1: Stand nach Etappe 3a (ohne Linien). Version 2: mit Liniennetz (Etappe 3b).
+ * Version 1: Stand nach Etappe 3a (ohne Linien). Version 2: mit Liniennetz (Etappe 3b). Version 3: mit Dienstplan (3c-1).
  * Karten-Auszüge werden nicht gespeichert, nur referenziert (Gemeinde und Quelle).
  */
 export interface SpielstandDaten {
@@ -25,6 +27,8 @@ export interface SpielstandDaten {
   personal: string;
   /** Ab Version 2. */
   netz?: Netz;
+  /** Ab Version 3. */
+  dienste?: Dienstplan;
 }
 
 export class SpielstandFehler extends Error {}
@@ -42,14 +46,20 @@ export function spielstandDaten(s: SpielZustand): SpielstandDaten {
     fuhrpark: serialisiereFuhrpark(s.fuhrpark),
     personal: serialisierePersonal(s.personal),
     netz: structuredClone(s.netz),
+    dienste: structuredClone(s.dienste),
   };
 }
 
-/** Bringt ältere Stände auf die aktuelle Version. Version 1 (Etappe 3a) bekommt ein leeres Liniennetz. */
+/**
+ * Bringt ältere Stände auf die aktuelle Version. Version 1 (Etappe 3a) bekommt ein leeres Liniennetz, Version 2
+ * (Etappe 3b) einen leeren Dienstplan.
+ */
 export function migriere(version: number, p: SpielstandDaten): SpielstandDaten {
   if (version > config.storage.saveVersion) throw new SpielstandFehler(`Spielstand hat Version ${version}, bekannt ist nur ${config.storage.saveVersion}`);
-  if (version < 2) return { ...p, netz: neuesNetz() };
-  return p;
+  let q = p;
+  if (version < 2) q = { ...q, netz: neuesNetz() };
+  if (version < 3) q = { ...q, dienste: neuerDienstplan() };
+  return q;
 }
 
 const zahl = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -74,6 +84,7 @@ export function ladeSpielstand(rec: SaveRecord, modellIds?: ReadonlySet<string>)
       fuhrpark,
       personal: ladePersonal(p.personal, config.personal),
       netz: ladeNetz(p.netz, new Set(fuhrpark.busse.map((b) => b.id))),
+      dienste: ladeDienstplan(p.dienste),
     };
   } catch (e) {
     if (e instanceof SpielstandFehler) throw e;

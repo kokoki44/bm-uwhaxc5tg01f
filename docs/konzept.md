@@ -162,6 +162,12 @@ Die Busse folgen echten Wegen auf dem Raster. Bei hohem Zeitraffer rechnet das S
 
 **Optik.** Der Betriebshof ist bewusst schlicht. Er wird als Draufsicht aus flachen Farbflächen gezeichnet, je eine Farbe pro Bauteiltyp, mit einfachen Symbolen statt Details. Busse sind kleine Rechtecke in der Linienfarbe. Es gibt keine Texturen, keine Gebäudemodelle und keine Animationen außer der Bewegung der Busse. Das hält das Spiel schnell und die Umsetzung überschaubar.
 
+**Bauteil-Verbund.** Ein Bauteil darf aus mehreren Rechtecken bestehen. Berühren sich zwei Rechtecke gleichen Typs auf mindestens 1 Meter Kante, werden sie zu einem Bauteil, auch in L- oder T-Form. Die Kapazität wird über die gesamte Fläche des Verbunds gerechnet: In der Werkstatt zählen die vollen Felder von 5 × 15 Metern in der Gesamtfläche, in der Halle die Plätze im ganzen Verbund, bei Lager und Räumen die Fläche. So ergeben zwei schmale Streifen zusammen einen Arbeitsplatz, den jeder für sich nicht hätte. Kosten und Abrisserstattung bleiben je Quadratmeter. Ein Teil des Verbunds lässt sich einzeln abreißen, der Rest bleibt stehen, solange das Layout gültig bleibt. Bauteile verschiedenen Typs verschmelzen nie, ein einzelner Stellplatz (ein Rechteck, ein Bus) ebenfalls nicht.
+
+**Stellplatzfläche.** Neben dem einzelnen Stellplatz gibt es die Stellplatzfläche, ein Rechteck unter freiem Himmel, auf dem das Spiel so viele Stellplätze wie möglich anordnet. Der Spieler wählt die Platzgröße der Fläche (Standard: der längste Bus im Fuhrpark) und die Aufstellung (senkrecht oder längs). Das Spiel legt die Plätze in Reihen mit Fahrgassen an, sodass jeder Platz direkt erreichbar ist, und zeigt die Zahl der Plätze sofort an. Die Fläche braucht eine Verbindung zu einem Fahrweg mindestens in Busbreite. Ein Klick auf einen Platz zeigt wie beim einzelnen Stellplatz Weg und Zeit. Die Plätze zählen für die Fuhrparkgrenze wie Stellplätze. Der einzelne Stellplatz bleibt für die Feinarbeit. Aneinandergrenzende Stellplatzflächen verschmelzen wie im Bauteil-Verbund.
+
+**Hof-Vorlagen und Planungsassistent (Vorschlag).** Eigene Hofentwürfe lassen sich als Vorlage speichern und auf einem anderen Grundstück laden. Bauteile, die nicht aufs Grundstück passen, fallen weg und werden gemeldet. Dazu liefert das Spiel einige Starterhöfe (zum Beispiel klein und mittel). Die Bauteile kosten wie beim normalen Bauen. Der Planungsassistent wird über den Technologiebaum freigeschaltet: Der Spieler gibt Grundstück und Zielgröße vor (Zahl der Busse, Ladeplätze, Werkstattplätze) und bekommt einen gültigen Hofentwurf zum Anpassen, bezahlt wie normales Bauen. Zuerst nur für rechteckige Grundstücke.
+
 ## Fuhrpark, Ersatzteile und Wartung
 
 Jeder Bus hat einen Zustand, der mit der Nutzung sinkt. Die Werkstatt hebt ihn wieder an, braucht dafür aber einen freien Arbeitsplatz und Ersatzteile aus dem Lager. Fehlen Arbeitsplätze oder Teile, bleiben Busse stehen, und das kostet Fahrten, Einnahmen und Bewertungen.
@@ -278,7 +284,7 @@ Personal besteht aus einzelnen Personen mit Lohn, Qualifikation und Arbeitszeit.
 
 **Lohn und Arbeitszeit.** Der Lohn gilt je Personalart und Erfahrungsstufe pro Stunde. Hinzu kommen Zuschläge für Nacht, Sonntag und Feiertag sowie für Überstunden, außerdem Urlaub und Krankheit. Die Größenordnungen richtet Claude Code an realen Tarifen aus, alle Werte stehen in der zentralen Konfigurationsdatei.
 
-**Lenk- und Ruhezeiten.** Die Dienste müssen sich an realistische Regeln halten, ein regelwidriger Dienst lässt sich nicht speichern. Als Grundlage dienen die EU-Lenk- und Ruhezeiten (zum Beispiel höchstens 4,5 Stunden Lenkzeit am Stück, danach mindestens 45 Minuten Pause) sowie das Arbeitszeitgesetz. Welche Regeln im Linienverkehr genau gelten, unterscheidet sich je nach Land und Streckenlänge. Deshalb liegen die Regeln als austauschbares Regelwerk pro Land vor, das wir vor der Umsetzung noch genau prüfen.
+**Lenk- und Ruhezeiten.** Die Dienste müssen sich an realistische Regeln halten, ein regelwidriger Dienst lässt sich nicht speichern. Als Grundlage dienen die EU-Lenk- und Ruhezeiten (zum Beispiel höchstens 4,5 Stunden Lenkzeit am Stück, danach mindestens 45 Minuten Pause) sowie das Arbeitszeitgesetz. Welche Regeln im Linienverkehr genau gelten, unterscheidet sich je nach Land und Streckenlänge. Deshalb liegen die Regeln als austauschbares Regelwerk pro Land mit Quelle je Regel vor. Für Deutschland gilt im Linienverkehr bis 50 Kilometer Linienstrecke statt der EU-Verordnung die Fahrpersonalverordnung, dazu kommen Arbeitszeitgesetz und TV-N SH. Die Gesetze sind harte Regeln, Grenzen aus dem Tarifvertrag warnen nur. Die Regeln werden vor dem Bau von 3c-1 gegen die Originaltexte geprüft.
 
 **Schichtplan.** Der Fahrplan besteht aus Fahrten. Ein Umlauf ist die Folge von Fahrten eines Busses, ein Dienst die Folge von Abschnitten eines Fahrers (Ausrücken, Fahrten, Pausen, Einrücken). Der Spieler weist Fahrten Bussen und Fahrern zu. Dienstarten sind Frühdienst, Spätdienst, Nachtdienst und geteilter Dienst mit langer Unterbrechung in der Mitte. Fahrerwechsel sind an Wendepunkten und am Betriebshof möglich.
 
@@ -417,7 +423,7 @@ Forschung schaltet Fahrzeugklassen, Ausstattung, Automatisierung und Verbesserun
 | Fahrzeuge | Bauarten freischalten (Mini, Midi, Solo kurz, Solo, Gelenk, Doppelgelenk, Doppeldecker). Innerhalb einer Bauart sind alle aktuellen Modelle kaufbar. Antriebsarten bleiben wie entschieden von Anfang an verfügbar. Verbesserungen in Stufen: Verbrauch, Verschmutzung und Verschleiß je Stufe um 10 Prozent senken, Reichweite um 10 Prozent erhöhen, 10 Prozent schneller laden |
 | Fahrzeugausstattung | Klimaanlage, WLAN, USB-Ladeanschlüsse, Premium-Sitze und Kamerasystem als Neukauf-Optionen werden erst nach Forschung wählbar. Die Fahrgastinformation hat Stufen: erst Fallblattanzeiger, dann Punktmatrix-Anzeigen, dann LCD-Monitore, dann LED-Monitore. Ansagen kommen zuerst vom Fahrer und später automatisiert |
 | Betrieb und Fahrgäste | Haltestellen-Upgrades freischalten, mobile App entwickeln, Fahrkartenautomat, Ampelvorrang freischalten, digitale Werbeflächen |
-| Betriebshof | Nebendepots (externe Depots) freischalten. Das Betriebsgelände wächst weiter über den Kauf von Grundstücken, nicht über Forschung |
+| Betriebshof | Nebendepots (externe Depots) und den Planungsassistenten für Betriebshöfe freischalten. Das Betriebsgelände wächst weiter über den Kauf von Grundstücken, nicht über Forschung |
 | Personal | Automatische Reinigung, Wasch- und Tankvorgänge, Reparatur in Nebendepots, automatische Wartungs- und Dienstplanung, Teile-Nachbestellung; Arbeitsweise der Kontrolleure in Stufen; besseres Essen für Mitarbeiter in Stufen (Zufriedenheit) |
 | Werkstatt | Ersatzteilpreise und Reparaturdauer je Stufe um 10 Prozent senken |
 
@@ -485,7 +491,8 @@ Claude Code baut das Spiel in Etappen, nicht in einem Durchgang. Jede Etappe hat
 |  | 2 | Fahrzeugkatalog und Betriebshof | Katalog einlesen und prüfen, Betriebshof-Editor mit allen Bauteilen, Standortwahl und Grundstückskauf, Layout-Gültigkeit, Wege im Hof (Betriebshof-Editor, Katalog) |
 |  | 3a | Fahrzeugmarkt und Personal | Neukauf mit Konfiguration, Gebrauchtmarkt, einzelne Personen einstellen, Lohn (Fahrzeugmarkt, Personal) |
 |  | 3b | Linien und Fahrplan | Linie als Perlenkette mit Richtungen und Kurzläufern, Takt und Einzelfahrten, automatische Fahrzeiten, Standzeiten, Bedarf an Bussen (Linien und Fahrplan) |
-|  | 3c | Dienstplan | Dienste von Hand planen, Lenk- und Ruhezeiten (Personal und Schichtplan) |
+|  | 3c | Dienstplan | Aufgeteilt in 3c-1 (Dienste von Hand planen, Lenk- und Ruhezeiten innerhalb eines Dienstes, freie Fahrten) und 3c-2 (Wochenplan je Fahrer, Ruhezeit und Wochenregeln) (Personal und Schichtplan) |
+|  | 3d | Betriebshof-Ausbau | Bauteil-Verbund und Stellplatzfläche (Betriebshof-Editor), kann vor 3c-2 gebaut werden |
 |  | 4a | Betrieb und Fahrgäste | Busse fahren die Fahrpläne, Fahrgastmodell, Verspätungen, Tarif und Fahrscheinarten (Zeitmodell, Wirtschaft) |
 |  | 4b | Finanzen und Speichern | Einnahmen und Kosten, Kredite, Subventionen, Finanzberichte, Speichern und Laden (Wirtschaft, Finanzen) |
 | Phase 2: Tiefe und Balancing | 5 | Zustand, Wartung und Bewertungen | Zustand, Sauberkeit, Wartung, Ersatzteile, Pannen, Wertverlust, Bewertungen, Fahrgastkommentare, Beschwerden, Zufriedenheit (Fuhrpark, Fahrgastfeedback) |
@@ -634,7 +641,7 @@ Alle Prozentsätze und Obergrenzen liegen in der zentralen Konfigurationsdatei.
 - Betriebshof für Schienenfahrzeuge: gleicher Editor mit eigenen Bauteilen
 - Fahrzeugkatalog für weitere Fahrzeugarten: später entscheiden
 - Oberfläche: Karte vollflächig mit Kopfleiste und Menüleiste, vier Karten-Ansichten (Nachfrage, Auslastung und Verspätung, Bewertung, Verkehrsdichte), Meldungsliste mit Filter und einstellbarer Pause, kein Tutorial nur Hilfetexte
-- Etappenaufteilung: 3a, 3b, 3c, 4a, 4b, 7a, 7b
+- Etappenaufteilung: 3a, 3b, 3c-1, 3c-2, 3d, 4a, 4b, 7a, 7b
 
 **Nächste Module, die wir ausarbeiten.**
 

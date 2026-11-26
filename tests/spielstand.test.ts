@@ -10,6 +10,8 @@ import { ladeNetz, NetzLadeFehler } from "../src/linien/speichern";
 import { IndexedDbStore } from "../src/storage/indexeddb";
 import { SqliteStore, type SqlExecutor } from "../src/storage/sqlite";
 import { SaveVersionError, type SaveStore } from "../src/storage/types";
+import { DienstLadeFehler, ladeDienstplan } from "../src/dienste/dienste";
+import { neuerDienstplan } from "../src/dienste/typen";
 import type { World } from "../src/world/world";
 import { geradenNetz, halt } from "./helpers/linien-netz";
 
@@ -50,6 +52,10 @@ function spielMitLinie(): SpielZustand {
   });
   s.fuhrpark.naechsteBusId = 2;
   weiseBusZu(s.netz, l.linie.id, 1);
+  // Dienstplan (Etappe 3c-1): ein Dienst mit einem Stück, eigene Ferien-Dienste am Samstag
+  s.dienste.dienste.push({ id: 1, nummer: "D1", tag: "werktag", stuecke: [{ linie: l.linie.id, fahrten: [{ variante: l.linie.varianten[0].id, schluessel: "t22500" }, { variante: l.linie.varianten[1].id, schluessel: "z1" }] }] });
+  s.dienste.naechsteId = 2;
+  s.dienste.eigeneFerienDienste.samstag = true;
   return s;
 }
 
@@ -65,9 +71,10 @@ describe.each(stores)("Spielstand speichern und laden (%s)", (_n, make) => {
     await store.init();
     await store.save("autosave", spielstandDaten(s));
     const rec = await store.load("autosave");
-    expect(rec?.version).toBe(2);
+    expect(rec?.version).toBe(3);
     const geladen = ladeSpielstand(rec!, new Set(["m1"]));
     expect(geladen).toEqual(s);
+    expect(geladen.dienste.dienste[0].stuecke[0].fahrten).toHaveLength(2);
     expect(geladen.netz.linien[0].varianten[0].aenderungen.map((a) => a.art)).toEqual(["streichen", "zusatz"]);
     expect(spielstandInfo(rec)).toEqual({ firma: "Speichertest", gemeinde: "Norderstedt", zeit: s.zeit, datei: null });
   });
@@ -76,7 +83,7 @@ describe.each(stores)("Spielstand speichern und laden (%s)", (_n, make) => {
     const db = new DatabaseSync(":memory:");
     const name = "migration-" + Math.random();
     const s = spielMitLinie();
-    const { netz: _weg, ...v1 } = spielstandDaten(s);
+    const { netz: _weg, dienste: _d, ...v1 } = spielstandDaten(s);
     const alt = make(1, db, name);
     await alt.init();
     await alt.save("autosave", v1);
@@ -86,7 +93,25 @@ describe.each(stores)("Spielstand speichern und laden (%s)", (_n, make) => {
     expect(rec?.version).toBe(1);
     const geladen = ladeSpielstand(rec!, new Set(["m1"]));
     expect(geladen.netz).toEqual({ version: 1, linien: [], neueHaltestellen: [], namen: {}, naechsteLinieId: 1, naechsteVarianteId: 1, naechsteHaltestelleId: 1, naechsteZusatzId: 1 });
-    expect({ ...geladen, netz: s.netz }).toEqual(s);
+    expect({ ...geladen, netz: s.netz, dienste: s.dienste }).toEqual(s);
+    expect(geladen.dienste).toEqual(neuerDienstplan());
+  });
+
+  it("Migration: ein Stand der Etappe 3b (Version 2, ohne Dienste) lädt mit leerem Dienstplan, Linien bleiben", async () => {
+    const db = new DatabaseSync(":memory:");
+    const name = "migration2-" + Math.random();
+    const s = spielMitLinie();
+    const { dienste: _weg, ...v2 } = spielstandDaten(s);
+    const alt = make(2, db, name);
+    await alt.init();
+    await alt.save("autosave", v2);
+    const neu = make(config.storage.saveVersion, db, name);
+    await neu.init();
+    const rec = await neu.load("autosave");
+    expect(rec?.version).toBe(2);
+    const geladen = ladeSpielstand(rec!, new Set(["m1"]));
+    expect(geladen.dienste).toEqual(neuerDienstplan());
+    expect(geladen.netz).toEqual(s.netz);
   });
 
   it("ein Stand mit neuerer Version wird abgelehnt", async () => {
@@ -129,5 +154,26 @@ describe("Prüfung beim Laden", () => {
     expect(() => ladeNetz({ version: 2 })).toThrow(/Version/);
     const v: SpielstandDaten = spielstandDaten(spielMitLinie());
     expect(ladeNetz(v.netz)).toEqual(v.netz);
+  });
+
+  it("Dienstplan: ungültige Dienste, doppelte Nummern je Tagesart und zu große Ids werden erkannt", () => {
+    const p = spielMitLinie().dienste;
+    expect(ladeDienstplan(structuredClone(p))).toEqual(p);
+    const doppelt = structuredClone(p);
+    doppelt.dienste.push({ ...structuredClone(p.dienste[0]), id: 5, nummer: "d1" });
+    doppelt.naechsteId = 6;
+    expect(() => ladeDienstplan(doppelt)).toThrow(/Dienstnummer doppelt/);
+    // gleiche Nummer an einer anderen Tagesart ist erlaubt
+    doppelt.dienste[1].tag = "samstag";
+    expect(ladeDienstplan(doppelt).dienste).toHaveLength(2);
+    const zuGross = structuredClone(p);
+    zuGross.naechsteId = 1;
+    expect(() => ladeDienstplan(zuGross)).toThrow(DienstLadeFehler);
+    const schluessel = structuredClone(p);
+    schluessel.dienste[0].stuecke[0].fahrten[0].schluessel = "x1";
+    expect(() => ladeDienstplan(schluessel)).toThrow(/Dienststück/);
+    expect(() => ladeDienstplan({ version: 2 })).toThrow(/Version/);
+    const v3 = spielstandDaten(spielMitLinie());
+    expect(() => ladeSpielstand({ version: 3, savedAt: "", payload: { ...v3, dienste: { ...v3.dienste, dienste: [{ id: 1 }] } } }, new Set(["m1"]))).toThrow(SpielstandFehler);
   });
 });

@@ -64,6 +64,18 @@
       .warnung { color: #7a4b00; }
       .hinweisbox { border: 2px solid var(--fehler); border-radius: 4px; padding: 0.4em 0.6em; background: #fff5f5; }
       .hinweisbox[hidden] { display: none; }
+      .zeitleiste { display: grid; gap: 0.25rem; margin: 0.4rem 0; }
+      .zeitskala { position: relative; height: 1.1rem; margin-left: 9rem; margin-right: 14rem; font-size: 0.75rem; color: #444; }
+      .zeitskala span { position: absolute; transform: translateX(-50%); }
+      .zeitzeile { display: grid; grid-template-columns: 9rem 1fr 14rem; align-items: center; gap: 0.4rem; font-size: 0.85rem; }
+      .zeitlabel { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .leiste { position: relative; height: 1.2rem; background: #eef1f4; border: 1px solid #c8ced6; }
+      .balken { position: absolute; top: 0.1rem; bottom: 0.1rem; min-width: 2px; cursor: pointer; }
+      .balken.belegt { background: var(--linienfarbe); }
+      .balken.frei { background: repeating-linear-gradient(45deg, #ffffff 0 3px, var(--fehler) 3px 5px); outline: 1px solid var(--fehler); }
+      .zeitfrei { font-size: 0.8rem; }
+      .stuecke li { margin: 0.2rem 0; }
+      .tabelle.kompakt th, .tabelle.kompakt td { padding: 0.15rem 0.4rem; }
       .primaer { background: var(--akzent); color: #fff; border-color: var(--akzent); font-weight: 700; }
       .aktionen { display: flex; justify-content: flex-end; gap: 8px; }
       button:disabled { opacity: .5; cursor: not-allowed; }

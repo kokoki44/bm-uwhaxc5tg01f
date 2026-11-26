@@ -44,11 +44,29 @@ describe("Sprachdatei Etappe 2", () => {
     for (const a of ["hin", "rueck", "kurz"]) hat(`variante.art.${a}`);
     for (const s of ["takt", "verschoben", "gestrichen", "zusatz"]) hat(`fahrplan.status.${s}`);
     for (const k of config.linien.engKlassen) hat(`strassenklasse.${k}`);
-    for (const r of ["norden", "nordosten", "osten", "suedosten", "sueden", "suedwesten", "westen", "nordwesten"]) hat(`richtung.${r}`);
+    // Nachtrag 3b: Lage als "Straße, weiter Richtung <nächste Haltestelle>" statt Himmelsrichtung
+    for (const k of ["haltestelle.lage", "haltestelle.lageBeide", "haltestelle.ohneStrasse"]) hat(k);
+    expect(texte["haltestelle.lage"]).toBe("{strasse}, weiter Richtung {naechste}");
     for (const k of ["takt.vonKopf", "takt.bisKopf", "takt.taktKopf", "linie.art", "linie.halte", "linie.laenge", "linie.fahrzeitWerktag", "linie.route", "linie.fahrten", "linie.busseNoetig",
       "linien.status", "linien.varianten", "linien.bedarf", "linien.zugewiesen", "linien.hinweis", "fahrplan.abfahrt", "fahrplan.variante", "fahrplan.von", "fahrplan.nach", "fahrplan.ankunft",
       "fahrplan.status", "fahrplan.umlauf", "fahrplan.fahrtenZahl", "fahrplan.beginn", "fahrplan.ende", "fahrplan.ausruecken", "variante.halt", "variante.an", "variante.ab", "variante.abschnitt"]) hat(k);
     (hat("menue.linien"), hat("menue.zeichen.linien"));
+  });
+  it("Etappe 3c-1: jeder Befund, jede Dienstart, jeder Abschnitt und jede Meldung des Regelwerks hat einen Text, ohne feste Zahlen", () => {
+    const befunde: Record<string, string[]> = {
+      ablauf: ["leer", "linieFehlt", "fahrtFehlt", "nichtZusammenhaengend", "ueberschneidung", "keinAusruecken", "keinEinruecken", "fahrtDoppelt", "umlaufOhneBus"],
+      lenkSechstel: ["amStueck", "pauseDanach", "sechstel"], lenkBlockFPersV: ["block"], lenkBlockVO: ["block"], tageslenkzeit: ["max"], arbeitszeit: ["max"],
+      ruhepause: ["zuKurz", "ohnePause"], tarifArbeitszeit: ["max"], tarifLenkzeit: ["max"], tarifDienstschicht: ["max", "dringend"], tarifTeilung: ["anzahl", "teil"],
+    };
+    for (const [r, cs] of Object.entries(befunde)) for (const c of cs) hat(`dienst.befund.${r}.${c}`);
+    for (const a of ["frueh", "spaet", "nacht", "geteilt"]) hat(`dienst.art.${a}`);
+    for (const r of ["sechstel", "blockFPersV", "blockVO"]) hat(`dienst.regime.${r}`);
+    for (const e of ["vorbereitung", "ausruecken", "fahrt", "wende", "weg", "pause", "einruecken", "abschluss"]) hat(`dienst.element.${e}`);
+    for (const m of ["unlesbar", "regelFehlt", "feldFehlt", "wertUngueltig"]) hat(`regelwerk.meldung.${m}`);
+    for (const f of ["regelverstoss", "nummerLeer", "nummerZuLang", "nummerDoppelt", "nichtGeprueft"]) hat(`dienst.fehler.${f}`);
+    (hat("menue.dienste"), hat("menue.zeichen.dienste"));
+    // Grenzen kommen aus dem Regelwerk und der Konfiguration, nicht aus den Texten
+    for (const [k, v] of Object.entries(texte)) if (k.startsWith("dienst")) expect(/\d/.test(v), k).toBe(false);
   });
   it("keine Gedankenstriche in den Texten", () => {
     for (const [k, v] of Object.entries(texte)) expect(/[–—]/.test(v), k).toBe(false);

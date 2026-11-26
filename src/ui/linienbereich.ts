@@ -4,8 +4,10 @@ import { config, PLAN_TAGE, type PlanTag } from "../config";
 import { analysiereHof } from "../depot/analyse";
 import { fahrtZeiten } from "../linien/fahrplan";
 import { Haltestellen, loesePerlenAuf, planAnfrage } from "../linien/linien";
+import { HaltIndex, haltLage } from "../linien/richtung";
+import { t } from "../i18n";
 import type { LinienPlan, PlanAnfrage, VariantenPlan } from "../linien/plan";
-import type { HaltId, Linie, Perle } from "../linien/typen";
+import type { HaltDaten, HaltId, Linie, Perle } from "../linien/typen";
 import { freierRand, setzeKartenklick, sichtbarerAnteil, zeigeAuswahl, zeigeHaltestellen, zeigeLinien, type Rechteck } from "../map/linienkarte";
 import type { Simulation } from "../sim/client";
 import { LocalProj, pointInRings, projectOnLine, type LonLat } from "../world/geo";
@@ -138,6 +140,16 @@ export function zeichneKarte(): void {
   const perlen: Perle[] = v ? v.perlen : l.perlen;
   const route = u.plaene.get(l.id)?.varianten.find((x) => x.id === (v ? v.id : GRUNDLINIE))?.strecke.coords ?? null;
   zeigeAuswahl(u.map, route, loesePerlenAuf(perlen, u.halte).map((p) => ({ coord: p.coord, art: p.halt ? ("halt" as const) : ("weg" as const) })), l.farbe);
+}
+
+/** Straße und nächste Haltestelle in Fahrtrichtung, damit gleichnamige Haltestellen unterscheidbar sind. */
+export function lageText(u: LinienUi, hd: HaltDaten): string {
+  if (!hd.snaps.length) return t("haltestelle.ohneStrasse");
+  const l = haltLage(u.world.network, new HaltIndex(u.halte.alle()), hd, L.richtungSucheM);
+  const strasse = l.strasse || t("haltestelle.ohneStrasse");
+  if (l.art === "beide") return t("haltestelle.lageBeide", { strasse });
+  if (l.art === "richtung") return t("haltestelle.lage", { strasse, naechste: l.naechste });
+  return strasse;
 }
 
 /* ---------- Zoom auf eine Linie ---------- */

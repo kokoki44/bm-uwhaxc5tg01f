@@ -4,6 +4,7 @@ import { fahrtZeiten } from "../src/linien/fahrplan";
 import { fange, fangIndex } from "../src/linien/fangen";
 import { erzeugeRichtungen, fuegeHaltEin, Haltestellen, legeLinieAn, neueHaltestelle, osmHaltId, planAnfrage, setzeTakt } from "../src/linien/linien";
 import { berechneLinie } from "../src/linien/plan";
+import { HaltIndex, haltLage } from "../src/linien/richtung";
 import { neuesNetz, type Linie, type Netz } from "../src/linien/typen";
 import { findRoute } from "../src/world/router";
 import type { World } from "../src/world/world";
@@ -99,6 +100,20 @@ describe("Beispiellinie Norderstedt (Handrechnung für den Bericht)", () => {
       expect(findRoute(world.network, s.snaps, kirchenweg.snaps, R)).not.toBeNull();
     }
   }, 120000);
+
+  it("Suche zeigt 'weiter Richtung <nächste Haltestelle>' statt einer schwankenden Himmelsrichtung (Regression Nachtrag 3b)", () => {
+    const index = new HaltIndex(halte.alle());
+    const lage = (id: number) => haltLage(world.network, index, halte.hole(osmHaltId(id))!, L.richtungSucheM);
+    const naechste = (id: number) => {
+      const l = lage(id);
+      expect(l.art === "richtung" && l.strasse).toBe("Segeberger Chaussee");
+      return l.art === "richtung" ? l.naechste : "";
+    };
+    // Hinrichtung: jede Haltestelle zeigt die nächste der Linie (Kirchenweg die danach folgende)
+    expect(HIN.map(naechste)).toEqual(["Harksheide, Kielort", "Glashütte, Am Böhmerwald", "Glashütte, Hofweg"]);
+    // Gegenrichtung: gleiche Namen, aber eindeutig unterscheidbar; keine Umkehr durch einen Kreisverkehr
+    expect(RUECK.map(naechste)).toEqual(["Glashütte, Am Böhmerwald", "Harksheide, Wilhelm-Busch-Platz", "Harksheide, Heidehofweg (West)"]);
+  });
 
   it("gleiche Eingabe, gleiches Ergebnis auf dem echten Netz", () => {
     const a = planAnfrage(linie, halte, null);

@@ -155,7 +155,7 @@
     "firmenfarbeStandard": "#0b6e4f"
   },
   "storage": {
-    "saveVersion": 2,
+    "saveVersion": 3,
     "databaseName": "busmanager",
     "indexedDbStore": "spielstaende",
     "autosaveSlot": "autosave",
@@ -305,6 +305,16 @@
     "fangZelleM": 100,
     "neueTaktzeile": { "vonH": 6, "dauerMin": 60, "taktMin": 20 },
     "probeStunde": 7,
-    "zoom": { "randPx": 40, "mindestBreitePx": 240, "maxZoom": 16 }
+    "zoom": { "randPx": 40, "mindestBreitePx": 240, "maxZoom": 16 },
+    "richtungSucheM": 2000
+  },
+  "dienste": {
+    "regelwerk": "de",
+    "vorbereitungS": 600,
+    "abschlussS": 300,
+    "wegS": 900,
+    "geteiltAbS": 7200,
+    "fruehdienstBisH": 10,
+    "nummerMaxLaenge": 8
   }
 }

@@ -184,6 +184,23 @@ Anleitung Beispiellinie (berichtigt): Linien, Nummer 1, "Linie anlegen". In der 
 
 Tag `etappe-3b-fertig` auf dem grünen Stand 3b481b2 gesetzt (26.11.2026).
 
-## Etappe 3c: Dienstplan (Vorbereitung, wartet auf Kokos Bestätigung)
+## Etappe 3c-1: Dienste und Regelwerk (in Arbeit)
 
-Abnahmekriterien, offene Fragen, vorgeschlagene Annahmen A3c-1 bis A3c-14 und die Recherche zum Regelwerk (VO (EG) Nr. 561/2006, FPersV § 1, ArbZG, TV-N SH Anlage 3, mit Quellen) stehen im Bericht vom 26.11.2026. Vorschlag: 3c in 3c-1 (Dienste und Regeln innerhalb eines Dienstes) und 3c-2 (Wochenplan je Fahrer und Regeln über mehrere Tage) teilen. Noch nichts gebaut.
+Von Koko am 26.11.2026 bestätigt: Teilung in 3c-1 (Dienste, Regelwerk, freie Fahrten) und 3c-2 (Wochenplan je Fahrer, Regeln über mehrere Tage), die 15 Abnahmekriterien von 3c-1, F1 bis F12 mit den Empfehlungen, Annahmen A3c-1 bis A3c-14. Nachträge vor dem Bau: Regelwerk gegen die Originaltexte prüfen, A3c-1 als vereinfachende Annahme kennzeichnen, Fahrtrichtung in der Suche als "weiter Richtung <nächste Haltestelle>". Neue Konzeptfassung (3c-1, 3c-2, 3d, Bauteil-Verbund, Stellplatzfläche, Hof-Vorlagen) in docs/ übernommen.
+
+Fertig (gebaut, wartet auf Kokos Freigabe):
+- Regelwerk als Datei je Land (`regelwerk/de.json`) mit Quelle, Fundstelle und Sinn je Regel, Prüfung beim Start mit Fehlerfenster wie bei der Optionsdatei (`src/dienste/regelwerk.ts`, `src/dienste/laden.ts`). Gegen die Originaltexte geprüft.
+- Dienste je Tagesart aus Dienststücken (zusammenhängende Teile von Umläufen), Aufbau mit Vorbereitung, Ausrücken, Fahrten, Wendezeiten, Wegen, Pausen, Einrücken, Abschluss; Prüfung von Ablauf, Lenkzeitunterbrechung (FPersV Nr. 2, Nr. 1, VO Art. 7), Tageslenkzeit, Arbeitszeit, Ruhepausen mit Abgeltung nach TV-N SH, Tarifwarnungen, Dienstart (`src/dienste/pruefung.ts`, `src/dienste/dienste.ts`).
+- Prüfung im Simulations-Worker, freie Fahrten je Linie und Tagesart; Einrückfahrt im Linienplan (`src/linien/plan.ts`).
+- Oberfläche: Menüpunkt "Dienste" mit Zeitleiste der Umläufe (belegt in Linienfarbe, frei schraffiert), Dienstliste, Dienst-Editor ohne Maus bedienbar ("Ganzen Umlauf übernehmen", "Umlauf bis zur Ablösung", "Rest des Umlaufs in neuen Dienst"), Befunde mit Regel, Wert, Grenze und Quelle; freie Fahrten in Linienliste und Fahrplan, Einrücken im Fahrplan (`src/ui/dienste.ts`, `src/ui/dienstbereich.ts`).
+- Spielstand Version 3 mit Migration vom Stand 3b (leerer Dienstplan), beide Speicher getestet.
+- Fahrtrichtung in Suche und Haltestellenfenster: "Straße, weiter Richtung <nächste Haltestelle>" (`src/linien/richtung.ts`).
+
+Tests: `tests/dienste.test.ts` (Handrechnungen und Grenzfälle aller Regeln, Leistung), `tests/dienste-norderstedt.test.ts` (Beispiel D1, D2, D3 auf dem echten Netz), `tests/spielstand.test.ts` (Version 3, Migration 2 nach 3), Rauchtest mit "Dienst anlegen", Oberflächentest `e2e/dienste.spec.ts` mit Screenshots.
+
+## Merkposten für spätere Etappen
+
+- Krankheit, Urlaub und Reservefahrer (Ausfälle): Etappe 5 (Kokos Entscheidung zu F11 vom 26.11.2026).
+- Wochenarbeitszeit: Der TV-N SH senkt sie ab 01.01.2027 auf 37,5 h. Wird in 4b mit dem Lohn geregelt, bis dahin bleibt die Spanne 10 bis 38 h (`personal.wochenstundenMin/Max`).
+- Etappe 3c-2 (Wochenplan je Fahrer, Ruhezeit und Wochenregeln): Kriterien erst nach Kokos Freigabe von 3c-1.
+- Etappe 3d (Betriebshof-Ausbau, neu im Phasenplan seit 26.11.2026): Bauteil-Verbund, Stellplatzfläche, Hof-Vorlagen; der Planungsassistent kommt über den Technologiebaum. Kriterien und Fragen erst nach Kokos Freigabe von 3c-1, kann vor 3c-2 gebaut werden.

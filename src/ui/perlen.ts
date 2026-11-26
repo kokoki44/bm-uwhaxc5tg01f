@@ -4,9 +4,8 @@ import { entfernePerle, ersetzeHalt, fuegeHaltEin, fuegeWegpunktEin, loescheHalt
 import type { VariantenPlan } from "../linien/plan";
 import type { HaltId, Perle } from "../linien/typen";
 import type { LonLat } from "../world/geo";
-import type { Snap } from "../world/router";
 import { h } from "./dom";
-import { freigeschaltet, linienUi, setzeWerkzeug, werkzeug, type Werkzeug } from "./linienbereich";
+import { freigeschaltet, lageText, linienUi, setzeWerkzeug, werkzeug, type Werkzeug } from "./linienbereich";
 
 const L = config.linien;
 /** Werte aus der Konfiguration für Platzhalter in Texten. */
@@ -120,7 +119,7 @@ export function perlenEditor(o: PerlenOptionen): { el: HTMLElement; zeichne(): v
     alle.sort((a, b) => a.name.localeCompare(b.name, "de") || a.id.localeCompare(b.id));
     treffer.replaceChildren(
       ...alle.slice(0, 8).map((x) => {
-        const k = h("button", { type: "button", class: "listeneintrag", "data-testid": `${id}-treffer-${x.id}`, text: `${x.name} (${lage(x.snaps)}, ${x.id.startsWith("n") ? t("haltestelle.neu") : t("haltestelle.vorhanden")})` });
+        const k = h("button", { type: "button", class: "listeneintrag", "data-testid": `${id}-treffer-${x.id}`, text: `${x.name} (${lageText(u, x)},${x.id.startsWith("n") ? t("haltestelle.neu") : t("haltestelle.vorhanden")})` });
         k.addEventListener("click", () => fuegeHalt(x.id));
         return h("li", {}, k);
       }),
@@ -180,17 +179,6 @@ export function perlenEditor(o: PerlenOptionen): { el: HTMLElement; zeichne(): v
     if (!o.perlen.length) liste.append(h("li", { class: "hilfe", text: t("perle.leer") }));
     for (const w of ["halt", "neu", "weg", "aus"] as const) (werkzeuge.querySelector(`#${id}-werkzeug-${w}`) as HTMLInputElement).checked = w === art;
     mitte.disabled = art !== "neu" && art !== "weg";
-  }
-
-  /** Straße und Fahrtrichtung einer Haltestelle, damit gleichnamige Haltestellen unterscheidbar sind. */
-  function lage(snaps: Snap[]): string {
-    const e = u.world.network.edges[snaps[0].edge];
-    const strasse = e.name || t("haltestelle.ohneStrasse");
-    if (snaps.length > 1) return t("haltestelle.lageBeide", { strasse });
-    const a = e.coords[0], b = e.coords[e.coords.length - 1];
-    const winkel = (Math.atan2((b[1] - a[1]) * 111320, (b[0] - a[0]) * 111320 * Math.cos((a[1] * Math.PI) / 180)) * 180) / Math.PI;
-    const richtung = ["osten", "nordosten", "norden", "nordwesten", "westen", "suedwesten", "sueden", "suedosten"][((Math.round(winkel / 45) % 8) + 8) % 8];
-    return t("haltestelle.lage", { strasse, richtung: t(`richtung.${richtung}` as TextKey) });
   }
 
   function perlenName(p: Perle): string {
