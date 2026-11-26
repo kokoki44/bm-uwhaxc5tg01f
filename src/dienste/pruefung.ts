@@ -321,7 +321,8 @@ export function pruefeDienst(d: Dienst, linien: Map<number, LinieDaten>, andere:
         unterbrechungS += dauer(e);
         // Nach 4,5 h ununterbrochener Lenkzeit mindestens 45 min, sofern danach noch gelenkt wird
         if (cum >= r.maxAmStueckS && dauer(e) < r.pauseDanachS && elemente.slice(i + 1).some((x) => x.lenk)) pauseVerstoss = dauer(e);
-        cum = 0;
+        // Lesart nach dem Wortlaut: jede anrechenbare Unterbrechung unterbricht; streng: erst eine Unterbrechung von pauseDanachS
+        if (r.lesart === "wortlaut" || dauer(e) >= r.pauseDanachS) cum = 0;
       }
     });
     if (maxCum > r.maxAmStueckS) melde("lenkSechstel", "amStueck", maxCum, r.maxAmStueckS);

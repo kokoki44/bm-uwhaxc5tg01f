@@ -17,6 +17,7 @@
       "minUnterbrechungS": 600,
       "maxAmStueckS": 16200,
       "pauseDanachS": 2700,
+      "lesart": "wortlaut",
       "quelle": "FPersV § 1 Abs. 3 Nr. 2",
       "url": "https://www.gesetze-im-internet.de/fpersv/__1.html",
       "sinn": "Haltestellenabstand bis 3 km: Arbeitsunterbrechungen laut Dienstplan (z. B. Wendezeiten) ab 10 min genügen, wenn sie zusammen mindestens ein Sechstel der Lenkzeit der Schicht sind; nach 4,5 h ununterbrochener Lenkzeit mindestens 45 min Fahrtunterbrechung."

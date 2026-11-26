@@ -253,6 +253,21 @@ describe("Lenkzeitunterbrechung FPersV § 1 Abs. 3 Nr. 2 (Haltestellenabstand bi
     expect(codes(pruefe(dienst([{ linie: 1, fahrten: g }]), [l2]).verstoesse)).toContain("lenkSechstel.amStueck");
   });
 
+  it("Schalter im Regelwerk: Nach der strengeren Lesart setzen erst 45 min die 4,5 h zurück (A3c-15)", () => {
+    const l = linie();
+    // 14 Fahrten zu 20 min mit 10 min Wende: nach dem Wortlaut nie mehr als 30 min Lenkzeit am Stück
+    const f = umlauf(l, takt(6 * H, 14, 20 * M, 10 * M));
+    expect(RW.regeln.lenkSechstel.lesart).toBe("wortlaut");
+    expect(codes(pruefe(dienst([{ linie: 1, fahrten: f }]), [l]).verstoesse)).toEqual([]);
+    const streng = structuredClone(RW);
+    streng.regeln.lenkSechstel.lesart = "streng";
+    // Ausrücken 10 + 14 × 20 + Einrücken 10 = 300 min ohne Unterbrechung ab 45 min: über 4:30 h
+    expect(pruefe(dienst([{ linie: 1, fahrten: f }]), [l], [], streng).verstoesse).toContainEqual({ regel: "lenkSechstel", code: "amStueck", wertS: 300 * M, grenzeS: 270 * M });
+    const kaputt = structuredClone(rwRaw) as { regeln: { lenkSechstel: { lesart: string } } };
+    kaputt.regeln.lenkSechstel.lesart = "locker";
+    expect(ladeRegelwerk(kaputt).meldungen).toContainEqual({ code: "wertUngueltig", ort: "lenkSechstel", feld: "lesart" });
+  });
+
   it("Kriterium 5: Sechstelregel mit Grenzfall, 9:50 min zählt nicht, eine Minute zu wenig ist nicht speicherbar", () => {
     // Ausrücken 10 + 3 × 50 + Einrücken 10 = 170 min Lenkzeit; ein Sechstel = 28:20 min
     const mit = (w1: number, w2: number) => {

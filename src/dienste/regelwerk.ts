@@ -25,7 +25,11 @@ export interface Regelwerk {
   stand: string;
   anwendung: { linieMaxM: number; haltestellenabstandMaxM: number; quelle: string; url: string; sinn: string };
   regeln: {
-    lenkSechstel: Quelle & { nenner: number; minUnterbrechungS: number; maxAmStueckS: number; pauseDanachS: number };
+    /**
+     * lesart "wortlaut": Eine Arbeitsunterbrechung ab minUnterbrechungS unterbricht die Lenkzeit (A3c-15).
+     * lesart "streng": Nur eine Unterbrechung ab pauseDanachS setzt die 4,5 h zurück.
+     */
+    lenkSechstel: Quelle & { nenner: number; minUnterbrechungS: number; maxAmStueckS: number; pauseDanachS: number; lesart: "wortlaut" | "streng" };
     lenkBlockFPersV: Quelle & { maxLenkS: number; vollS: number; teilungen: Teilung[] };
     lenkBlockVO: Quelle & { maxLenkS: number; vollS: number; teilungen: Teilung[] };
     tageslenkzeit: Quelle & { maxS: number };
@@ -105,6 +109,7 @@ export function ladeRegelwerk(raw: unknown): { regelwerk: Regelwerk | null; meld
     const t = g[id]?.teilungen;
     if (!Array.isArray(t) || t.some((x) => !Array.isArray(x?.minS) || !x.minS.length || !x.minS.every(pos) || typeof x.geordnet !== "boolean")) m.push({ code: "wertUngueltig", ort: id, feld: "teilungen" });
   }
+  if (g.lenkSechstel && !["wortlaut", "streng"].includes(g.lenkSechstel.lesart)) m.push({ code: "wertUngueltig", ort: "lenkSechstel", feld: "lesart" });
   const st = g.ruhepause?.stufen;
   if (!Array.isArray(st) || !st.length || st.some((x, i) => !pos(x?.abS) || !pos(x?.pauseS) || (i > 0 && !(x.abS > st[i - 1].abS)))) m.push({ code: "wertUngueltig", ort: "ruhepause", feld: "stufen" });
   const n = g.nachtarbeit;

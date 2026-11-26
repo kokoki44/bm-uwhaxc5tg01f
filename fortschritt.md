@@ -184,7 +184,9 @@ Anleitung Beispiellinie (berichtigt): Linien, Nummer 1, "Linie anlegen". In der 
 
 Tag `etappe-3b-fertig` auf dem grünen Stand 3b481b2 gesetzt (26.11.2026).
 
-## Etappe 3c-1: Dienste und Regelwerk (in Arbeit)
+## Etappe 3c-1: Dienste und Regelwerk (freigegeben von Koko am 26.11.2026, Tag etappe-3c-1-fertig auf 3d77cc3)
+
+Bei der Freigabe: A3c-15 bis A3c-29 bestätigt; Schalter für die strengere Lesart der "ununterbrochenen Lenkzeit" in `regelwerk/de.json` (`lenkSechstel.lesart`) ergänzt; neue Konzeptfassung (Stellplatzfläche mit Anbindung in Fahrwegbreite, Hof-Vorlagen und Planungsassistent nicht Teil von 3d) übernommen.
 
 Von Koko am 26.11.2026 bestätigt: Teilung in 3c-1 (Dienste, Regelwerk, freie Fahrten) und 3c-2 (Wochenplan je Fahrer, Regeln über mehrere Tage), die 15 Abnahmekriterien von 3c-1, F1 bis F12 mit den Empfehlungen, Annahmen A3c-1 bis A3c-14. Nachträge vor dem Bau: Regelwerk gegen die Originaltexte prüfen, A3c-1 als vereinfachende Annahme kennzeichnen, Fahrtrichtung in der Suche als "weiter Richtung <nächste Haltestelle>". Neue Konzeptfassung (3c-1, 3c-2, 3d, Bauteil-Verbund, Stellplatzfläche, Hof-Vorlagen) in docs/ übernommen.
 
@@ -204,5 +206,8 @@ Unabhängige Prüfung (Subagent, 26.11.2026): kein Fehler, der ein Kriterium gan
 
 - Krankheit, Urlaub und Reservefahrer (Ausfälle): Etappe 5 (Kokos Entscheidung zu F11 vom 26.11.2026).
 - Wochenarbeitszeit: Der TV-N SH senkt sie ab 01.01.2027 auf 37,5 h. Wird in 4b mit dem Lohn geregelt, bis dahin bleibt die Spanne 10 bis 38 h (`personal.wochenstundenMin/Max`).
-- Etappe 3c-2 (Wochenplan je Fahrer, Ruhezeit und Wochenregeln): Kriterien erst nach Kokos Freigabe von 3c-1.
-- Etappe 3d (Betriebshof-Ausbau, neu im Phasenplan seit 26.11.2026): Bauteil-Verbund, Stellplatzfläche, Hof-Vorlagen; der Planungsassistent kommt über den Technologiebaum. Kriterien und Fragen erst nach Kokos Freigabe von 3c-1, kann vor 3c-2 gebaut werden.
+- Reihenfolge ab 26.11.2026 (Kokos Vorgabe): erst Etappe 3d (Betriebshof-Ausbau: nur Bauteil-Verbund und Stellplatzfläche), danach 3c-2 (Wochenplan je Fahrer, Ruhezeit und Wochenregeln). 4a braucht erst 3c-2.
+- Hof-Vorlagen und Planungsassistent: weiter Vorschlag, nicht Teil von 3d.
+- Etappe 3c-2: Ziehen mit der Maus auf der Fahrer-Zeitleiste (Frage 6 aus 3c-1).
+- Etappe 6: Wendezeit als planmäßige Pause nach TV-N SH Anlage 3 § 4 Abs. 2 erneut ansehen (betrifft Linien mit Haltestellenabstand über 3 km, Frage 3 aus 3c-1).
+- Nachtrag mit der nächsten Etappe (wenn klein): Haltestellensuche unterscheidet gleich wirkende Richtungen besser, zum Beispiel "weiter Richtung Am Böhmerwald" statt "weiter Richtung Glashütte, Am Böhmerwald" (Ortsteil weglassen, solange der Name eindeutig bleibt); Vorschlag im Bericht zur Vorbereitung von 3d.

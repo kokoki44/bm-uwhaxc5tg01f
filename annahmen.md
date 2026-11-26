@@ -266,7 +266,7 @@ Von Koko am 25.11.2026 bestätigt: A3b-1 bis A3b-14 (A3b-1, A3b-3 und A3b-12 mit
 
 ## Etappe 3c-1
 
-Von Koko am 26.11.2026 bestätigt: A3c-1 bis A3c-14 (Sterne bleiben). Vor dem Bau gegen die Originaltexte geprüft: VO (EG) Nr. 561/2006 in der konsolidierten Fassung vom 22.05.2024 (amtlicher Text über das Amt für Veröffentlichungen der EU, weil EUR-Lex automatisierte Abrufe sperrt), FPersV § 1 und ArbZG auf gesetze-im-internet.de, TV-N SH Lesefassung des 14. ÄTV vom 01.03.2026 (kavsh.de). Abweichungen von der Vorbereitung sind bei der jeweiligen Annahme vermerkt. Die Regeln selbst (Grenzen, hart oder Warnung, Quelle je Regel) stehen in `regelwerk/de.json`, die Spielwerte in `src/config/config.json`, Abschnitt `dienste`.
+Von Koko am 26.11.2026 bestätigt: A3c-1 bis A3c-14 (Sterne bleiben), mit der Freigabe von 3c-1 auch A3c-15 bis A3c-29. Vor dem Bau gegen die Originaltexte geprüft: VO (EG) Nr. 561/2006 in der konsolidierten Fassung vom 22.05.2024 (amtlicher Text über das Amt für Veröffentlichungen der EU, weil EUR-Lex automatisierte Abrufe sperrt), FPersV § 1 und ArbZG auf gesetze-im-internet.de, TV-N SH Lesefassung des 14. ÄTV vom 01.03.2026 (kavsh.de). Abweichungen von der Vorbereitung sind bei der jeweiligen Annahme vermerkt. Die Regeln selbst (Grenzen, hart oder Warnung, Quelle je Regel) stehen in `regelwerk/de.json`, die Spielwerte in `src/config/config.json`, Abschnitt `dienste`.
 
 ### Bestätigt (mit Ergebnis der Normprüfung)
 
@@ -287,7 +287,9 @@ Von Koko am 26.11.2026 bestätigt: A3c-1 bis A3c-14 (Sterne bleiben). Vor dem Ba
 | A3c-13 | Zeitraster | Alle Dienstzeiten liegen auf 10 s, weil Fahrten und alle Werte der Konfiguration es tun | Konzept: 10 Sekunden. |
 | A3c-14 | Mehrere Tage | Ruhezeit und Wochenregeln prüft 3c-2 für alle Tagesarten, die aufeinander folgen können | Nicht Teil von 3c-1. |
 
-### Neu beim Bau (zur Bestätigung)
+### Neu beim Bau (mit der Freigabe am 26.11.2026 bestätigt, A3c-26 bleibt mit Stern)
+
+Nachtrag zu A3c-15 (Kokos Vorgabe bei der Freigabe): Die strengere Lesart ist möglich. Sie lässt sich in `regelwerk/de.json` mit `lenkSechstel.lesart` von `"wortlaut"` auf `"streng"` umstellen; dann setzt erst eine Unterbrechung von mindestens `pauseDanachS` (45 min) die 4,5 h zurück (Test in `tests/dienste.test.ts`).
 
 | Nr. | Thema | Festlegung | Begründung |
 | --- | --- | --- | --- |
