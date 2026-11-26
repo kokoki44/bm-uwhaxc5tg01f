@@ -84,17 +84,19 @@ test("Dienst anlegen: D1 bis zur Ablösung, D2 als Rest des Umlaufs, D3 (ganzer 
   await page.keyboard.press("Escape");
   await expect(d).toHaveCount(0);
 
-  // Kriterium 12 nur mit der Tastatur: Neuer Dienst, Umlauf mit Pfeiltaste, Tab bis "Ganzen Umlauf übernehmen", Enter
+  // Kriterium 12 nur mit der Tastatur: Neuer Dienst mit Enter, Tab bis "Ganzen Umlauf übernehmen", Enter. Die Auswahl in
+  // nativen Listen bedient jedes System selbst (Pfeiltasten unter Windows, unter macOS öffnen sie die Liste); deshalb hier
+  // der vorgewählte Umlauf 1.
   await plan.getByTestId("dienst-neu").focus();
   await page.keyboard.press("Enter");
   await expect(d).toBeVisible();
   await d.getByTestId("dienst-umlauf").focus();
-  await page.keyboard.press("ArrowDown");
-  await expect(d.getByTestId("dienst-umlauf")).toHaveValue("1");
   for (let i = 0; i < 4; i++) await page.keyboard.press("Tab");
   await expect(d.getByTestId("dienst-ganzer-umlauf")).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(d.getByTestId("dienst-stuecke")).toContainText("Umlauf 2: 42 Fahrten");
+  await expect(d.getByTestId("dienst-stuecke")).toContainText("Umlauf 1: 42 Fahrten");
+  // Umlauf 1 ist schon mit D1 und D2 belegt: die Prüfung meldet es
+  await expect(d.getByTestId("dienst-verstoesse")).toContainText("Eine Fahrt gehört schon zu Dienst", { timeout: 20000 });
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await expect(d).toHaveCount(0);
