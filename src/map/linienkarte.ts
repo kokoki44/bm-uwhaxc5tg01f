@@ -15,6 +15,39 @@ function quelle(map: MapLibreMap, id: string, daten: GeoJSON.FeatureCollection):
 
 const vorHaltestellen = (map: MapLibreMap) => (map.getLayer("haltestellen") ? "haltestellen" : undefined);
 
+export interface Rechteck {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * Innenabstand für den Zoom auf eine Linie, damit sie neben den Fenstern über der Karte sichtbar ist.
+ * Ein Fenster, dessen Mitte links der Kartenmitte liegt, verdeckt den linken Rand, sonst den rechten.
+ * Bleibt dazwischen weniger als die Mindestbreite frei, bleibt nur die linke Seite frei (dort steht der Linieneditor),
+ * danach nur die rechte, zuletzt gilt der einfache Rand (die Linie liegt dann teils unter einem Fenster).
+ */
+export function freierRand(karte: Rechteck, verdeckt: Rechteck[], randPx: number, mindestBreitePx: number): { top: number; bottom: number; left: number; right: number } {
+  let left = randPx, right = randPx;
+  const mitte = (karte.left + karte.right) / 2;
+  for (const r of verdeckt) {
+    if (r.right <= karte.left || r.left >= karte.right || r.bottom <= karte.top || r.top >= karte.bottom || r.right <= r.left) continue;
+    if ((r.left + r.right) / 2 < mitte) left = Math.max(left, r.right - karte.left + randPx);
+    else right = Math.max(right, karte.right - r.left + randPx);
+  }
+  const breite = karte.right - karte.left;
+  const wahl = [[left, right], [left, randPx], [randPx, right]].find(([l, r]) => breite - l - r >= mindestBreitePx) ?? [randPx, randPx];
+  return { top: randPx, bottom: randPx, left: wahl[0], right: wahl[1] };
+}
+
+/** Anteil der Punkte, die im Kartenbild liegen und von keinem Fenster verdeckt sind (0 bis 1). */
+export function sichtbarerAnteil(punkte: [number, number][], karte: Rechteck, verdeckt: Rechteck[]): number {
+  if (!punkte.length) return 0;
+  const innen = (p: [number, number], r: Rechteck) => p[0] >= r.left && p[0] <= r.right && p[1] >= r.top && p[1] <= r.bottom;
+  return punkte.filter((p) => innen(p, karte) && !verdeckt.some((r) => innen(p, r))).length / punkte.length;
+}
+
 export interface LinieAufKarte {
   nummer: string;
   farbe: string;

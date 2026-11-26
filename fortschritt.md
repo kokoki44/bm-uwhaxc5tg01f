@@ -149,7 +149,7 @@ Offene Fragen an Koko:
 
 Geändert gegenüber Konzept: nichts.
 
-## Etappe 3b: Linien und Fahrplan (gebaut, wartet auf Kokos Freigabe)
+## Etappe 3b: Linien und Fahrplan (freigegeben von Koko am 26.11.2026, Nachträge eingearbeitet)
 
 Kriterien, Antworten F1 bis F16 und Annahmen A3b-1 bis A3b-14 von Koko am 25.11.2026 bestätigt (mit Ergänzungen: Route nach kürzester Fahrzeit, Meldung ohne Route, Zuschläge nicht mit dem Faktor multipliziert, minimaler Autosave, Beispiellinie; Faktoren nie unter 1).
 
@@ -170,4 +170,14 @@ Tests: `tests/linien.test.ts` (Handrechnungen Fahrzeit, Kurzläufer, Busbedarf, 
 
 Unabhängige Prüfung (Subagent, 25.11.2026): kein Fehler, der ein Kriterium bricht; Handrechnungen nachgerechnet, Annahmen passen zum Code, keine Gedankenstriche, UTF-8 ohne BOM. Behoben nach der Prüfung (Regressionstests in `tests/linien-pruefung.test.ts` und `tests/spiel.test.ts`): gespeicherte Netzanschlüsse wurden beim Laden nicht gegen die Karte geprüft; Verkauf nahm den Bus nur in der Oberfläche aus der Linie; Gegenhaltestelle konnte in einem gesperrten Gebiet liegen; Ersetzen erlaubte dieselbe Haltestelle doppelt; verwaiste neue Haltestelle bei gescheitertem Einfügen; Fehler des Workers blieben unbemerkt (jetzt Hinweis in der Linienliste); Zahlen im Code (neue Taktzeile, Probezeit, Zellgröße) und in Texten (60 m, 4 Uhr) jetzt aus der Konfiguration; Einheit und Symbole außerhalb der Sprachdatei; "Es fehlen 1 Busse" jetzt "Es fehlt 1 Bus"; fehlende Tests für die Prüfung der Verkehrsfaktoren, zusätzliche Fahrten, Kreuzungszuschlag und eigenen Ferientakt; zwei Füllaussagen in Tests entfernt. Annahmen ergänzt: A3b-21 (Halt-Zuschlag bei der Ausrückfahrt), A3-32 (Testzugang speichert), A3b-29 bis A3b-31.
 
-Geändert gegenüber Konzept: nichts. Annahmen A3b-15 bis A3b-31 warten auf Bestätigung.
+Geändert gegenüber Konzept: nichts. Annahmen A3b-15 bis A3b-31 mit der Freigabe bestätigt (A3b-23 mit Rückfrage vor dem Überschreiben).
+
+Nachträge zur Freigabe (26.11.2026):
+- Lücken: Linienliste und Kopf des Linieneditors nennen deutlich die Varianten, die wegen einer Lücke keine Fahrten erzeugen (A3b-34). Oberflächentest mit einem Wegpunkt, dessen Anschluss beim Laden wegfällt.
+- Erschließungswege: nachgerechnet, keine Änderung nötig. Im Busnetz sind nur Erschließungswege mit bus oder psv freigegeben (60 Abschnitte, alle freigegeben), alle 259 Haltestellen in beide Richtungen erreichbar, Haltestellen und Hofanschluss unverändert, Beispiellinie gleich (A3b-32, Regressionstest in `tests/linien-norderstedt.test.ts`).
+- Gegenhaltestelle bleibt bei 100 m, Wendekreis bleibt wie gebaut (Nachtrag zu A3b-12: 12,5 m Außenradius nicht recherchiert).
+- Autosave: Ein neues Spiel fragt vor dem Überschreiben nach, Vorgabe Abbrechen (A3b-23, Regressionstest in `e2e/linien.spec.ts`).
+- Karte: Beim Öffnen einer Linie zoomt die Karte auf die Linie, neben den Fenstern sichtbar (A3b-33, Tests in `tests/linien-pruefung.test.ts` und `e2e/linien.spec.ts`).
+- Fahrtrichtung in der Suche: Die Richtung des Straßenstücks an der Haltestelle ist geographisch richtig, die Segeberger Chaussee knickt am Kirchenweg von etwa 15° auf etwa 55° ab. Ein längeres Straßenstück ändert daran nichts. Nicht geändert, Vorschlag im Bericht.
+
+Anleitung Beispiellinie (berichtigt): Linien, Nummer 1, "Linie anlegen". In der Suche nacheinander "Harksheide, Wilhelm-Busch-Platz" und "Harksheide, Kielort" mit "Segeberger Chaussee, Fahrtrichtung Osten" und "Glashütte, Glashütter Kirchenweg" mit "Segeberger Chaussee, Fahrtrichtung Nordosten" einfügen. "Hin- und Rückrichtung aus der Grundlinie erzeugen", in beiden Richtungen Takt 06:00 bis 20:00 alle 20 min. Erwartung Werktag 7 Uhr: Hin 6:30 min, Rück 6:40 min, 84 Fahrten, 2 Busse.

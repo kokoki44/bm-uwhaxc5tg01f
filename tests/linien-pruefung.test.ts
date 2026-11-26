@@ -9,6 +9,7 @@ import {
 import { bereinigeAnschluesse } from "../src/linien/speichern";
 import { berechneStrecke } from "../src/linien/strecke";
 import { neuesNetz } from "../src/linien/typen";
+import { freierRand, sichtbarerAnteil } from "../src/map/linienkarte";
 import { LocalProj } from "../src/world/geo";
 import { geradenNetz, halt } from "./helpers/linien-netz";
 
@@ -108,6 +109,24 @@ describe("Regressionen Prüfung Etappe 3b", () => {
     ], L, config.roads);
     expect(s.abschnitte[0].zuschlagS).toBe(config.roads.kreuzungZuschlagS + config.roads.ampelZuschlagS);
     expect(abschnittZeitS(s.abschnitte[0], "werktag", 12 * 3600, L)).toBe(120);
+  });
+
+  it("Zoom auf die Linie lässt die Fenster frei: links und rechts verdeckte Ränder, zu schmal ergibt den einfachen Rand", () => {
+    const karte = { left: 0, top: 60, right: 1600, bottom: 900 };
+    const menue = { left: 12, top: 72, right: 150, bottom: 300 };
+    const editor = { left: 160, top: 72, right: 736, bottom: 880 };
+    const rechts = { left: 1100, top: 72, right: 1588, bottom: 600 };
+    expect(freierRand(karte, [menue, editor], 40, 240)).toEqual({ top: 40, bottom: 40, left: 776, right: 40 });
+    expect(freierRand(karte, [editor, rechts], 40, 240)).toEqual({ top: 40, bottom: 40, left: 776, right: 540 });
+    // Fenster außerhalb der Karte zählen nicht
+    expect(freierRand(karte, [{ left: 0, top: 0, right: 1600, bottom: 50 }], 40, 240)).toEqual({ top: 40, bottom: 40, left: 40, right: 40 });
+    // Bleiben weniger als 240 px frei, bleibt die linke Seite (Editor) frei, das rechte Fenster darf die Linie verdecken
+    expect(freierRand({ ...karte, right: 1280 }, [editor, { left: 815, top: 72, right: 1268, bottom: 290 }], 40, 240)).toEqual({ top: 40, bottom: 40, left: 776, right: 40 });
+    // Reicht auch das nicht, nur die rechte Seite, zuletzt der einfache Rand
+    expect(freierRand({ ...karte, right: 1000 }, [{ ...editor, right: 800 }, { left: 950, top: 72, right: 990, bottom: 600 }], 40, 240)).toEqual({ top: 40, bottom: 40, left: 40, right: 90 });
+    expect(freierRand({ ...karte, right: 1000 }, [{ ...editor, right: 800 }, { left: 300, top: 72, right: 990, bottom: 600 }], 40, 240)).toEqual({ top: 40, bottom: 40, left: 40, right: 40 });
+    expect(sichtbarerAnteil([[800, 400], [400, 400], [1700, 400], [1000, 500]], karte, [editor])).toBe(0.5);
+    expect(sichtbarerAnteil([], karte, [])).toBe(0);
   });
 
   it("die Konfiguration lehnt Verkehrsfaktoren unter 1 und Lücken in der Tabelle ab", () => {

@@ -5,6 +5,7 @@ import { fange, fangIndex } from "../src/linien/fangen";
 import { erzeugeRichtungen, fuegeHaltEin, Haltestellen, legeLinieAn, neueHaltestelle, osmHaltId, planAnfrage, setzeTakt } from "../src/linien/linien";
 import { berechneLinie } from "../src/linien/plan";
 import { neuesNetz, type Linie, type Netz } from "../src/linien/typen";
+import { findRoute } from "../src/world/router";
 import type { World } from "../src/world/world";
 import { buildWorld } from "../src/world/world";
 import { ladeNorderstedt, netzSperren } from "./helpers/norderstedt";
@@ -72,6 +73,32 @@ describe("Beispiellinie Norderstedt (Handrechnung für den Bericht)", () => {
     expect(p.tage.werktag.busbedarf).toBe(2);
     expect(p.tage.samstag.busbedarf).toBe(0);
   });
+
+  it("Erschließungswege im Busnetz nur mit ausdrücklicher Busfreigabe; alle 259 Haltestellen in beide Richtungen erreichbar", async () => {
+    const ex = await (async () => {
+      const e = netzSperren();
+      try {
+        return await ladeNorderstedt();
+      } finally {
+        e();
+      }
+    })();
+    const tags = new Map(ex.elements.filter((x) => x.type === "way").map((x) => [x.id, x.tags ?? {}]));
+    const frei = new Set(["yes", "designated", "permissive"]);
+    const fremd = world.network.edges.filter((e) => !R.busHighways.includes(e.cls));
+    expect(fremd.length).toBe(60);
+    for (const e of fremd) {
+      expect(e.cls).toBe("service");
+      const t = tags.get(e.wayId)!;
+      expect(frei.has(t.bus ?? "") || frei.has(t.psv ?? "")).toBe(true);
+    }
+    expect(world.stops).toHaveLength(259);
+    const kirchenweg = halte.hole(osmHaltId(333727173))!;
+    for (const s of world.stops) {
+      expect(findRoute(world.network, kirchenweg.snaps, s.snaps, R)).not.toBeNull();
+      expect(findRoute(world.network, s.snaps, kirchenweg.snaps, R)).not.toBeNull();
+    }
+  }, 120000);
 
   it("gleiche Eingabe, gleiches Ergebnis auf dem echten Netz", () => {
     const a = planAnfrage(linie, halte, null);

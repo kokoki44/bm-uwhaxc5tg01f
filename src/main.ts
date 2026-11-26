@@ -25,7 +25,7 @@ import { bereinigeAnschluesse } from "./linien/speichern";
 import { LocalProj } from "./world/geo";
 import type { SaveRecord, SaveStore } from "./storage/types";
 import { oeffneHaltestelle, oeffneLinien } from "./ui/linien";
-import { baueLinienUi, berechne, haltKlick, zeichneKarte, type LinienUi } from "./ui/linienbereich";
+import { baueLinienUi, berechne, haltKlick, sichtbarerLinienanteil, zeichneKarte, type LinienUi } from "./ui/linienbereich";
 import type { GespeicherterStand } from "./ui/setup";
 import { t, type TextKey } from "./i18n";
 import { createMap, zeigeWelt } from "./map/map";
@@ -319,6 +319,8 @@ async function starteEinrichtung(hinweis = ""): Promise<void> {
         aktualisiereFenster();
       },
       speichern,
+      // Anteil der Linie, der neben den Fenstern sichtbar ist (Zoom beim Öffnen des Linieneditors)
+      linieSichtbar: (id: number) => sichtbarerLinienanteil(id),
     };
   }
   const setzeTempo = (tempo: number) => {

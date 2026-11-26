@@ -115,6 +115,8 @@ export interface LinienConfig {
   neueTaktzeile: { vonH: number; dauerMin: number; taktMin: number };
   /** Voreingestellte Abfahrt der Fahrzeitprobe im Varianteneditor (Stunde). */
   probeStunde: number;
+  /** Zoom auf eine Linie beim Öffnen des Editors: Rand neben den Fenstern, kleinste freie Breite, größter Zoom. */
+  zoom: { randPx: number; mindestBreitePx: number; maxZoom: number };
 }
 
 /** Optionsdatei (Ausstattung beim Neukauf), wie der Katalog nur gelesen. */
@@ -385,6 +387,7 @@ export function validateConfig(c: unknown): Config {
     if (!b?.length || b[0][0] !== 0 || b[b.length - 1][1] !== 24 || b.some((x, i) => !(x[2] >= 1) || !(x[1] > x[0]) || (i > 0 && b[i - 1][1] !== x[0]))) bad(`linien.verkehrsfaktor.${tag}`);
   }
   if (!(l.fangZelleM > 0) || !(l.probeStunde >= 0 && l.probeStunde < 24)) bad("linien.fangZelleM/probeStunde");
+  if (!l.zoom || !(l.zoom.randPx >= 0) || !(l.zoom.mindestBreitePx > 0) || !(l.zoom.maxZoom > 0)) bad("linien.zoom");
   const nz = l.neueTaktzeile;
   if (!nz || !(nz.dauerMin > 0) || !(nz.taktMin >= l.taktMinMin && nz.taktMin <= l.taktMaxMin) || !(nz.vonH >= l.betriebstagBeginnH && nz.vonH < 24 + l.betriebstagBeginnH)) bad("linien.neueTaktzeile");
   for (const [tag, v] of Object.entries(l.taktVorlage ?? {})) if (v.some((x) => !(x[1] > x[0]) || !(x[2] >= l.taktMinMin && x[2] <= l.taktMaxMin))) bad(`linien.taktVorlage.${tag}`);

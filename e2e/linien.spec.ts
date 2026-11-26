@@ -223,6 +223,23 @@ test("Linie anlegen, Takt setzen, Fahrplan erzeugen, Bus zuweisen, Weiterspielen
   await page.evaluate(() => (window as unknown as { __spieltest: { speichern(): Promise<boolean> } }).__spieltest.speichern());
   await page.reload();
   await expect(page.getByTestId("setup-stand")).toContainText("Linien Test in Norderstedt");
+  // Regression A3b-23: Ein neues Spiel überschreibt den gespeicherten Stand erst nach Rückfrage, Vorgabe ist Abbrechen
+  await page.locator("#s-name").fill("Neues Spiel");
+  await page.locator("#s-name").press("Enter");
+  const rueckfrage = page.getByTestId("ueberschreiben");
+  await expect(rueckfrage).toBeVisible();
+  await expect(rueckfrage).toContainText("Gespeicherten Stand wirklich überschreiben?");
+  await expect(rueckfrage.getByTestId("ueberschreiben-abbrechen")).toBeFocused();
+  await page.screenshot({ path: info.outputPath("rueckfrage-ueberschreiben.png") });
+  await page.keyboard.press("Enter");
+  await expect(rueckfrage).toHaveCount(0);
+  await expect(page.getByTestId("setup")).toBeVisible();
+  // Esc bricht ebenfalls ab
+  await page.locator("#s-name").press("Enter");
+  await expect(rueckfrage).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(rueckfrage).toHaveCount(0);
+  await expect(page.getByTestId("setup-stand")).toContainText("Linien Test in Norderstedt");
   await page.getByTestId("setup-weiter").click();
   await expect(page.locator("#kopfleiste")).toBeVisible({ timeout: 30000 });
   await expect(page.getByTestId("fenster-standorte")).toHaveCount(0);
@@ -234,5 +251,66 @@ test("Linie anlegen, Takt setzen, Fahrplan erzeugen, Bus zuweisen, Weiterspielen
   await expect(fp2.getByTestId("fahrplan-tabelle").locator("tbody tr")).toHaveCount(85);
   await expect(fp2.getByTestId(`fahrt-${hinId}-t${6 * 3600 + 20 * 60}-status`)).toHaveText("gestrichen");
   await page.screenshot({ path: info.outputPath("nach-neuladen.png") });
+  await fp2.getByTestId("fenster-schliessen").click();
+  await liste2.getByTestId("fenster-schliessen").click();
+
+  // Lücke in einer Variante: Ein Wegpunkt, dessen Netzanschluss nicht zur Karte passt, fällt beim Laden weg (A3b-31).
+  // Die Rückrichtung erzeugt dann keine Fahrten; Linienliste und Linienkopf zeigen das deutlich, die Hinrichtung fährt.
+  await page.evaluate(() => (window as unknown as { __spieltest: { speichern(): Promise<boolean> } }).__spieltest.speichern());
+  await page.reload();
+  await expect(page.getByTestId("setup-stand")).toBeVisible();
+  // Im Einrichtungsdialog läuft kein Spiel, das automatisch speichern könnte
+  const rueckName = await page.evaluate(
+    () =>
+      new Promise<string>((resolve, reject) => {
+        const req = indexedDB.open("busmanager", 1);
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction("spielstaende", "readwrite");
+          const s = tx.objectStore("spielstaende");
+          const g = s.get("autosave");
+          g.onsuccess = () => {
+            const rec = g.result;
+            const v = rec.payload.netz.linien[0].varianten[1];
+            const p = v.perlen[0].art === "halt" ? [10.03, 53.69] : v.perlen[0].coord;
+            v.perlen.splice(1, 0, { art: "weg", coord: p, snaps: [{ edge: 0, t: 0.5, dist: 0, point: p }] });
+            s.put(rec, "autosave");
+            tx.oncomplete = () => resolve(v.name);
+          };
+        };
+      }),
+  );
+  await page.reload();
+  await page.getByTestId("setup-weiter").click();
+  await expect(page.locator("#kopfleiste")).toBeVisible({ timeout: 30000 });
+  // Das Fenster mit den Katalogfehlern vom Start schließen, damit rechts nichts die Linie verdeckt
+  await page.getByTestId("fenster-katalog").getByTestId("fenster-schliessen").click();
+  await page.getByTestId("menu-linien").click();
+  const liste3 = page.getByTestId("fenster-linien");
+  await expect(liste3.locator("[data-testid$='-hinweis']").first()).toContainText(`Keine Fahrten auf ${rueckName}: Die Route hat eine Lücke.`, { timeout: 20000 });
+  // Karte weit weg schieben; beim Öffnen der Linie zoomt die Karte auf die Linie, neben dem Fenster sichtbar
+  await page.evaluate(() => {
+    const m = (document.getElementById("map") as unknown as { __karte: { jumpTo(o: { center: [number, number]; zoom: number }): void } }).__karte;
+    m.jumpTo({ center: [9.96, 53.74], zoom: 17 });
+  });
+  await liste3.locator("[data-testid$='-bearbeiten']").first().click();
+  const ed3 = page.getByTestId("fenster-linie");
+  await expect(ed3.getByTestId("linie-luecke-hinweis")).toBeVisible();
+  await expect(ed3.getByTestId("linie-luecke-hinweis")).toContainText(`Keine Fahrten auf ${rueckName}`);
+  await expect(ed3.getByTestId("varianten-tabelle").locator("tbody tr").nth(1)).toContainText("Lücke, keine Fahrten");
+  await expect(ed3.getByTestId("varianten-tabelle").locator("tbody tr").first()).toContainText("✔ vollständig");
+  const sichtbar = await page.evaluate(() => (window as unknown as { __spieltest: { linieSichtbar(id: number): number } }).__spieltest.linieSichtbar(1));
+  // Warten, bis die Karte im neuen Ausschnitt fertig gezeichnet ist
+  await page.evaluate(() => {
+    const m = (document.getElementById("map") as unknown as { __karte: { once(ev: string, f: () => void): void; triggerRepaint(): void } }).__karte;
+    return new Promise<void>((r) => {
+      m.once("idle", () => r());
+      m.triggerRepaint();
+      setTimeout(r, 5000);
+    });
+  });
+  await page.screenshot({ path: info.outputPath("linie-luecke-zoom.png") });
+  expect(sichtbar).toBeGreaterThanOrEqual(0.95);
   expect(fehler).toEqual([]);
 });

@@ -12,7 +12,7 @@ import { planTag } from "../linien/tagesart";
 import type { HaltId, Linie, TaktZeile, Variante } from "../linien/typen";
 import { h } from "./dom";
 import { datum, zahl } from "./format";
-import { berechne, berechnungsFehler, fahrzeitSpanne, freigeschaltet, GRUNDLINIE, linienUi, variantenPlaene, waehleAus, type LinienUi } from "./linienbereich";
+import { berechne, berechnungsFehler, fahrzeitSpanne, freigeschaltet, GRUNDLINIE, linienUi, variantenPlaene, waehleAus, zoomeAufLinie, type LinienUi } from "./linienbereich";
 import { perlenEditor } from "./perlen";
 import { beobachte, modellName } from "./spielui";
 import { istOffen, oeffneFenster, schliesseFenster } from "./windows";
@@ -56,6 +56,12 @@ export function hoechsterBedarf(b: Record<PlanTag, number>): { tag: PlanTag; bus
   let best: { tag: PlanTag; busse: number } = { tag: "werktag", busse: 0 };
   for (const tag of PLAN_TAGE) if (b[tag] > best.busse) best = { tag, busse: b[tag] };
   return best;
+}
+
+/** Namen der Varianten, die wegen einer Lücke in der Route keine Fahrten erzeugen (Grundlinie zählt nicht). */
+function lueckenVarianten(l: Linie, plan: LinienPlan | undefined): string[] {
+  const ohne = new Set(variantenPlaene(plan).filter((v) => !v.vollstaendig).map((v) => v.id));
+  return l.varianten.filter((v) => ohne.has(v.id)).map((v) => v.name);
 }
 
 function warnungText(w: PassWarnung): string {
@@ -112,7 +118,7 @@ export function oeffneLinien(): void {
       ...u.spiel.netz.linien.map((l) => {
         const plan = u.plaene.get(l.id);
         const b = hoechsterBedarf(bedarf(plan));
-        const luecke = variantenPlaene(plan).some((v) => !v.vollstaendig);
+        const luecke = lueckenVarianten(l, plan);
         const bearbeiten = h("button", { type: "button", "data-testid": `linie-${l.id}-bearbeiten`, "aria-label": t("linien.bearbeiten", { nummer: l.nummer }) }, linienSchild(l));
         bearbeiten.addEventListener("click", () => oeffneLinie(l.id));
         const aktiv = h("input", { type: "checkbox", checked: l.aktiv, "data-testid": `linie-${l.id}-aktiv`, "aria-label": t("linien.aktivFuer", { nummer: l.nummer }) });
@@ -124,7 +130,7 @@ export function oeffneLinien(): void {
         fahrplan.addEventListener("click", () => oeffneFahrplan(l.id));
         const hinweise: string[] = [];
         if (!l.varianten.length) hinweise.push(t("linien.ohneVarianten"));
-        if (luecke) hinweise.push(t("linien.routeFehlt"));
+        if (luecke.length) hinweise.push(t("linien.routeFehlt", { varianten: luecke.join(", ") }));
         const bf = berechnungsFehler(l.id);
         if (bf) hinweise.push(t("linien.berechnungFehler", { grund: bf }));
         if (b.busse > l.busse.length) hinweise.push(mz("linien.zuWenigBusse", b.busse - l.busse.length, { tag: tagName(b.tag) }));
@@ -256,9 +262,14 @@ export function oeffneLinie(id: number): void {
   const fahrplan = h("button", { type: "button", "data-testid": "linie-fahrplan", text: t("linien.fahrplan") });
   fahrplan.addEventListener("click", () => oeffneFahrplan(l.id));
 
+  const lueckeHinweis = h("p", { class: "schlecht hinweisbox", role: "status", "data-testid": "linie-luecke-hinweis", hidden: true });
+
   function zeichne() {
     if (!u.spiel.netz.linien.includes(l!)) return;
     const plan = u.plaene.get(l!.id);
+    const luecke = lueckenVarianten(l!, plan);
+    lueckeHinweis.hidden = !luecke.length;
+    lueckeHinweis.textContent = luecke.length ? `⚠ ${t("linie.lueckeHinweis", { varianten: luecke.join(", ") })}` : "";
     grund.zeichne();
     richtungen.textContent = richtungBestaetigen ? t("linie.richtungenBestaetigen") : t(l!.varianten.some((v) => v.art !== "kurz") ? "linie.richtungenNeu" : "linie.richtungen");
     varianten.replaceChildren(
@@ -332,6 +343,7 @@ export function oeffneLinie(id: number): void {
       h("label", { for: "linie-farbe", text: t("linie.farbe") }), farbe,
     ),
     h("div", { class: "aktionen links" }, speichern, h("label", { class: "option", for: "linie-aktiv" }, aktiv, t("linie.aktiv")), fahrplan),
+    lueckeHinweis,
     meldung,
     h("details", { open: true },
       h("summary", { class: "fett", text: t("linie.grundlinie") }),
@@ -373,6 +385,8 @@ export function oeffneLinie(id: number): void {
   ), { links: true, mittel: true, geschlossen: () => (istOffen("variante") ? undefined : waehleAus(null)) });
   // Erst nach dem Öffnen: Ein zuvor offener Editor meldet beim Schließen "keine Auswahl"
   waehleAus(l.id, GRUNDLINIE);
+  // Die Linie neben dem Fenster zeigen; die Karte bleibt frei bedienbar
+  zoomeAufLinie(l.id);
   fenster.querySelector("header h2")!.prepend(linienSchild(l), " ");
   beobachte("linie", () => mitFokus(fenster, zeichne));
   zeichne();

@@ -113,6 +113,8 @@ export function zeigeSetup(stand: GespeicherterStand | null = null, hinweis = ""
       kapital.setAttribute("aria-invalid", String(!ergebnis.ok && !!ergebnis.fehler.startkapital));
       name.setAttribute("aria-invalid", String(!ergebnis.ok && !!ergebnis.fehler.firmenname));
       if (!ergebnis.ok) return;
+      // Bis Etappe 4b gibt es nur einen Speicherplatz: ein neues Spiel überschreibt ihn erst nach Rückfrage (Vorgabe: Abbrechen)
+      if (stand && !(await bestaetigeUeberschreiben(dlg))) return;
       const bytes = gewaehlt ? await gewaehlt.arrayBuffer() : null;
       dlg.close();
       dlg.remove();
@@ -122,6 +124,30 @@ export function zeigeSetup(stand: GespeicherterStand | null = null, hinweis = ""
     document.body.append(dlg);
     dlg.showModal();
     name.focus();
+  });
+}
+
+/** Rückfrage vor dem Überschreiben des gespeicherten Stands. Abbrechen hat den Fokus, Esc bricht ebenfalls ab. */
+function bestaetigeUeberschreiben(eltern: HTMLDialogElement): Promise<boolean> {
+  return new Promise((resolve) => {
+    const abbrechen = h("button", { type: "button", "data-testid": "ueberschreiben-abbrechen", text: t("setup.ueberschreibenAbbrechen") });
+    const ja = h("button", { type: "button", "data-testid": "ueberschreiben-ja", text: t("setup.ueberschreibenJa") });
+    const dlg = h("dialog", { class: "dialog", role: "alertdialog", "aria-labelledby": "ueberschreiben-titel", "aria-describedby": "ueberschreiben-text", "data-testid": "ueberschreiben" },
+      h("h2", { id: "ueberschreiben-titel", text: t("setup.ueberschreibenTitel") }),
+      h("p", { id: "ueberschreiben-text", text: t("setup.ueberschreibenText") }),
+      h("div", { class: "aktionen" }, abbrechen, ja),
+    );
+    const ende = (ok: boolean) => {
+      dlg.close();
+      dlg.remove();
+      resolve(ok);
+    };
+    abbrechen.addEventListener("click", () => ende(false));
+    ja.addEventListener("click", () => ende(true));
+    dlg.addEventListener("cancel", (e) => (e.preventDefault(), ende(false)));
+    eltern.append(dlg);
+    dlg.showModal();
+    abbrechen.focus();
   });
 }
 

@@ -6,7 +6,7 @@ import { fahrtZeiten } from "../linien/fahrplan";
 import { Haltestellen, loesePerlenAuf, planAnfrage } from "../linien/linien";
 import type { LinienPlan, PlanAnfrage, VariantenPlan } from "../linien/plan";
 import type { HaltId, Linie, Perle } from "../linien/typen";
-import { setzeKartenklick, zeigeAuswahl, zeigeHaltestellen, zeigeLinien } from "../map/linienkarte";
+import { freierRand, setzeKartenklick, sichtbarerAnteil, zeigeAuswahl, zeigeHaltestellen, zeigeLinien, type Rechteck } from "../map/linienkarte";
 import type { Simulation } from "../sim/client";
 import { LocalProj, pointInRings, projectOnLine, type LonLat } from "../world/geo";
 import type { Snap } from "../world/router";
@@ -138,6 +138,54 @@ export function zeichneKarte(): void {
   const perlen: Perle[] = v ? v.perlen : l.perlen;
   const route = u.plaene.get(l.id)?.varianten.find((x) => x.id === (v ? v.id : GRUNDLINIE))?.strecke.coords ?? null;
   zeigeAuswahl(u.map, route, loesePerlenAuf(perlen, u.halte).map((p) => ({ coord: p.coord, art: p.halt ? ("halt" as const) : ("weg" as const) })), l.farbe);
+}
+
+/* ---------- Zoom auf eine Linie ---------- */
+
+/** Punkte einer Linie: berechnete Routen aller Varianten und der Grundlinie, sonst die Lage der Perlen. */
+function linienPunkte(u: LinienUi, l: Linie): LonLat[] {
+  const routen = (u.plaene.get(l.id)?.varianten ?? []).flatMap((v) => v.strecke.coords);
+  if (routen.length) return routen;
+  return [l.perlen, ...l.varianten.map((v) => v.perlen)].flatMap((p) => loesePerlenAuf(p, u.halte).map((x) => x.coord));
+}
+
+/** Kartenbereich und die Flächen darüber, die ihn verdecken (Fenster und Menüleiste), in Seitenkoordinaten. */
+function kartenFlaechen(u: LinienUi): { karte: Rechteck; verdeckt: Rechteck[] } {
+  const karte = u.map.getContainer().getBoundingClientRect();
+  const verdeckt = [...document.querySelectorAll(".fenster, #menueleiste")].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
+  return { karte, verdeckt };
+}
+
+/**
+ * Zoomt die Karte auf die Linie, sodass sie neben den offenen Fenstern sichtbar ist. Die Karte bleibt danach frei bedienbar.
+ * Liefert false, wenn die Linie noch keine Punkte hat.
+ */
+export function zoomeAufLinie(linieId: number): boolean {
+  const u = linienUi();
+  const l = u.spiel.netz.linien.find((x) => x.id === linieId);
+  const p = l ? linienPunkte(u, l) : [];
+  if (!p.length) return false;
+  const lon = p.map((x) => x[0]), lat = p.map((x) => x[1]);
+  const { karte, verdeckt } = kartenFlaechen(u);
+  u.map.fitBounds([[Math.min(...lon), Math.min(...lat)], [Math.max(...lon), Math.max(...lat)]], {
+    padding: freierRand(karte, verdeckt, L.zoom.randPx, L.zoom.mindestBreitePx),
+    maxZoom: L.zoom.maxZoom,
+    duration: 0,
+  });
+  return true;
+}
+
+/** Anteil der Linie, der gerade sichtbar und nicht von Fenstern verdeckt ist (für Oberflächentests). */
+export function sichtbarerLinienanteil(linieId: number): number {
+  const u = linienUi();
+  const l = u.spiel.netz.linien.find((x) => x.id === linieId);
+  if (!l) return 0;
+  const { karte, verdeckt } = kartenFlaechen(u);
+  const punkte = linienPunkte(u, l).map((c) => {
+    const q = u.map.project(c);
+    return [q.x + karte.left, q.y + karte.top] as [number, number];
+  });
+  return sichtbarerAnteil(punkte, karte, verdeckt);
 }
 
 /* ---------- Werkzeuge für Klicks auf die Karte ---------- */

@@ -304,6 +304,7 @@
     "routenCacheGroesse": 20000,
     "fangZelleM": 100,
     "neueTaktzeile": { "vonH": 6, "dauerMin": 60, "taktMin": 20 },
-    "probeStunde": 7
+    "probeStunde": 7,
+    "zoom": { "randPx": 40, "mindestBreitePx": 240, "maxZoom": 16 }
   }
 }
