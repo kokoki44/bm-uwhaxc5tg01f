@@ -27,6 +27,7 @@ test("Dienst anlegen: D1 bis zur Ablösung, D2 als Rest des Umlaufs, D3 (ganzer 
   await plan.getByTestId("dienste-tag").selectOption("werktag");
   await expect(plan.getByTestId("dienste-frei")).toContainText("84 von 84 Fahrten haben noch keinen Dienst", { timeout: 20000 });
   await expect(plan.getByTestId("dienste-regelwerk")).toContainText("Deutschland");
+  const linieId = (await plan.locator("[data-testid^='zeitzeile-'][data-testid$='-0-frei']").first().getAttribute("data-testid"))!.split("-")[1];
 
   // D1: Umlauf 1 bis zur Ablösung 12:26:20 am Wilhelm-Busch-Platz, nur mit Auswahllisten und Knöpfen
   await plan.getByTestId("dienst-neu").click();
@@ -51,6 +52,11 @@ test("Dienst anlegen: D1 bis zur Ablösung, D2 als Rest des Umlaufs, D3 (ganzer 
   await expect(d.getByTestId("dienst-nummer")).toHaveValue("2");
   await expect(d.getByTestId("dienst-ergebnis")).toContainText("regelgerecht", { timeout: 20000 });
   await expect(d.getByTestId("dienst-art")).toHaveText("Spätdienst");
+  // Regression Prüfung 3c-1, Befund 1: Auch im ersetzten Editor wählt ein Klick auf eine Fahrt der Zeitleiste sie aus
+  await plan.getByTestId(`balken-${linieId}-1-3`).click({ force: true });
+  await expect(d.getByTestId("dienst-umlauf")).toHaveValue("1");
+  await expect(d.getByTestId("dienst-von")).toHaveValue("3");
+  await d.getByTestId("dienst-umlauf").selectOption("0");
   console.log("D2:", await d.getByTestId("dienst-zeit").textContent(), "Lenkzeit", await d.getByTestId("dienst-lenkzeit").textContent(), "Arbeitszeit", await d.getByTestId("dienst-arbeitszeit").textContent());
   await d.getByTestId("dienst-speichern").click();
   await expect(d.getByTestId("dienst-meldung")).toHaveText("Dienst 2 gespeichert.");
@@ -67,9 +73,29 @@ test("Dienst anlegen: D1 bis zur Ablösung, D2 als Rest des Umlaufs, D3 (ganzer 
   await expect(d.getByTestId("dienst-meldung")).toContainText("Nicht gespeichert: Arbeitszeit");
   console.log("D3:", await d.getByTestId("dienst-verstoesse").textContent());
   await page.screenshot({ path: info.outputPath("dienst-d3.png") });
-  // Schließen mit ungespeicherten Änderungen: erst Hinweis, beim zweiten Mal verworfen (Esc wie ✕)
-  await page.keyboard.press("Escape");
+  // Regression Prüfung 3c-1, Befund 2: "Neuer Dienst" ersetzt einen Entwurf mit ungespeicherten Änderungen nicht stumm
+  await plan.getByTestId("dienst-neu").click();
   await expect(d.getByTestId("dienst-meldung")).toContainText("Ungespeicherte Änderungen");
+  await expect(d.getByTestId("dienst-stuecke")).toContainText("Umlauf 2: 42 Fahrten");
+  // Schließen mit ungespeicherten Änderungen: erst Hinweis, beim zweiten Mal verworfen (Esc wie ✕)
+  await d.getByTestId("dienst-nummer").fill("3");
+  await d.getByTestId("dienst-nummer").press("Escape");
+  await expect(d.getByTestId("dienst-meldung")).toContainText("Ungespeicherte Änderungen");
+  await page.keyboard.press("Escape");
+  await expect(d).toHaveCount(0);
+
+  // Kriterium 12 nur mit der Tastatur: Neuer Dienst, Umlauf mit Pfeiltaste, Tab bis "Ganzen Umlauf übernehmen", Enter
+  await plan.getByTestId("dienst-neu").focus();
+  await page.keyboard.press("Enter");
+  await expect(d).toBeVisible();
+  await d.getByTestId("dienst-umlauf").focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(d.getByTestId("dienst-umlauf")).toHaveValue("1");
+  for (let i = 0; i < 4; i++) await page.keyboard.press("Tab");
+  await expect(d.getByTestId("dienst-ganzer-umlauf")).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(d.getByTestId("dienst-stuecke")).toContainText("Umlauf 2: 42 Fahrten");
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await expect(d).toHaveCount(0);
 
@@ -77,7 +103,6 @@ test("Dienst anlegen: D1 bis zur Ablösung, D2 als Rest des Umlaufs, D3 (ganzer 
   await expect(plan.getByTestId("dienste-tabelle").locator("tbody tr")).toHaveCount(2);
   await expect(plan.getByTestId("dienste-tabelle")).toContainText("Frühdienst");
   await expect(plan.getByTestId("dienste-tabelle")).toContainText("Spätdienst");
-  const linieId = (await plan.locator("[data-testid^='zeitzeile-'][data-testid$='-0-frei']").first().getAttribute("data-testid"))!.split("-")[1];
   await expect(plan.getByTestId(`zeitzeile-${linieId}-0-frei`)).toHaveText("alle Fahrten belegt");
   await expect(plan.getByTestId(`zeitzeile-${linieId}-1-frei`)).toContainText("frei: 42 Fahrten (06:00 bis 19:45:50)");
   await page.screenshot({ path: info.outputPath("dienstplan.png") });

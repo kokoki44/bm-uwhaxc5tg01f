@@ -1,5 +1,5 @@
 import { config, PLAN_TAGE, schulferien, type PlanTag } from "../config";
-import { entferneStueck, entwurfVon, freieBereiche, fuegeStueckHinzu, loescheDienst, neuerEntwurf, setzeEigeneFerienDienste, speichereDienst } from "../dienste/dienste";
+import { bereichBisAbloesung, entferneStueck, entwurfVon, freieBereiche, fuegeStueckHinzu, loescheDienst, neuerEntwurf, restDesUmlaufs, setzeEigeneFerienDienste, speichereDienst } from "../dienste/dienste";
 import { fahrtKey, wirksameDienste, type Auswertung, type LinieDaten, type TagesAuswertung } from "../dienste/pruefung";
 import type { Dienst, FahrtRef } from "../dienste/typen";
 import { grundtagVon, istFerientag, uhrzeit } from "../linien/fahrplan";
@@ -10,7 +10,7 @@ import { artText, befundText, diensteConfig as C, linienFuer, pruefeEntwurf, pru
 import { linienUi } from "./linienbereich";
 import { linienSchild, tagName } from "./linien";
 import { beobachte } from "./spielui";
-import { istOffen, oeffneFenster } from "./windows";
+import { darfErsetzen, istOffen, oeffneFenster } from "./windows";
 
 /* ---------- Hilfen ---------- */
 
@@ -194,6 +194,8 @@ function waehleImEditor(linie: number, umlauf: number, index: number) {
  * Prüfung im Worker mit Regel, Wert, Grenze und Quelle; nur ein regelgerechter Dienst lässt sich speichern.
  */
 export function oeffneDienst(entwurf: Dienst, gespeichert: boolean): void {
+  // Ein offener Entwurf mit ungespeicherten Änderungen wird nicht ohne Hinweis ersetzt (F10, Regression Prüfung 3c-1)
+  if (istOffen("dienst") && !darfErsetzen("dienst")) return;
   const u = linienUi();
   const tag = entwurf.tag;
   let geaendert = !gespeichert;
@@ -201,7 +203,8 @@ export function oeffneDienst(entwurf: Dienst, gespeichert: boolean): void {
   let verwerfen = false;
   const { el: meldung, melde } = meldungsfeld("dienst-meldung");
   const nummer = h("input", { type: "text", id: "dienst-nummer", "data-testid": "dienst-nummer", value: entwurf.nummer, maxlength: C.nummerMaxLaenge, class: "kurztext" });
-  nummer.addEventListener("input", () => ((entwurf.nummer = nummer.value), (geaendert = true)));
+  // Jede Änderung setzt die Rückfrage zurück: Das nächste Schließen zeigt wieder erst den Hinweis
+  nummer.addEventListener("input", () => ((entwurf.nummer = nummer.value), (geaendert = true), (verwerfen = false)));
 
   const linieWahl = h("select", { id: "dienst-linie", "data-testid": "dienst-linie" });
   const umlaufWahl = h("select", { id: "dienst-umlauf", "data-testid": "dienst-umlauf" });
@@ -277,27 +280,20 @@ export function oeffneDienst(entwurf: Dienst, gespeichert: boolean): void {
     const l = aktLinie(), um = aktUmlauf();
     if (!l || !um) return;
     const ta = tagesAuswertung(tag);
-    const bis = Number(abloesung.value);
-    // Ab der ersten freien Fahrt (nicht in einem anderen Dienst, nicht schon im Entwurf) bis zur Ablösung
-    const von = um.fahrten.findIndex((f) => !belegung(l, f, ta, entwurf));
-    if (von < 0 || von > bis) return melde(t("dienst.keinFreierAnfang"));
-    fuegeHinzu(von, bis);
+    // Der zusammenhängende freie Bereich (nicht in einem anderen Dienst, nicht schon im Entwurf), der an der Ablösung endet
+    const b = bereichBisAbloesung(um, um.fahrten.filter((f) => !belegung(l, f, ta, entwurf)), Number(abloesung.value));
+    if (!b) return melde(t("dienst.keinFreierAnfang"));
+    fuegeHinzu(b[0], b[1]);
   });
   for (const s of [linieWahl, umlaufWahl]) s.addEventListener("change", () => ((vonWahl.value = bisWahl.value = abloesung.value = ""), fuelleWahl()));
   rest.addEventListener("click", () => {
     if (geaendert) return melde(t("dienst.erstSpeichern"));
     const ta = tagesAuswertung(tag);
-    const st = entwurf.stuecke[entwurf.stuecke.length - 1];
-    const l = linien().find((x) => x.linie === st?.linie);
-    const k = l?.umlaeufe.findIndex((um) => um.fahrten.some((f) => ref(f) === ref(st.fahrten[st.fahrten.length - 1]))) ?? -1;
-    if (!l || k < 0) return melde(t("dienst.keinRest"));
-    const um = l.umlaeufe[k];
-    const letzte = um.fahrten.findIndex((f) => ref(f) === ref(st.fahrten[st.fahrten.length - 1]));
-    const frei = um.fahrten.map((f, i) => (i > letzte && !belegung(l, f, ta, null) ? i : -1)).filter((i) => i >= 0);
-    if (!frei.length) return melde(t("dienst.keinRest"));
-    const bis = freieBereiche(um, um.fahrten.filter((_, i) => frei.includes(i)))[0];
+    // Nach dem zeitlich letzten Stück des Dienstes, im selben Umlauf (Regression Prüfung 3c-1)
+    const r = restDesUmlaufs(entwurf, linien(), (l) => l.fahrten.filter((f) => !belegung(l, f, ta, entwurf)));
+    if (!r) return melde(t("dienst.keinRest"));
     const neu = neuerEntwurf(u.spiel.dienste, tag);
-    fuegeStueckHinzu(neu, l, k, bis[0], bis[1]);
+    fuegeStueckHinzu(neu, r.linie, r.umlaufNr, r.von, r.bis);
     oeffneDienst(neu, false);
   });
   speichern.addEventListener("click", async () => {
@@ -310,7 +306,7 @@ export function oeffneDienst(entwurf: Dienst, gespeichert: boolean): void {
     zeichne();
   });
 
-  editorWahl = (linie, k, i) => {
+  const wahl = (linie: number, k: number, i: number) => {
     linieWahl.value = String(linie);
     fuelleWahl();
     umlaufWahl.value = String(k);
@@ -427,8 +423,12 @@ export function oeffneDienst(entwurf: Dienst, gespeichert: boolean): void {
       melde(t("dienst.ungespeichert"));
       return false;
     },
-    geschlossen: () => (editorWahl = null),
+    // Nur die eigene Auswahl abmelden: Ein neuer Editor ersetzt den alten, dessen Schließen darf ihn nicht abmelden
+    geschlossen: () => {
+      if (editorWahl === wahl) editorWahl = null;
+    },
   });
+  editorWahl = wahl;
   beobachte("dienst", () => zeichne());
   zeichne();
   void pruefen();

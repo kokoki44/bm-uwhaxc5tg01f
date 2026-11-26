@@ -1,7 +1,7 @@
 import type { DiensteConfig, PlanTag } from "../config";
 import { grundtagVon, istFerientag } from "../linien/fahrplan";
 import type { LinienPlan } from "../linien/plan";
-import type { RegelId, Regelwerk, Teilung } from "./regelwerk";
+import type { GrenzRegel, RegelId, Regelwerk, Teilung } from "./regelwerk";
 import type { Dienst, Dienstplan, FahrtRef } from "./typen";
 
 /* ---------- Eingabe: Fahrten und Umläufe einer Tagesart ---------- */
@@ -157,6 +157,19 @@ export function baueDienst(d: Dienst, linien: Map<number, LinieDaten>, cfg: Dien
     return { ref: r, f: index(a.linie).fahrt.get(`${r.variante}:${r.schluessel}`)!, v: a.linie.varianten.find((v) => v.id === r.variante)! };
   };
   stuecke.sort((a, b) => fahrt(a, a.von).f.abfahrtS - fahrt(b, b.von).f.abfahrtS);
+  // Schließen zwei Stücke im selben Umlauf direkt aneinander, ist das ein Stück: dazwischen liegt eine Wendezeit, keine
+  // Pause (gespeicherte Stände, neu gebildete Umläufe; Regression Prüfung 3c-1)
+  for (let i = stuecke.length - 1; i > 0; i--) {
+    const a = stuecke[i - 1], b = stuecke[i];
+    if (a.linie === b.linie && a.umlaufNr === b.umlaufNr && b.von === a.bis + 1) {
+      a.bis = b.bis;
+      stuecke.splice(i, 1);
+    }
+  }
+  // Ohne Start- oder Zielhaltestelle einer Variante ist der Ort der Ablösung unbekannt
+  for (const a of stuecke) {
+    if (!fahrt(a, a.von).v.start || !fahrt(a, a.bis).v.ziel) fehler.push({ regel: "ablauf", code: "ortFehlt", daten: { linie: a.linie.nummer } });
+  }
 
   type Teil = { elemente: Element[]; startOrt: string | null; endeOrt: string | null; startS: number; endeS: number };
   const teile: Teil[] = [];
@@ -273,7 +286,7 @@ export function pruefeDienst(d: Dienst, linien: Map<number, LinieDaten>, andere:
   const { elemente, fehler, stuecke } = baueDienst(d, linien, cfg);
   const verstoesse: Befund[] = [...fehler];
   const warnungen: Befund[] = [];
-  const melde = (regel: RegelId, code: string, wertS?: number, grenzeS?: number) => (rw.regeln[regel].hart ? verstoesse : warnungen).push({ regel, code, wertS, grenzeS });
+  const melde = (regel: GrenzRegel, code: string, wertS?: number, grenzeS?: number) => (rw.regeln[regel].hart ? verstoesse : warnungen).push({ regel, code, wertS, grenzeS });
 
   // Ablauf: jede Fahrt nur in einem Dienst, Umlauf mit Bus
   const vergeben = andere instanceof Map ? andere : vergabe(andere);
@@ -357,7 +370,8 @@ export function pruefeDienst(d: Dienst, linien: Map<number, LinieDaten>, andere:
 
   // Tarif (nur Warnungen, wenn das Regelwerk es so festlegt)
   const schichtS = endeS - beginnS;
-  if (arbeitS > R.tarifArbeitszeit.maxS) melde("tarifArbeitszeit", "max", arbeitS, R.tarifArbeitszeit.maxS);
+  if (arbeitS > R.tarifArbeitszeit.ausnahmeMaxS) melde("tarifArbeitszeit", "ausnahme", arbeitS, R.tarifArbeitszeit.ausnahmeMaxS);
+  else if (arbeitS > R.tarifArbeitszeit.maxS) melde("tarifArbeitszeit", "max", arbeitS, R.tarifArbeitszeit.maxS);
   if (lenkS > R.tarifLenkzeit.maxS) melde("tarifLenkzeit", "max", lenkS, R.tarifLenkzeit.maxS);
   if (schichtS > R.tarifDienstschicht.dringendMaxS) melde("tarifDienstschicht", "dringend", schichtS, R.tarifDienstschicht.dringendMaxS);
   else if (schichtS > R.tarifDienstschicht.maxS) melde("tarifDienstschicht", "max", schichtS, R.tarifDienstschicht.maxS);

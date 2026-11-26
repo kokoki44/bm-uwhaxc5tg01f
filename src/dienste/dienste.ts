@@ -1,4 +1,4 @@
-import { PLAN_TAGE, type DiensteConfig, type PlanTag } from "../config";
+import { config, PLAN_TAGE, type DiensteConfig, type PlanTag } from "../config";
 import type { Grundtag } from "../linien/fahrplan";
 import type { Auswertung, LinieDaten } from "./pruefung";
 import type { Dienst, Dienstplan, Dienststueck, FahrtRef } from "./typen";
@@ -45,6 +45,7 @@ export function fuegeStueckHinzu(d: Dienst, l: LinieDaten, umlaufNr: number, von
   const eigene: [number, number][] = [];
   const rest: Dienststueck[] = [];
   for (const st of d.stuecke) {
+    if (!st.fahrten.length) continue; // leere Stücke fallen weg
     const a = st.linie === l.linie ? lage(st.fahrten[0]) : -1;
     if (a >= 0 && st.fahrten.every((f, i) => u.fahrten[a + i] && gleich(u.fahrten[a + i], f))) eigene.push([a, a + st.fahrten.length - 1]);
     else rest.push(st);
@@ -77,6 +78,36 @@ export function freieBereiche(u: LinieDaten["umlaeufe"][number], frei: readonly 
     else out.push([i, i]);
   });
   return out;
+}
+
+/**
+ * "Umlauf bis zur Ablösung": der zusammenhängende Bereich freier Fahrten, der mit der Fahrt `bis` endet (Ablösung nach
+ * dieser Fahrt). Null, wenn die Fahrt selbst nicht frei ist.
+ */
+export function bereichBisAbloesung(u: LinieDaten["umlaeufe"][number], frei: readonly FahrtRef[], bis: number): [number, number] | null {
+  const b = freieBereiche(u, frei).find(([a, e]) => a <= bis && bis <= e);
+  return b ? [b[0], bis] : null;
+}
+
+/**
+ * "Rest des Umlaufs in neuen Dienst": der erste Bereich freier Fahrten nach dem zeitlich letzten Stück des Dienstes, im
+ * Umlauf dieses Stücks. Null, wenn es keinen gibt.
+ */
+export function restDesUmlaufs(d: Dienst, linien: readonly LinieDaten[], frei: (l: LinieDaten) => readonly FahrtRef[]): { linie: LinieDaten; umlaufNr: number; von: number; bis: number } | null {
+  let best: { linie: LinieDaten; umlaufNr: number; idx: number; an: number } | null = null;
+  for (const st of d.stuecke) {
+    const l = linien.find((x) => x.linie === st.linie);
+    const f = st.fahrten[st.fahrten.length - 1];
+    if (!l || !f) continue;
+    const k = l.umlaeufe.findIndex((um) => um.fahrten.some((x) => gleich(x, f)));
+    const an = l.fahrten.find((x) => gleich(x, f))?.ankunftS;
+    if (k < 0 || an === undefined) continue;
+    if (!best || an > best.an) best = { linie: l, umlaufNr: k, idx: l.umlaeufe[k].fahrten.findIndex((x) => gleich(x, f)), an };
+  }
+  if (!best) return null;
+  const um = best.linie.umlaeufe[best.umlaufNr];
+  const b = freieBereiche(um, frei(best.linie)).find(([a]) => a > best!.idx);
+  return b ? { linie: best.linie, umlaufNr: best.umlaufNr, von: b[0], bis: b[1] } : null;
 }
 
 export type SpeicherFehler = NummerFehler | "regelverstoss" | "nichtGeprueft";
@@ -136,9 +167,9 @@ export function ladeDienstplan(o: unknown): Dienstplan {
   const e = p.eigeneFerienDienste;
   if (![e.werktag, e.samstag, e.sonnFeiertag].every((x) => typeof x === "boolean")) fehler("Ferien");
   const dienste = p.dienste.map((d) => {
-    if (!d || !ganz(d.id) || d.id >= p.naechsteId || typeof d.nummer !== "string" || !d.nummer.trim() || !PLAN_TAGE.includes(d.tag) || !Array.isArray(d.stuecke)) fehler(`Dienst ${JSON.stringify(d)?.slice(0, 120)}`);
+    if (!d || !ganz(d.id) || d.id >= p.naechsteId || typeof d.nummer !== "string" || !d.nummer.trim() || d.nummer.trim().length > config.dienste.nummerMaxLaenge || !PLAN_TAGE.includes(d.tag) || !Array.isArray(d.stuecke)) fehler(`Dienst ${JSON.stringify(d)?.slice(0, 120)}`);
     const stuecke = d.stuecke.map((s) => {
-      if (!s || !ganz(s.linie) || !Array.isArray(s.fahrten) || s.fahrten.some((f) => !f || !ganz(f.variante) || typeof f.schluessel !== "string" || !/^[tz]\d+$/.test(f.schluessel))) fehler(`Dienststück in Dienst ${d.nummer}`);
+      if (!s || !ganz(s.linie) || !Array.isArray(s.fahrten) || !s.fahrten.length || s.fahrten.some((f) => !f || !ganz(f.variante) || typeof f.schluessel !== "string" || !/^[tz]\d+$/.test(f.schluessel))) fehler(`Dienststück in Dienst ${d.nummer}`);
       return { linie: s.linie, fahrten: s.fahrten.map((f) => ({ variante: f.variante, schluessel: f.schluessel })) };
     });
     return { id: d.id, nummer: d.nummer, tag: d.tag, stuecke };

@@ -28,7 +28,8 @@ test("Linie anlegen, Takt setzen, Fahrplan erzeugen, Bus zuweisen, Weiterspielen
   // Grundlinie über die Suche: drei vorhandene Haltestellen an der Segeberger Chaussee; die Suche zeigt die nächste
   // Haltestelle in Fahrtrichtung (Nachtrag 3b), damit gleichnamige Haltestellen beider Straßenseiten unterscheidbar sind
   await ed.getByTestId("linie-suche").fill("Wilhelm-Busch");
-  await expect(ed.getByTestId("linie-treffer-o333727165")).toContainText("Segeberger Chaussee, weiter Richtung Harksheide, Kielort");
+  // Regression Prüfung 3c-1: Leerzeichen nach dem Komma vor "vorhanden"
+  await expect(ed.getByTestId("linie-treffer-o333727165")).toHaveText("Harksheide, Wilhelm-Busch-Platz (Segeberger Chaussee, weiter Richtung Harksheide, Kielort, vorhanden)");
   await expect(ed.getByTestId("linie-treffer-o334310462")).toContainText("Segeberger Chaussee, weiter Richtung Harksheide, Heidehofweg (West)");
   await ed.getByTestId("linie-treffer-o333727165").click();
   await sucheHalt(ed, "linie", "Kielort", "o333727166");

@@ -173,6 +173,13 @@ describe("Prüfung beim Laden", () => {
     schluessel.dienste[0].stuecke[0].fahrten[0].schluessel = "x1";
     expect(() => ladeDienstplan(schluessel)).toThrow(/Dienststück/);
     expect(() => ladeDienstplan({ version: 2 })).toThrow(/Version/);
+    // Regression Prüfung 3c-1, Befund 9: leere Stücke und zu lange Nummern werden abgelehnt
+    const leer = structuredClone(p);
+    leer.dienste[0].stuecke.push({ linie: 1, fahrten: [] });
+    expect(() => ladeDienstplan(leer)).toThrow(/Dienststück/);
+    const lang = structuredClone(p);
+    lang.dienste[0].nummer = "x".repeat(config.dienste.nummerMaxLaenge + 1);
+    expect(() => ladeDienstplan(lang)).toThrow(DienstLadeFehler);
     const v3 = spielstandDaten(spielMitLinie());
     expect(() => ladeSpielstand({ version: 3, savedAt: "", payload: { ...v3, dienste: { ...v3.dienste, dienste: [{ id: 1 }] } } }, new Set(["m1"]))).toThrow(SpielstandFehler);
   });

@@ -69,7 +69,6 @@
       "sinn": "Im Voraus feststehende Ruhepausen: 30 min bei mehr als 6 bis 9 h Arbeitszeit, 45 min bei mehr als 9 h, in Teilen von mindestens 15 min; höchstens 6 h hintereinander ohne Ruhepause."
     },
     "pausenAbgeltung": {
-      "hart": true,
       "nenner": 6,
       "minUnterbrechungS": 600,
       "quelle": "TV-N SH Anlage 3 § 4 Abs. 3 (ArbZG § 7 Abs. 1 Nr. 2)",
@@ -77,7 +76,6 @@
       "sinn": "Die Pause nach ArbZG gilt als abgegolten, wenn Arbeitsunterbrechungen (z. B. Wendezeiten) von jeweils mindestens 10 min zusammen mindestens ein Sechstel der reinen Fahrzeit sind."
     },
     "nachtarbeit": {
-      "hart": false,
       "vonH": 23,
       "bisH": 6,
       "mehrAlsS": 7200,
@@ -88,6 +86,7 @@
     "tarifArbeitszeit": {
       "hart": false,
       "maxS": 30600,
+      "ausnahmeMaxS": 34200,
       "quelle": "TV-N SH Anlage 3 § 1",
       "url": "https://www.kavsh.de/download/tv-n-sh-lesefassung-idf-des-14.-aetv-01032026",
       "sinn": "Die dienstplanmäßige tägliche Arbeitszeit darf 8,5 Stunden, in Ausnahmefällen 9,5 Stunden nicht übersteigen."

@@ -31,9 +31,11 @@ export interface Regelwerk {
     tageslenkzeit: Quelle & { maxS: number };
     arbeitszeit: Quelle & { maxS: number };
     ruhepause: Quelle & { stufen: { abS: number; pauseS: number }[]; minTeilS: number; maxOhnePauseS: number };
-    pausenAbgeltung: Quelle & { nenner: number; minUnterbrechungS: number };
-    nachtarbeit: Quelle & { vonH: number; bisH: number; mehrAlsS: number };
-    tarifArbeitszeit: Quelle & { maxS: number };
+    /** Ohne Feld "hart": Die Abgeltung ist keine eigene Grenze, sie ersetzt die Ruhepause (A3c-17). */
+    pausenAbgeltung: Omit<Quelle, "hart"> & { nenner: number; minUnterbrechungS: number };
+    /** Ohne Feld "hart": bestimmt nur die Dienstart Nachtdienst. */
+    nachtarbeit: Omit<Quelle, "hart"> & { vonH: number; bisH: number; mehrAlsS: number };
+    tarifArbeitszeit: Quelle & { maxS: number; ausnahmeMaxS: number };
     tarifLenkzeit: Quelle & { maxS: number };
     tarifDienstschicht: Quelle & { maxS: number; dringendMaxS: number };
     tarifTeilung: Quelle & { maxTeilungen: number; minTeilS: number };
@@ -41,6 +43,9 @@ export interface Regelwerk {
 }
 
 export type RegelId = keyof Regelwerk["regeln"];
+/** Regeln mit Grenze (hart oder Warnung). */
+export type GrenzRegel = Exclude<RegelId, "pausenAbgeltung" | "nachtarbeit">;
+const OHNE_HART: RegelId[] = ["pausenAbgeltung", "nachtarbeit"];
 
 export const REGEL_IDS: RegelId[] = [
   "lenkSechstel", "lenkBlockFPersV", "lenkBlockVO", "tageslenkzeit", "arbeitszeit", "ruhepause", "pausenAbgeltung",
@@ -57,7 +62,7 @@ const ZAHLEN: Record<RegelId, string[]> = {
   ruhepause: ["minTeilS", "maxOhnePauseS"],
   pausenAbgeltung: ["nenner", "minUnterbrechungS"],
   nachtarbeit: ["mehrAlsS"],
-  tarifArbeitszeit: ["maxS"],
+  tarifArbeitszeit: ["maxS", "ausnahmeMaxS"],
   tarifLenkzeit: ["maxS"],
   tarifDienstschicht: ["maxS", "dringendMaxS"],
   tarifTeilung: ["maxTeilungen", "minTeilS"],
@@ -91,7 +96,7 @@ export function ladeRegelwerk(raw: unknown): { regelwerk: Regelwerk | null; meld
       m.push({ code: "regelFehlt", ort: id });
       continue;
     }
-    if (typeof g.hart !== "boolean") m.push({ code: "feldFehlt", ort: id, feld: "hart" });
+    if (!OHNE_HART.includes(id) && typeof g.hart !== "boolean") m.push({ code: "feldFehlt", ort: id, feld: "hart" });
     for (const f of ["quelle", "url", "sinn"]) if (!text(g[f])) m.push({ code: "feldFehlt", ort: id, feld: f });
     for (const f of ZAHLEN[id]) if (!pos(g[f])) m.push({ code: "wertUngueltig", ort: id, feld: f });
   }
@@ -105,5 +110,6 @@ export function ladeRegelwerk(raw: unknown): { regelwerk: Regelwerk | null; meld
   const n = g.nachtarbeit;
   if (n && !(Number.isInteger(n.vonH) && Number.isInteger(n.bisH) && n.vonH >= 0 && n.vonH < 24 && n.bisH >= 0 && n.bisH < 24)) m.push({ code: "wertUngueltig", ort: "nachtarbeit", feld: "vonH/bisH" });
   if (g.tarifDienstschicht && !(g.tarifDienstschicht.dringendMaxS >= g.tarifDienstschicht.maxS)) m.push({ code: "wertUngueltig", ort: "tarifDienstschicht", feld: "dringendMaxS" });
+  if (g.tarifArbeitszeit && !(g.tarifArbeitszeit.ausnahmeMaxS >= g.tarifArbeitszeit.maxS)) m.push({ code: "wertUngueltig", ort: "tarifArbeitszeit", feld: "ausnahmeMaxS" });
   return { regelwerk: m.length ? null : r, meldungen: m };
 }

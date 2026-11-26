@@ -4,8 +4,9 @@ import { config } from "../src/config";
 import { baueDienst, pruefeDienst, pruefeTag, regimeFuer, teilungErfuellt, wirksameDienste, type LinieDaten } from "../src/dienste/pruefung";
 import { ladeRegelwerk, type Regelwerk } from "../src/dienste/regelwerk";
 import { aktuellesRegelwerk } from "../src/dienste/laden";
+import { grosseFlotte } from "./helpers/grosse-flotte";
 import { neuerDienstplan, type Dienst, type FahrtRef } from "../src/dienste/typen";
-import { entferneStueck, entwurfVon, freieBereiche, fuegeStueckHinzu, loescheDienst, naechsteNummer, neuerEntwurf, pruefeNummer, setzeEigeneFerienDienste, speichereDienst } from "../src/dienste/dienste";
+import { bereichBisAbloesung, restDesUmlaufs, entferneStueck, entwurfVon, freieBereiche, fuegeStueckHinzu, loescheDienst, naechsteNummer, neuerEntwurf, pruefeNummer, setzeEigeneFerienDienste, speichereDienst } from "../src/dienste/dienste";
 
 const C = config.dienste;
 const RW = ladeRegelwerk(rwRaw).regelwerk!;
@@ -394,9 +395,9 @@ describe("Dienstarten, geteilter Dienst, Tarif", () => {
     const u1 = umlauf(l, takt(5 * H, 12, 20 * M, 10 * M)); // 4:40 bis Einrücken 11:00
     const u2 = umlauf(l, takt(14 * H, 6, 20 * M, 10 * M)); // Vorbereitung 13:40, Abschluss bis 17:05
     const a = pruefe(dienst([{ linie: 1, fahrten: u1 }, { linie: 1, fahrten: u2 }]), [l]);
-    // Arbeitszeit 380 + 205 = 585 min (über 8,5 h), Schicht 4:40 bis 17:05 = 12:25 h (über 10 h, unter 13 h)
+    // Arbeitszeit 380 + 205 = 585 min (über der Ausnahme 9,5 h), Schicht 4:40 bis 17:05 = 12:25 h (über 10 h, unter 13 h)
     expect([a.arbeitS, a.schichtS]).toEqual([585 * M, 12 * H + 25 * M]);
-    expect(codes(a.warnungen)).toEqual(expect.arrayContaining(["tarifArbeitszeit.max", "tarifDienstschicht.max"]));
+    expect(codes(a.warnungen)).toEqual(expect.arrayContaining(["tarifArbeitszeit.ausnahme", "tarifDienstschicht.max"]));
     expect(codes(a.warnungen)).not.toContain("tarifDienstschicht.dringend");
     expect(a.gueltig).toBe(true);
   });
@@ -410,6 +411,168 @@ describe("Dienstarten, geteilter Dienst, Tarif", () => {
     const a = pruefe(dienst([{ linie: 1, fahrten: umlauf(l, z) }]), [l], [], weich);
     expect(codes(a.warnungen)).toContain("arbeitszeit.max");
     expect(codes(a.verstoesse)).not.toContain("arbeitszeit.max");
+  });
+});
+
+describe("Regressionen und Grenzfälle aus der unabhängigen Prüfung 3c-1", () => {
+  /** Ganzer Umlauf als Stück: eine Fahrt von `ab` mit `dauer`, Aus- und Einrücken je `ae` (Sekunden). */
+  const stueck = (l: LinieDaten, ab: number, dauer: number, ae = 10 * M) => ({ linie: l.linie, fahrten: umlauf(l, [[ab, ab + dauer]], ae, ae) });
+  /** Folge ganzer Umläufe mit Pausen dazwischen: Lenkzeit je Stück = 2 × ae + fahrS. */
+  function stueckeMitPausen(l: LinieDaten, fahrS: number, pausen: number[], start = 6 * H) {
+    const st = [];
+    let ab = start;
+    for (let i = 0; i <= pausen.length; i++) {
+      st.push(stueck(l, ab, fahrS));
+      // nächste Abfahrt: Einrücken (10 min) + Pause + Vorbereitung (10 min) + Ausrücken (10 min)
+      if (i < pausen.length) ab = ab + fahrS + 10 * M + pausen[i] + C.vorbereitungS + 10 * M;
+    }
+    return st;
+  }
+
+  it("Befund 6: aneinandergrenzende Stücke im selben Umlauf sind ein Stück, dazwischen Wendezeit statt Pause", () => {
+    const l = linie();
+    const u = umlauf(l, takt(6 * H, 4, 20 * M, 10 * M));
+    const a = pruefe(dienst([{ linie: 1, fahrten: u.slice(2) }, { linie: 1, fahrten: u.slice(0, 2) }]), [l]);
+    expect(a.elemente.map((e) => e.art)).toEqual(["vorbereitung", "ausruecken", "fahrt", "wende", "fahrt", "wende", "fahrt", "wende", "fahrt", "einruecken", "abschluss"]);
+    expect(a.pauseS).toBe(0);
+  });
+
+  it("Befund 3 und 4: bis zur Ablösung nur der freie Bereich davor; Rest nach dem zeitlich letzten Stück", () => {
+    const l = linie();
+    const u = umlauf(l, takt(6 * H, 21, 20 * M, 10 * M));
+    const frei = [...u.slice(0, 5), ...u.slice(10)];
+    expect(bereichBisAbloesung(l.umlaeufe[0], frei, 15)).toEqual([10, 15]);
+    expect(bereichBisAbloesung(l.umlaeufe[0], frei, 3)).toEqual([0, 3]);
+    expect(bereichBisAbloesung(l.umlaeufe[0], frei, 7)).toBeNull();
+    // Stücke im Array nicht zeitlich geordnet: der Rest folgt auf das spätere Stück (Umlauf 2 ab 12:05)
+    const u2 = umlauf(l, takt(12 * H + 5 * M, 6, 20 * M, 10 * M));
+    const d = dienst([{ linie: 1, fahrten: u2.slice(0, 2) }, { linie: 1, fahrten: u.slice(0, 3) }]);
+    const r = restDesUmlaufs(d, [l], () => [...u.slice(3), ...u2.slice(2)]);
+    expect(r && [r.umlaufNr, r.von, r.bis]).toEqual([1, 2, 5]);
+    expect(restDesUmlaufs(d, [l], () => u.slice(3))).toBeNull();
+  });
+
+  it("Befund 10: Variante ohne Start- oder Zielhaltestelle ist ein Fehler, kein stiller Betriebshof", () => {
+    const l = linie();
+    const u = umlauf(l, takt(6 * H, 4, 20 * M, 10 * M));
+    l.varianten[1].ziel = null;
+    expect(codes(pruefe(dienst([{ linie: 1, fahrten: u.slice(0, 2) }]), [l]).verstoesse)).toContain("ablauf.ortFehlt");
+  });
+
+  it("Befund 9: leere Stücke werden beim Bearbeiten übergangen", () => {
+    const l = linie();
+    umlauf(l, takt(6 * H, 4, 20 * M, 10 * M));
+    const d = dienst([{ linie: 1, fahrten: [] }]);
+    expect(fuegeStueckHinzu(d, l, 0, 0, 1)).toBe(true);
+    expect(d.stuecke.map((s) => s.fahrten.length)).toEqual([2]);
+  });
+
+  it("Kriterium 6, Abgeltung nach TV-N SH: genau ein Sechstel reicht, 10 s weniger nicht", () => {
+    // 7 Fahrten zu 50 min, Aus- und Einrücken 10 min: Lenkzeit 370 min, ein Sechstel 61:40 min
+    const mit = (letzteWendeS: number) => {
+      const l = linie();
+      const w = [10 * M, 10 * M, 10 * M, 10 * M, 10 * M, letzteWendeS];
+      const z: [number, number][] = [];
+      let ab = 6 * H;
+      for (let i = 0; i < 7; i++) {
+        z.push([ab, ab + 50 * M]);
+        ab += 50 * M + (w[i] ?? 0);
+      }
+      return pruefe(dienst([{ linie: 1, fahrten: umlauf(l, z) }]), [l]);
+    };
+    const genau = mit(11 * M + 40);
+    expect(genau.lenkS).toBe(370 * M);
+    expect(genau.arbeitS).toBeGreaterThan(6 * H);
+    expect(codes(genau.verstoesse)).toEqual([]);
+    expect(codes(mit(11 * M + 30).verstoesse)).toEqual(expect.arrayContaining(["ruhepause.zuKurz", "ruhepause.ohnePause"]));
+  });
+
+  it("Kriterium 6, ArbZG § 4: genau 6:00 h Arbeit am Stück erlaubt, 6:00:10 h nicht", () => {
+    const mit = (extraS: number) => {
+      const l = linie(1, 4000); // Nr. 1, Wendezeiten unter 10 min: keine Abgeltung
+      // Stück 1: Vorbereitung 10 + Ausrücken 18 + 11 × 22 + 10 × 8 min Wende + Einrücken 10 = 360 min (Lenkzeit 270 min)
+      const z = takt(6 * H, 11, 22 * M, 8 * M);
+      for (let i = 1; i < 11; i++) if (i === 10) z[i] = [z[i][0] + extraS, z[i][1] + extraS];
+      const a = { linie: 1, fahrten: umlauf(l, z, 18 * M, 10 * M) };
+      const ende = z[10][1] + 10 * M;
+      // Stück 2 nach 30 min Pause: eine Fahrt 20 min
+      const b = stueck(l, ende + 30 * M + C.vorbereitungS + 10 * M, 20 * M);
+      return pruefe(dienst([a, b]), [l]);
+    };
+    const ok = mit(0);
+    expect(ok.lenkS).toBe(270 * M + 40 * M);
+    expect(codes(ok.verstoesse)).toEqual([]);
+    expect(codes(mit(10).verstoesse)).toEqual(["ruhepause.ohnePause"]);
+  });
+
+  it("Kriterium 6, ArbZG § 4: bis 9:00 h Arbeit genügen 30 min Pause, ab 9:00:10 h sind 45 min nötig", () => {
+    const mit = (extraS: number) => {
+      const l = linie(1, 4000);
+      // Stück 1: 10 + 5 + 5 × 45 + 4 × 5 + 10 = 270 min; Stück 2: 10 + 0 + 225 + 20 + 10 + Abschluss 5 = 270 min
+      const z1 = takt(6 * H, 5, 45 * M, 5 * M);
+      const a = { linie: 1, fahrten: umlauf(l, z1, 5 * M, 10 * M) };
+      const start2 = z1[4][1] + 10 * M + 30 * M + C.vorbereitungS;
+      const z2 = takt(start2, 5, 45 * M, 5 * M);
+      z2[4] = [z2[4][0] + extraS, z2[4][1] + extraS];
+      const b = { linie: 1, fahrten: umlauf(l, z2, 0, 10 * M) };
+      return pruefe(dienst([a, b]), [l]);
+    };
+    const ok = mit(0);
+    expect([ok.arbeitS, ok.pauseS]).toEqual([9 * H, 30 * M]);
+    expect(codes(ok.verstoesse)).toEqual([]);
+    expect(mit(10).verstoesse).toContainEqual({ regel: "ruhepause", code: "zuKurz", wertS: 30 * M, grenzeS: 45 * M });
+  });
+
+  it("Kriterien 3 und 4: Teilungen über echte Pausen zwischen Stücken (Nr. 1: 2 × 20 und 3 × 15 min, VO: 15 dann 30 min)", () => {
+    const nr1 = (fahrS: number, pausen: number[]) => {
+      const l = linie(1, 4000);
+      return pruefe(dienst(stueckeMitPausen(l, fahrS, pausen)), [l]);
+    };
+    // Stücke zu 100 min Lenkzeit: 100, 20 min, 100, 20 min (2 × 20 erfüllt), 100
+    expect(codes(nr1(80 * M, [20 * M, 20 * M]).verstoesse)).toEqual([]);
+    expect(nr1(80 * M, [19 * M, 19 * M]).verstoesse).toContainEqual({ regel: "lenkBlockFPersV", code: "block", wertS: 300 * M, grenzeS: 270 * M });
+    // Stücke zu 60 min: drei Teile zu 15 min setzen zurück, zu 14 min nicht
+    expect(codes(nr1(40 * M, [15 * M, 15 * M, 15 * M, 15 * M]).verstoesse)).toEqual([]);
+    expect(codes(nr1(40 * M, [14 * M, 14 * M, 14 * M, 14 * M]).verstoesse)).toContain("lenkBlockFPersV.block");
+    const vo = (pausen: number[]) => {
+      const l = linie(1, 1200, 50010);
+      return pruefe(dienst(stueckeMitPausen(l, 80 * M, pausen)), [l]);
+    };
+    expect(vo([15 * M, 30 * M]).regime).toBe("blockVO");
+    expect(codes(vo([15 * M, 30 * M]).verstoesse)).toEqual([]);
+    expect(codes(vo([30 * M, 15 * M]).verstoesse)).toEqual(["lenkBlockVO.block"]);
+    expect(codes(vo([45 * M, 1 * M]).verstoesse)).toEqual([]);
+  });
+
+  it("Tarifwarnungen: Lenkzeit über 8 h, Arbeitszeit über der Ausnahme 9,5 h, zwei Teilungen, Dienstschicht über 13 h", () => {
+    const l = linie();
+    // 10 Fahrten zu 47 min, 9 Wenden zu 10 min: Lenkzeit 490 min, Arbeitszeit 595 min
+    const a = pruefe(dienst([{ linie: 1, fahrten: umlauf(l, takt(5 * H, 10, 47 * M, 10 * M)) }]), [l]);
+    expect([a.lenkS, a.arbeitS, a.gueltig]).toEqual([490 * M, 595 * M, true]);
+    expect(codes(a.warnungen)).toEqual(expect.arrayContaining(["tarifLenkzeit.max", "tarifArbeitszeit.ausnahme"]));
+    const l2 = linie();
+    const g = pruefe(dienst(stueckeMitPausen(l2, 60 * M, [2 * H, 2 * H])), [l2]);
+    expect(g.warnungen).toContainEqual({ regel: "tarifTeilung", code: "anzahl", wertS: 2, grenzeS: 1 });
+    const l3 = linie();
+    const s = pruefe(dienst([stueck(l3, 5 * H, 20 * M), stueck(l3, 18 * H, 20 * M)]), [l3]);
+    expect(s.schichtS).toBeGreaterThan(13 * H);
+    expect(codes(s.warnungen)).toContain("tarifDienstschicht.dringend");
+  });
+
+  it("Dienstart an den Grenzen: genau 2:00 h Nachtzeit ist kein Nachtdienst, 1:59:50 h Unterbrechung kein geteilter Dienst", () => {
+    const nacht = (extraS: number) => {
+      const l = linie();
+      // Vorbereitung ab 22:00, Fahrt 22:20 bis 0:45, Einrücken bis 0:55, Abschluss bis 1:00: Nachtzeit 23:00 bis 1:00
+      return pruefe(dienst([stueck(l, 22 * H + 20 * M, 2 * H + 25 * M + extraS)]), [l]).art;
+    };
+    expect(nacht(0)).toBe("spaet");
+    expect(nacht(10)).toBe("nacht");
+    const geteilt = (pauseS: number) => {
+      const l = linie();
+      return pruefe(dienst(stueckeMitPausen(l, 60 * M, [pauseS])), [l]).art;
+    };
+    expect(geteilt(2 * H - 10)).toBe("frueh");
+    expect(geteilt(2 * H)).toBe("geteilt");
   });
 });
 
@@ -446,29 +609,11 @@ describe("Tagesart: freie Fahrten, ungültige Dienste, Ferien", () => {
     expect(wirksameDienste(p, "samstag")).toEqual([]);
   });
 
-  it("Leistung (Kriterium 13): 1.000 Dienste prüfen in unter 200 ms, gleiches Ergebnis bei gleicher Eingabe", () => {
-    const linien: LinieDaten[] = [];
-    const dienste: Dienst[] = [];
-    for (let i = 0; i < 100; i++) {
-      const l = linie(i + 1);
-      for (let k = 0; k < 10; k++) {
-        const u = umlauf(l, takt(5 * H + k * 60, 30, 20 * M, 10 * M));
-        dienste.push(dienst([{ linie: l.linie, fahrten: u.slice(0, 15) }], dienste.length + 1, `D${dienste.length + 1}`));
-      }
-      linien.push(l);
-    }
-    const a = { tag: "werktag" as const, linien, dienste, entwurf: null };
-    // Rechenzeit des Prozesses (CPU-Zeit), bester von drei Läufen: unabhängig von der Last durch parallel laufende Testdateien
-    let t = pruefeTag(a, RW, C);
-    let best = Infinity;
-    for (let i = 0; i < 5; i++) {
-      const c0 = process.cpuUsage();
-      t = pruefeTag(a, RW, C);
-      const c = process.cpuUsage(c0);
-      best = Math.min(best, (c.user + c.system) / 1000);
-    }
-    expect(best).toBeLessThan(200);
+  it("Kriterium 13: gleiches Ergebnis bei gleicher Eingabe (1.000 Dienste; die Zeit misst tests/dienste.leistung.ts allein)", () => {
+    const a = grosseFlotte();
+    const t = pruefeTag(a, RW, C);
     expect(t.dienste).toHaveLength(1000);
+    expect(t.dienste.every((d) => d.gueltig)).toBe(true);
     const t2 = pruefeTag(structuredClone(a), RW, C);
     expect(JSON.stringify(t2)).toBe(JSON.stringify(t));
     expect([...t2.besetzt]).toEqual([...t.besetzt]);

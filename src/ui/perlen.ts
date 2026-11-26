@@ -5,6 +5,7 @@ import type { VariantenPlan } from "../linien/plan";
 import type { HaltId, Perle } from "../linien/typen";
 import type { LonLat } from "../world/geo";
 import { h } from "./dom";
+import { HaltIndex } from "../linien/richtung";
 import { freigeschaltet, lageText, linienUi, setzeWerkzeug, werkzeug, type Werkzeug } from "./linienbereich";
 
 const L = config.linien;
@@ -117,9 +118,10 @@ export function perlenEditor(o: PerlenOptionen): { el: HTMLElement; zeichne(): v
     if (q.length < 2) return treffer.replaceChildren();
     const alle = u.halte.alle().filter((x) => x.name.toLowerCase().includes(q) && x.snaps.length);
     alle.sort((a, b) => a.name.localeCompare(b.name, "de") || a.id.localeCompare(b.id));
+    const index = new HaltIndex(u.halte.alle());
     treffer.replaceChildren(
       ...alle.slice(0, 8).map((x) => {
-        const k = h("button", { type: "button", class: "listeneintrag", "data-testid": `${id}-treffer-${x.id}`, text: `${x.name} (${lageText(u, x)},${x.id.startsWith("n") ? t("haltestelle.neu") : t("haltestelle.vorhanden")})` });
+        const k = h("button", { type: "button", class: "listeneintrag", "data-testid": `${id}-treffer-${x.id}`, text: `${x.name} (${lageText(u, x, index)}, ${x.id.startsWith("n") ? t("haltestelle.neu") : t("haltestelle.vorhanden")})` });
         k.addEventListener("click", () => fuegeHalt(x.id));
         return h("li", {}, k);
       }),

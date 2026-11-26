@@ -49,6 +49,12 @@ export function schliesseFenster(id?: string, erzwingen = false): boolean {
   return true;
 }
 
+/** Darf das Fenster ohne Rückfrage ersetzt werden? Zeigt sonst dessen Hinweis (zum Beispiel ungespeicherte Änderungen). */
+export function darfErsetzen(id: string): boolean {
+  const f = offen.find((x) => x.id === id);
+  return !f?.vorSchliessen || f.vorSchliessen();
+}
+
 export function istOffen(id: string): boolean {
   return offen.some((f) => f.id === id);
 }

@@ -196,7 +196,9 @@ Fertig (gebaut, wartet auf Kokos Freigabe):
 - Spielstand Version 3 mit Migration vom Stand 3b (leerer Dienstplan), beide Speicher getestet.
 - Fahrtrichtung in Suche und Haltestellenfenster: "Straße, weiter Richtung <nächste Haltestelle>" (`src/linien/richtung.ts`).
 
-Tests: `tests/dienste.test.ts` (Handrechnungen und Grenzfälle aller Regeln, Leistung), `tests/dienste-norderstedt.test.ts` (Beispiel D1, D2, D3 auf dem echten Netz), `tests/spielstand.test.ts` (Version 3, Migration 2 nach 3), Rauchtest mit "Dienst anlegen", Oberflächentest `e2e/dienste.spec.ts` mit Screenshots.
+Tests: `tests/dienste.test.ts` (Handrechnungen und Grenzfälle aller Regeln), `tests/dienste.leistung.ts` (1.000 Dienste, läuft in `npm test` allein), `tests/dienste-norderstedt.test.ts` (Beispiel D1, D2, D3 auf dem echten Netz), `tests/spielstand.test.ts` (Version 3, Migration 2 nach 3), Rauchtest mit "Dienst anlegen", Oberflächentest `e2e/dienste.spec.ts` mit Screenshots und reinem Tastaturdurchlauf.
+
+Unabhängige Prüfung (Subagent, 26.11.2026): kein Fehler, der ein Kriterium ganz bricht; Regeln stimmen mit den Normtexten und Annahmen überein. Behoben mit Regressionstests: Klick in der Zeitleiste wirkte nach dem Ersetzen des Editors nicht mehr; "Neuer Dienst" und "Bearbeiten" verwarfen einen Entwurf mit ungespeicherten Änderungen ohne Hinweis; "Umlauf bis zur Ablösung" nahm den ersten freien Bereich statt des Bereichs vor der Ablösung; "Rest des Umlaufs" nahm das letzte Stück im Array statt des zeitlich letzten; fehlendes Leerzeichen in der Haltestellensuche; aneinandergrenzende Stücke ergaben eine Pause statt Wendezeit; Variante ohne Start oder Ziel galt still als Betriebshof; Feld "hart" ohne Wirkung bei Abgeltung und Nachtarbeit entfernt; Ausnahme 9,5 h im Tarif ergänzt; leere Stücke und zu lange Nummern beim Laden abgelehnt; fehlende Grenzfälle (Abgeltung genau ein Sechstel, 6:00 h am Stück, 9:00 h Arbeit, Teilungen über echte Pausen, VO 15 dann 30, Tarifwarnungen, Nachtdienst genau 2:00 h, Teilung 1:59:50 h). Beim Testen selbst gefunden: Nach einer Änderung der Dienstnummer zeigte Esc keinen neuen Hinweis.
 
 ## Merkposten für spätere Etappen
 

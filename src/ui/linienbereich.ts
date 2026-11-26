@@ -143,9 +143,9 @@ export function zeichneKarte(): void {
 }
 
 /** Straße und nächste Haltestelle in Fahrtrichtung, damit gleichnamige Haltestellen unterscheidbar sind. */
-export function lageText(u: LinienUi, hd: HaltDaten): string {
+export function lageText(u: LinienUi, hd: HaltDaten, index = new HaltIndex(u.halte.alle())): string {
   if (!hd.snaps.length) return t("haltestelle.ohneStrasse");
-  const l = haltLage(u.world.network, new HaltIndex(u.halte.alle()), hd, L.richtungSucheM);
+  const l = haltLage(u.world.network, index, hd, L.richtungSucheM);
   const strasse = l.strasse || t("haltestelle.ohneStrasse");
   if (l.art === "beide") return t("haltestelle.lageBeide", { strasse });
   if (l.art === "richtung") return t("haltestelle.lage", { strasse, naechste: l.naechste });
